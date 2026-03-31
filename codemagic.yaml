@@ -8,7 +8,10 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.decideforus.app   # <-- CHANGE THIS
+        bundle_identifier: com.decideforus.app   # <-- KEEP YOUR REAL ONE
+
+    integrations:
+      app_store_connect: Codemagic
 
     scripts:
       - name: Get Flutter packages
