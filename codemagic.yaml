@@ -18,7 +18,7 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Build iOS with Codemagic signing
+      - name: Use provisioning profiles
         script: |
           xcode-project use-profiles
 
