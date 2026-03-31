@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "573639270934",
+    "project_id": "decide-for-us-792bc",
+    "storage_bucket": "decide-for-us-792bc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:573639270934:android:5c8ab5014410949708cb37",
+        "android_client_info": {
+          "package_name": "com.decideforus.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8sxH45pwh6WyL_Jy-YdiZmRzqhBYdR94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:573639270934:android:0046533cc8788c6108cb37",
+        "android_client_info": {
+          "package_name": "com.mycompany.decideforus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8sxH45pwh6WyL_Jy-YdiZmRzqhBYdR94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
