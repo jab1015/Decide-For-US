@@ -6,9 +6,10 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.decideforus.app   # <-- KEEP YOUR REAL ONE
+        bundle_identifier: com.decideforus.app
 
     integrations:
       app_store_connect: Codemagic
@@ -29,3 +30,10 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+
+    # 🔥 THIS IS THE FIX
+    # Force Codemagic to create profiles/certs
+    ios_signing:
+      provisioning_profiles:
+        - bundle_identifier: com.decideforus.app
+          distribution_type: app_store
