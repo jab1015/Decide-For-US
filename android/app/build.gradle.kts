@@ -19,8 +19,8 @@ android {
         applicationId = "com.decideforus.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.0.23"
+        versionCode = 16
+        versionName = "1.0.15"
     }
 
     signingConfigs {
