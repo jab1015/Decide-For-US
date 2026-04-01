@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
 
     environment:
-      flutter: latest
+      flutter: stable
       xcode: latest
 
       ios_signing:
