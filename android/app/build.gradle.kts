@@ -19,7 +19,7 @@ android {
         applicationId = "com.decideforus.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 18
+        versionCode = 19
         versionName = "1.0.15"
     }
 
