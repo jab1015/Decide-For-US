@@ -9,14 +9,13 @@ import 'services/subscription_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  /// 🔥 THIS IS THE FIX THAT UNBLOCKS EVERYTHING
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  /// 🔥 REQUIRED FOR FIRESTORE RULES
   await FirebaseAuth.instance.signInAnonymously();
 
+  /// 🔥 THIS IS CRITICAL
   await SubscriptionService.init();
 
   runApp(const MyApp());

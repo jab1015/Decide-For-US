@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
+import '../services/subscription_service.dart';
 import 'decide_screen.dart';
 
 class PaywallScreen extends StatelessWidget {
@@ -24,6 +25,45 @@ class PaywallScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _purchase(BuildContext context) async {
+    try {
+      final offerings = await Purchases.getOfferings();
+      final package = offerings.current?.availablePackages.first;
+
+      if (package != null) {
+        final result = await Purchases.purchasePackage(package);
+
+        /// 🔥 UPDATE SUBSCRIPTION STATE
+        SubscriptionService.updateStatus(result.customerInfo);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Subscription successful!")),
+        );
+
+        _goBack(context);
+      }
+    } catch (e) {
+      print("Purchase error: $e");
+    }
+  }
+
+  Future<void> _restore(BuildContext context) async {
+    try {
+      final info = await Purchases.restorePurchases();
+
+      /// 🔥 UPDATE SUBSCRIPTION STATE
+      SubscriptionService.updateStatus(info);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Purchases restored")),
+      );
+
+      _goBack(context);
+    } catch (e) {
+      print("Restore error: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,14 +79,9 @@ class PaywallScreen extends StatelessWidget {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-
                 children: [
-
-                  /// 🔥 TITLE
                   const Text(
                     "Unlock Unlimited Decisions ✨",
                     textAlign: TextAlign.center,
@@ -59,7 +94,6 @@ class PaywallScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  /// 🔥 SUBTEXT
                   const Text(
                     "Better ideas. Smarter decisions.\nDate Night mode included 💎",
                     textAlign: TextAlign.center,
@@ -71,145 +105,43 @@ class PaywallScreen extends StatelessWidget {
 
                   const SizedBox(height: 30),
 
-                  /// 🔥 FEATURE CARD
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Column(
-                      children: const [
-                        FeatureRow("Unlimited Decisions"),
-                        FeatureRow("Premium AI Ideas"),
-                        FeatureRow("Date Night Mode 💎"),
-                        FeatureRow("No Repeats Ever"),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  /// 🔥 SUBSCRIBE BUTTON
+                  /// SUBSCRIBE BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(30),
-                        ),
-                      ),
-                      onPressed: () async {
-                        try {
-                          final offerings =
-                              await Purchases.getOfferings();
-
-                          final package =
-                              offerings.current?.availablePackages.first;
-
-                          if (package != null) {
-                            await Purchases.purchasePackage(package);
-                          }
-                        } catch (e) {
-                          print("Purchase error: $e");
-                        }
-                      },
-                      child: const Text(
-                        "Subscribe Now",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      onPressed: () => _purchase(context),
+                      child: const Text("Subscribe Now"),
                     ),
                   ),
 
                   const SizedBox(height: 12),
 
-                  /// 🔥 RESTORE
+                  /// RESTORE
                   TextButton(
-                    onPressed: () async {
-                      try {
-                        await Purchases.restorePurchases();
-                      } catch (e) {
-                        print("Restore error: $e");
-                      }
-                    },
-                    child: const Text(
-                      "Restore Purchases",
-                      style: TextStyle(color: Colors.white70),
-                    ),
+                    onPressed: () => _restore(context),
+                    child: const Text("Restore Purchases"),
                   ),
 
                   const SizedBox(height: 20),
 
-                  /// 🔥 NOT RIGHT NOW (NEW)
+                  /// NOT NOW
                   TextButton(
                     onPressed: () => _goBack(context),
-                    child: const Text(
-                      "Not Right Now",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
+                    child: const Text("Not Right Now"),
                   ),
 
                   const SizedBox(height: 10),
 
-                  /// 🔥 TEST BUTTON
+                  /// TEST RESET
                   TextButton(
                     onPressed: () => _resetUsage(context),
-                    child: const Text(
-                      "Reset Usage (Testers)",
-                      style: TextStyle(
-                        color: Colors.white38,
-                        fontSize: 12,
-                      ),
-                    ),
+                    child: const Text("Reset Usage (Testers)"),
                   ),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 🔥 FEATURE ROW
-class FeatureRow extends StatelessWidget {
-  final String text;
-
-  const FeatureRow(this.text, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle,
-              color: Colors.white, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
