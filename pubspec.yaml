@@ -2,7 +2,7 @@ name: decide_clean
 description: Decide For Us App
 publish_to: 'none'
 
-version: 1.0.15+19
+version: 1.0.15+18
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
