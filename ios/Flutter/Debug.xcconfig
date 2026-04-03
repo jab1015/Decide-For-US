@@ -1,1 +1,3 @@
 #include "Generated.xcconfig"
+CODE_SIGN_STYLE=Automatic
+PROVISIONING_PROFILE_SPECIFIER=
