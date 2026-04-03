@@ -12,35 +12,35 @@ dependencies:
   flutter:
     sdk: flutter
 
-  cupertino_icons: ^1.0.6
+  cupertino_icons: 1.0.6
 
   # Core
-  shared_preferences: ^2.2.2
+  shared_preferences: 2.2.2
 
-  # RevenueCat (latest working)
-  purchases_flutter: ^6.30.2
+  # RevenueCat (LOCKED — critical)
+  purchases_flutter: 6.30.2
 
-  # Firebase
-  firebase_core: ^2.32.0
-  cloud_firestore: ^4.17.5
-  firebase_auth: ^4.16.0
+  # Firebase (LOCKED)
+  firebase_core: 2.32.0
+  cloud_firestore: 4.17.5
+  firebase_auth: 4.16.0
 
-  # Location (FIXES Geolocator errors)
-  geolocator: ^11.0.0
+  # Location
+  geolocator: 11.0.0
 
-  # HTTP (FIXES http.post)
-  http: ^1.2.1
+  # HTTP
+  http: 1.2.1
 
   # UI
-  confetti: ^0.7.0
+  confetti: 0.7.0
 
   # Sharing
-  share_plus: ^7.2.2
+  share_plus: 7.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: 3.0.0
 
 flutter:
   uses-material-design: true
