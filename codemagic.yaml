@@ -4,7 +4,7 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: 15.4   # 🔥 FIX: downgrade Xcode
+      xcode: latest
 
       ios_signing:
         distribution_type: app_store
@@ -22,9 +22,11 @@ workflows:
         script: |
           xcode-project use-profiles
 
-      - name: Build IPA
+      - name: Build IPA (override bad flags)
         script: |
-          flutter build ipa --release
+          flutter build ipa --release -- \
+            OTHER_CFLAGS="" \
+            OTHER_SWIFT_FLAGS=""
 
     artifacts:
       - build/ios/ipa/*.ipa
