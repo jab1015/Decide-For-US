@@ -26,7 +26,8 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  # 🔥 THIS IS THE KEY CHANGE
+  use_frameworks! :linkage => :static
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
@@ -38,14 +39,6 @@ post_install do |installer|
 
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
-
-      # 🔥 FORCE compiler to ignore unknown flags like -G
-      config.build_settings['WARNING_CFLAGS'] = ['-Wno-error=unused-command-line-argument']
-      config.build_settings['OTHER_CFLAGS'] ||= ['$(inherited)']
-      config.build_settings['OTHER_CFLAGS'] << '-Wno-unused-command-line-argument'
-
-      config.build_settings['OTHER_CPLUSPLUSFLAGS'] ||= ['$(inherited)']
-      config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-Wno-unused-command-line-argument'
     end
   end
 end
