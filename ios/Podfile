@@ -37,19 +37,27 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
-      # 🔥 FORCE iOS 13
+
+      # ✅ Force iOS version
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
 
-      # 🔥 REMOVE INVALID -G FLAG (THIS FIXES YOUR ERROR)
-      flags = config.build_settings['OTHER_CFLAGS']
-      if flags
-        config.build_settings['OTHER_CFLAGS'] = flags.gsub(/-G\S*/, '')
+      # 🔥 Strip -G from ALL possible flag locations
+      %w[
+        OTHER_CFLAGS
+        OTHER_CPLUSPLUSFLAGS
+        OTHER_LDFLAGS
+        GCC_PREPROCESSOR_DEFINITIONS
+      ].each do |key|
+        flags = config.build_settings[key]
+        if flags
+          if flags.is_a?(Array)
+            config.build_settings[key] = flags.map { |f| f.gsub(/-G\S*/, '') }
+          else
+            config.build_settings[key] = flags.gsub(/-G\S*/, '')
+          end
+        end
       end
 
-      flags = config.build_settings['OTHER_LDFLAGS']
-      if flags
-        config.build_settings['OTHER_LDFLAGS'] = flags.gsub(/-G\S*/, '')
-      end
     end
   end
 end
