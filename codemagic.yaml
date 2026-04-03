@@ -6,6 +6,7 @@ workflows:
     environment:
       flutter: 3.24.0
       xcode: latest
+      cocoapods: default
 
     cache:
       cache_paths:
@@ -13,7 +14,7 @@ workflows:
         - ~/.pub-cache
 
     scripts:
-      - name: Flutter clean
+      - name: Clean project
         script: |
           flutter clean
 
@@ -21,18 +22,9 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Build iOS (no signing forced)
+      - name: Build IPA (signed)
         script: |
-          flutter build ios --release --no-codesign
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
+          flutter build ipa --release
 
     artifacts:
-      - build/ios/iphoneos/*.app
+      - build/ios/ipa/*.ipa
