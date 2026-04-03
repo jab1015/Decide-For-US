@@ -12,7 +12,7 @@ workflows:
       cache_paths: []
 
     scripts:
-      - name: Clean project
+      - name: Clean everything
         script: |
           flutter clean
           rm -rf ios/Pods
@@ -21,13 +21,14 @@ workflows:
           rm -rf ios/Flutter/Flutter.podspec
           rm -rf ~/Library/Developer/Xcode/DerivedData
 
-      - name: Install Flutter dependencies
+      - name: Install Flutter deps
         script: |
           flutter pub get
 
-      - name: Install Pods (LOCKED)
+      - name: Reinstall Pods clean (LOCKED)
         script: |
           cd ios
+          pod deintegrate
           pod install --deployment
 
       - name: Build iOS
