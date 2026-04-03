@@ -34,7 +34,7 @@ class PaywallScreen extends StatelessWidget {
         final result = await Purchases.purchasePackage(package);
 
         /// 🔥 UPDATE SUBSCRIPTION STATE
-        SubscriptionService.updateStatus(result.customerInfo);
+        SubscriptionService.updateStatus(result);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Subscription successful!")),
