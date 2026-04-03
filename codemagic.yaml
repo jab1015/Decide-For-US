@@ -3,7 +3,7 @@ workflows:
     name: iOS Release Build
 
     environment:
-      flutter: master   # 🔥 CRITICAL FIX
+      flutter: master
       xcode: latest
 
       ios_signing:
@@ -14,6 +14,10 @@ workflows:
       app_store_connect: Codemagic
 
     scripts:
+      - name: Disable Swift Package Manager (FIX)
+        script: |
+          rm -rf ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm || true
+
       - name: Get Flutter packages
         script: |
           flutter pub get
