@@ -23,10 +23,10 @@ class AIService {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final List data = jsonDecode(response.body);
 
-      return (data as List)
-          .map((e) => Activity.fromJson(e))
+      return data
+          .map((e) => Activity.fromJson(e as Map<String, dynamic>))
           .toList();
     } else {
       throw Exception("Failed to load ideas");
