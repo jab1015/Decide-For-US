@@ -13,24 +13,20 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.6
-
-  # Local storage
   shared_preferences: ^2.2.2
 
-  # Subscriptions (RevenueCat)
-  purchases_flutter: ^6.30.0
+  # ✅ UPDATED (CRITICAL FIX)
+  purchases_flutter: ^9.16.0
 
-  # Firebase (compatible versions)
-  firebase_core: ^2.30.0
+  firebase_core: ^2.32.0
   firebase_auth: ^4.16.0
 
-  # ✅ FIXED (compatible + includes privacy manifest)
+  # keep compatible version
   share_plus: ^7.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^3.0.0
 
 flutter:
