@@ -10,7 +10,9 @@ project 'Runner', {
 
 def flutter_root
   generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-  raise "Generated.xcconfig must exist. Run flutter pub get first" unless File.exist?(generated_xcode_build_settings_path)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. Run flutter pub get first"
+  end
 
   File.foreach(generated_xcode_build_settings_path) do |line|
     matches = line.match(/FLUTTER_ROOT\=(.*)/)
@@ -24,7 +26,6 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  # 🚨 CHANGE: REMOVE static linkage (this is the fix)
   use_frameworks!
   use_modular_headers!
 
@@ -36,10 +37,19 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
+      # 🔥 FORCE iOS 13
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
 
-      # Ensure module maps are generated properly
-      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      # 🔥 REMOVE INVALID -G FLAG (THIS FIXES YOUR ERROR)
+      flags = config.build_settings['OTHER_CFLAGS']
+      if flags
+        config.build_settings['OTHER_CFLAGS'] = flags.gsub(/-G\S*/, '')
+      end
+
+      flags = config.build_settings['OTHER_LDFLAGS']
+      if flags
+        config.build_settings['OTHER_LDFLAGS'] = flags.gsub(/-G\S*/, '')
+      end
     end
   end
 end
