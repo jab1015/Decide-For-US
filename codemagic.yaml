@@ -21,9 +21,18 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Build iOS (no signing)
+      - name: Build iOS (no signing forced)
         script: |
           flutter build ios --release --no-codesign
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
 
     artifacts:
       - build/ios/iphoneos/*.app
