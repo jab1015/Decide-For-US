@@ -14,10 +14,9 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      # 🔥 THIS IS THE MISSING PIECE
       - name: Fetch signing files
         script: |
-          app-store-connect fetch-signing-files
+          app-store-connect fetch-signing-files com.decideforus.app --type IOS_APP_STORE
 
       - name: Use signing files
         script: |
