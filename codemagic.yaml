@@ -12,38 +12,28 @@ workflows:
       cache_paths: []
 
     scripts:
-      - name: Full clean (project + global CocoaPods)
+      - name: Clean project
         script: |
           flutter clean
           rm -rf ios/Pods
-          rm -rf ios/Podfile.lock
           rm -rf ios/.symlinks
           rm -rf ios/Flutter/Flutter.framework
           rm -rf ios/Flutter/Flutter.podspec
           rm -rf ~/Library/Developer/Xcode/DerivedData
 
-          rm -rf ~/.cocoapods
-          rm -rf ~/.cache/CocoaPods
-          pod cache clean --all
-
-      - name: Reinstall CocoaPods fresh
-        script: |
-          pod setup
-
       - name: Install Flutter dependencies
         script: |
           flutter pub get
 
-      - name: Install Pods (generate Podfile.lock)
+      - name: Install Pods (LOCKED)
         script: |
           cd ios
-          pod install
+          pod install --deployment
 
       - name: Build iOS
         script: |
           flutter build ios --release --no-codesign
 
     artifacts:
-      - ios/Podfile.lock
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
