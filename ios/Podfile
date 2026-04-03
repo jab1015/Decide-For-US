@@ -40,13 +40,9 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
 
       # 🔥 FINAL FIX: remove invalid flags safely
-      if config.build_settings['OTHER_CFLAGS']
-        config.build_settings['OTHER_CFLAGS'] = config.build_settings['OTHER_CFLAGS'].reject { |flag| flag == '-G' }
-      end
-
-      if config.build_settings['OTHER_SWIFT_FLAGS']
-        config.build_settings['OTHER_SWIFT_FLAGS'] = config.build_settings['OTHER_SWIFT_FLAGS'].reject { |flag| flag == '-G' }
-      end
+      # 🔥 FORCE CLEAN FLAGS (FINAL FIX)
+config.build_settings['OTHER_CFLAGS'] = '$(inherited)'
+config.build_settings['OTHER_SWIFT_FLAGS'] = '$(inherited)'
     end
   end
 end
