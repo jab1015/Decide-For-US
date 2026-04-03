@@ -26,10 +26,10 @@ workflows:
           flutter pub get
 
       # 🔥 TEMPORARY STEP (NO --deployment)
-      - name: Install Pods (REGENERATE LOCK)
-        script: |
-          cd ios
-          pod install
+      - name: Install Pods (LOCKED)
+  script: |
+    cd ios
+    pod install --deployment
 
       - name: Build iOS
         script: |
