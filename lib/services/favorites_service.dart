@@ -1,13 +1,31 @@
-// TEMPORARY STUB (Firestore disabled)
+// TEMPORARY STUB (Firestore disabled but app-compatible)
 
 class FavoritesService {
-  static Future<void> savePlan(Map<String, dynamic> plan) async {
-    // no-op
+  static final Set<String> _favorites = {};
+
+  static Future<void> toggle(dynamic activity) async {
+    final id = activity.toString();
+
+    if (_favorites.contains(id)) {
+      _favorites.remove(id);
+    } else {
+      _favorites.add(id);
+    }
   }
 
-  static Future<void> removePlan(String id) async {
-    // no-op
+  static Future<bool> isFavorite(dynamic activity) async {
+    final id = activity.toString();
+    return _favorites.contains(id);
   }
+
+  static Future<List<dynamic>> getFavorites() async {
+    return _favorites.toList();
+  }
+
+  // Optional compatibility methods
+  static Future<void> savePlan(Map<String, dynamic> plan) async {}
+
+  static Future<void> removePlan(String id) async {}
 
   static Future<List<Map<String, dynamic>>> getSavedPlans() async {
     return [];
