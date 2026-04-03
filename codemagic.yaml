@@ -1,51 +1,49 @@
 workflows:
   ios-release:
     name: iOS Release Build
+    max_build_duration: 60
 
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
 
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.decideforus.app
-
-    integrations:
-      app_store_connect: Codemagic
+    cache:
+      cache_paths: []
 
     scripts:
-      - name: Clean project
+      - name: Full clean (project + global CocoaPods)
         script: |
           flutter clean
+          rm -rf ios/Pods
+          rm -rf ios/Podfile.lock
+          rm -rf ios/.symlinks
+          rm -rf ios/Flutter/Flutter.framework
+          rm -rf ios/Flutter/Flutter.podspec
+          rm -rf ~/Library/Developer/Xcode/DerivedData
 
-      - name: Get packages
+          # 🚨 CRITICAL: wipe CocoaPods global cache (THIS is the real fix)
+          rm -rf ~/.cocoapods
+          rm -rf ~/.cache/CocoaPods
+          pod cache clean --all
+
+      - name: Reinstall CocoaPods fresh
+        script: |
+          pod setup
+
+      - name: Install Flutter deps
         script: |
           flutter pub get
 
-      - name: Build iOS (no codesign)
+      - name: Install Pods (clean install)
+        script: |
+          cd ios
+          pod install --repo-update --clean-install
+
+      - name: Build iOS
         script: |
           flutter build ios --release --no-codesign
 
-      - name: Archive with Xcode (FINAL FIX)
-        script: |
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/Runner.xcarchive \
-            archive
-
-      - name: Export IPA
-        script: |
-          cd ios
-          xcodebuild -exportArchive \
-            -archivePath build/Runner.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/ipa
-
     artifacts:
-      - ios/build/ipa/*.ipa
-
-    publishing:
-      app_store_connect:
-        auth: integration
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
