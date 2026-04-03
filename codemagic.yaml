@@ -3,7 +3,7 @@ workflows:
     name: iOS Release Build
 
     environment:
-      flutter: 3.24.5   # 🔥 STABLE VERSION THAT WORKS
+      flutter: stable
       xcode: latest
 
       ios_signing:
@@ -18,9 +18,20 @@ workflows:
         script: |
           flutter clean
 
-      - name: Get Flutter packages
+      - name: Get packages
         script: |
           flutter pub get
+
+      - name: Install pods
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: 🔥 FORCE REMOVE INVALID FLAGS AT BUILD TIME
+        script: |
+          export OTHER_CFLAGS="$(echo $OTHER_CFLAGS | sed 's/-G//g')"
+          export OTHER_SWIFT_FLAGS="$(echo $OTHER_SWIFT_FLAGS | sed 's/-G//g')"
 
       - name: Apply code signing
         script: |
