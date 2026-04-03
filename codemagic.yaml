@@ -14,11 +14,8 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Fetch signing files
-        script: |
-          app-store-connect fetch-signing-files com.decideforus.app --type IOS_APP_STORE
-
-      - name: Use signing files
+      # ✅ THIS is all you need for your setup
+      - name: Apply code signing
         script: |
           xcode-project use-profiles
 
