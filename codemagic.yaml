@@ -22,7 +22,6 @@ workflows:
           rm -rf ios/Flutter/Flutter.podspec
           rm -rf ~/Library/Developer/Xcode/DerivedData
 
-          # 🚨 CRITICAL: wipe CocoaPods global cache (THIS is the real fix)
           rm -rf ~/.cocoapods
           rm -rf ~/.cache/CocoaPods
           pod cache clean --all
@@ -31,19 +30,20 @@ workflows:
         script: |
           pod setup
 
-      - name: Install Flutter deps
+      - name: Install Flutter dependencies
         script: |
           flutter pub get
 
-      - name: Install Pods (clean install)
+      - name: Install Pods (generate Podfile.lock)
         script: |
           cd ios
-          pod install --repo-update --clean-install
+          pod install
 
       - name: Build iOS
         script: |
           flutter build ios --release --no-codesign
 
     artifacts:
+      - ios/Podfile.lock
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
