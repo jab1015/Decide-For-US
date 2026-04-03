@@ -3,7 +3,7 @@ workflows:
     name: iOS Release Build
 
     environment:
-      flutter: stable
+      flutter: master   # 🔥 CRITICAL FIX
       xcode: latest
 
       ios_signing:
@@ -17,18 +17,6 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter pub get
-
-      - name: Install Pods
-        script: |
-          cd ios
-          pod install
-          cd ..
-
-      - name: 🔥 FORCE REMOVE -G FROM ALL BUILD SETTINGS
-        script: |
-          echo "Removing invalid -G flags everywhere..."
-
-          find ios -name "*.pbxproj" -exec sed -i '' 's/-G//g' {} +
 
       - name: Apply code signing
         script: |
