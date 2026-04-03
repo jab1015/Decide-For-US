@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
 
     environment:
-      flutter: 3.24.0   # 🔥 force modern Flutter
+      flutter: 3.24.0
       xcode: latest
 
     cache:
@@ -21,9 +21,9 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Build iOS (Flutter managed)
+      - name: Build iOS (no signing)
         script: |
-          flutter build ipa --release
+          flutter build ios --release --no-codesign
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/*.app
