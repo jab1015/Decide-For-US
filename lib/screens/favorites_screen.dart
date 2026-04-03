@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/activity.dart';
 import '../services/favorites_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
