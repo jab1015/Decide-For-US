@@ -41,7 +41,7 @@ class _DecideScreenState extends State<DecideScreen> {
   final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
 
-  final player = AudioPlayer();
+  final AudioPlayer player = AudioPlayer();
 
   bool get isSubscribed => SubscriptionService.isSubscribed;
 
@@ -111,8 +111,6 @@ class _DecideScreenState extends State<DecideScreen> {
 
     await Future.delayed(const Duration(milliseconds: 100));
 
-    if (!_scrollController.hasClients) return;
-
     final target = _scrollController.position.maxScrollExtent;
 
     await _scrollController.animateTo(
@@ -135,7 +133,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
     if (!await canUseApp()) return;
 
-    await player.play(AssetSource('sounds/spin.mp3'));
+    await player.play(AssetSource('assets/sounds/spin.mp3'));
 
     final group = selectedGroup;
     final budget = selectedBudget;
@@ -159,7 +157,7 @@ class _DecideScreenState extends State<DecideScreen> {
       history: history,
     );
 
-    await Future.delayed(const Duration(seconds: 9));
+    await Future.delayed(const Duration(seconds: 3));
 
     try {
       final aiResults = await futureIdeas;
@@ -175,7 +173,7 @@ class _DecideScreenState extends State<DecideScreen> {
         isLoading = false;
       });
 
-      await player.play(AssetSource('sounds/win.mp3'));
+      await player.play(AssetSource('assets/sounds/win.mp3'));
       _confetti.play();
 
       await _scrollToResults();
@@ -259,108 +257,27 @@ class _DecideScreenState extends State<DecideScreen> {
           controller: _scrollController,
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
-                "Decide For Us",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
+              const Text("Decide For Us",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Text("🔥 $streak Day Streak"),
               const SizedBox(height: 20),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Date Night 💎"),
-                  const SizedBox(width: 10),
-                  Switch(
-                    value: isDateNight,
-                    onChanged: (val) {
-                      if (!isSubscribed && val) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const PaywallScreen()),
-                        );
-                        return;
-                      }
-                      setState(() => isDateNight = val);
-                    },
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              section("Who’s involved?"),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 10,
-                children: ["Couple", "Friends", "Family", "Solo"]
-                    .map((e) => chip(
-                          e,
-                          selectedGroup,
-                          (v) => setState(() => selectedGroup = v),
-                        ))
-                    .toList(),
-              ),
-
-              const SizedBox(height: 20),
-
-              section("Budget"),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 10,
-                children: ["Free", "\$", "\$\$"]
-                    .map((e) => chip(
-                          e,
-                          selectedBudget,
-                          (v) => setState(() => selectedBudget = v),
-                        ))
-                    .toList(),
-              ),
-
-              const SizedBox(height: 20),
-
-              section("Energy"),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 10,
-                children: ["Low", "Medium", "High"]
-                    .map((e) => chip(
-                          e,
-                          selectedEnergy,
-                          (v) => setState(() => selectedEnergy = v),
-                        ))
-                    .toList(),
-              ),
-
-              const SizedBox(height: 30),
-
-              Center(
-                child: GestureDetector(
-                  onTap: spin,
-                  child: AnimatedRotation(
-                    turns: rotation,
-                    duration: const Duration(seconds: 9),
-                    curve: Curves.easeOut,
-                    child: Container(
-                      height: 160,
-                      width: 160,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Colors.deepPurple, Colors.blue],
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "SPIN 🎡",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
+              GestureDetector(
+                onTap: spin,
+                child: Container(
+                  height: 160,
+                  width: 160,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Colors.deepPurple, Colors.blue],
                     ),
+                  ),
+                  child: const Center(
+                    child: Text("SPIN 🎡",
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ),
               ),
@@ -369,18 +286,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
               if (isLoading) const CircularProgressIndicator(),
 
-              const SizedBox(height: 20),
-
-              if (!isLoading && results.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 24),
-                  child: Text(
-                    "Tap SPIN to get ideas",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-
-              ...results.take(2).map((r) => DecisionCard(activity: r)),
+              ...results.map((r) => DecisionCard(activity: r)),
             ],
           ),
         ),
