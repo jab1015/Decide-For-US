@@ -4,37 +4,26 @@ workflows:
     max_build_duration: 60
 
     environment:
-      flutter: stable
+      flutter: 3.24.0   # 🔥 force modern Flutter
       xcode: latest
-      cocoapods: default
 
     cache:
-      cache_paths: []
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - ~/.pub-cache
 
     scripts:
-      - name: Clean everything
+      - name: Flutter clean
         script: |
           flutter clean
-          rm -rf ios/Pods
-          rm -rf ios/.symlinks
-          rm -rf ios/Flutter/Flutter.framework
-          rm -rf ios/Flutter/Flutter.podspec
-          rm -rf ios/Podfile.lock
-          rm -rf ~/Library/Developer/Xcode/DerivedData
 
-      - name: Install Flutter deps
+      - name: Get dependencies
         script: |
           flutter pub get
 
-      - name: Install Pods fresh
+      - name: Build iOS (Flutter managed)
         script: |
-          cd ios
-          pod install --repo-update
-
-      - name: Build iOS
-        script: |
-          flutter build ios --release --no-codesign
+          flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
