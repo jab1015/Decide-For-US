@@ -1,44 +1,35 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:geolocator/geolocator.dart';
+import '../models/activity.dart';
 
 class AIService {
-  static Future<Map<String, dynamic>> getDecision() async {
-    try {
-      // Request permission
-      LocationPermission permission = await Geolocator.requestPermission();
+  static Future<List<Activity>> getIdeas({
+    String? group,
+    String? budget,
+    String? energy,
+    bool isDateNight = false,
+    List<String> history = const [],
+  }) async {
+    final response = await http.post(
+      Uri.parse('https://your-api-endpoint.com/generate'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "group": group,
+        "budget": budget,
+        "energy": energy,
+        "dateNight": isDateNight,
+        "history": history,
+      }),
+    );
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw Exception("Location permission denied");
-      }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
-      // Get location
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      final url = Uri.parse("YOUR_API_ENDPOINT_HERE");
-
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "lat": position.latitude,
-          "lng": position.longitude,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception("API failed");
-      }
-    } catch (e) {
-      return {
-        "option1": "Dinner and a movie",
-        "option2": "Go for a walk"
-      };
+      return (data as List)
+          .map((e) => Activity.fromJson(e))
+          .toList();
+    } else {
+      throw Exception("Failed to load ideas");
     }
   }
 }
