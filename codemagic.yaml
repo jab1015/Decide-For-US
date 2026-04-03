@@ -14,7 +14,12 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Set up code signing
+      # 🔥 THIS IS THE MISSING PIECE
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files
+
+      - name: Use signing files
         script: |
           xcode-project use-profiles
 
