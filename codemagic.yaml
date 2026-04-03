@@ -1,40 +1,22 @@
 workflows:
   ios-release:
     name: iOS Release Build
-    max_build_duration: 60
 
     environment:
       flutter: stable
       xcode: latest
 
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.decideforus.app
-
-    integrations:
-      app_store_connect: Codemagic
+      groups:
+        - app_store_credentials  # make sure this exists in Codemagic
 
     scripts:
       - name: Get Flutter packages
         script: |
           flutter pub get
 
-      - name: Set up code signing
+      - name: Build iOS
         script: |
-          xcode-project use-profiles
-
-      - name: Build iOS IPA (correct method)
-        script: |
-          flutter build ios --release
-          xcodebuild -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive archive
-
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportOptionsPlist /Users/builder/export_options.plist \
-            -exportPath build/ios/ipa
+          flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
@@ -42,4 +24,3 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
