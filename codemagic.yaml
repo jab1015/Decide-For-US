@@ -1,28 +1,42 @@
 workflows:
   ios-release:
-    name: iOS Release Build
+    name: iOS Release
+    max_build_duration: 60
 
     environment:
-      flutter: 3.24.0
+      flutter: stable
       xcode: latest
 
     integrations:
-      app_store_connect: Codemagic
+      app_store_connect: DecideForUsKey
 
     scripts:
-      - name: Clean
-        script: flutter clean
-
-      - name: Get packages
-        script: flutter pub get
-
-      - name: Set up automatic signing
+      - name: Install dependencies
         script: |
-          xcode-project use-profiles
+          flutter clean
+          flutter pub get
 
-      - name: Build IPA
+      - name: Remove hardcoded provisioning profile
+        script: |
+          echo "Cleaning provisioning profile references..."
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = .*;/PROVISIONING_PROFILE_SPECIFIER = "";/g' ios/Runner.xcodeproj/project.pbxproj || true
+          sed -i '' 's/PROVISIONING_PROFILE = .*;/PROVISIONING_PROFILE = "";/g' ios/Runner.xcodeproj/project.pbxproj || true
+
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      - name: Build IPA (no codesign)
         script: |
           flutter build ipa --release --no-codesign
 
     artifacts:
       - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
