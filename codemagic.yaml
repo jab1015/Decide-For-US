@@ -5,18 +5,22 @@ workflows:
     environment:
       flutter: 3.24.0
       xcode: latest
-
-    integrations:
-      app_store_connect: Codemagic API key
-
-    ios_signing:
-      distribution_type: app_store
-      bundle_identifier: com.decideforus.app
+      cocoapods: default
 
     scripts:
-      - flutter clean
-      - flutter pub get
-      - flutter build ipa --release
+      - name: Clean
+        script: flutter clean
+
+      - name: Get packages
+        script: flutter pub get
+
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+
+      - name: Build IPA
+        script: |
+          flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
