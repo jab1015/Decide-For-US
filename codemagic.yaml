@@ -3,11 +3,8 @@ workflows:
     name: iOS Release Build
 
     environment:
-      flutter: master
+      flutter: 3.24.5   # 🔥 STABLE VERSION THAT WORKS
       xcode: latest
-
-      vars:
-        FLUTTER_XCODE_DISABLE_SWIFT_PACKAGE_MANAGER: "true"
 
       ios_signing:
         distribution_type: app_store
