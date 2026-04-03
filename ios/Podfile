@@ -39,25 +39,13 @@ post_install do |installer|
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
 
-      # 🔥 ONLY target problematic pods
-      if ['gRPC-Core', 'BoringSSL-GRPC'].include? target.name
+      # 🔥 FORCE compiler to ignore unknown flags like -G
+      config.build_settings['WARNING_CFLAGS'] = ['-Wno-error=unused-command-line-argument']
+      config.build_settings['OTHER_CFLAGS'] ||= ['$(inherited)']
+      config.build_settings['OTHER_CFLAGS'] << '-Wno-unused-command-line-argument'
 
-        %w[
-          OTHER_CFLAGS
-          OTHER_CPLUSPLUSFLAGS
-          OTHER_LDFLAGS
-        ].each do |key|
-          flags = config.build_settings[key]
-          if flags
-            if flags.is_a?(Array)
-              config.build_settings[key] = flags.reject { |f| f.include?('-G') }
-            else
-              config.build_settings[key] = flags.gsub(/-G\S*/, '')
-            end
-          end
-        end
-
-      end
+      config.build_settings['OTHER_CPLUSPLUSFLAGS'] ||= ['$(inherited)']
+      config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-Wno-unused-command-line-argument'
     end
   end
 end
