@@ -4,7 +4,7 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: 16.4
+      xcode: latest
 
       ios_signing:
         distribution_type: app_store
@@ -22,40 +22,29 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Install pods
+      - name: Build iOS (no codesign)
+        script: |
+          flutter build ios --release --no-codesign
+
+      - name: Archive with Xcode (FINAL FIX)
         script: |
           cd ios
-          pod install
-          cd ..
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/Runner.xcarchive \
+            archive
 
-      - name: 🔥 FORCE REMOVE INVALID FLAGS AT BUILD TIME
+      - name: Export IPA
         script: |
-          export OTHER_CFLAGS="$(echo $OTHER_CFLAGS | sed 's/-G//g')"
-          export OTHER_SWIFT_FLAGS="$(echo $OTHER_SWIFT_FLAGS | sed 's/-G//g')"
-
-      - name: Apply code signing
-        script: |
-          xcode-project use-profiles
-
-      - name: Build IPA (Xcode direct - FINAL FIX)
-  script: |
-    flutter build ios --release --no-codesign
-
-    cd ios
-
-    xcodebuild -workspace Runner.xcworkspace \
-      -scheme Runner \
-      -configuration Release \
-      -archivePath build/Runner.xcarchive \
-      archive
-
-    xcodebuild -exportArchive \
-      -archivePath build/Runner.xcarchive \
-      -exportOptionsPlist ExportOptions.plist \
-      -exportPath build/ipa
+          cd ios
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/ipa
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - ios/build/ipa/*.ipa
 
     publishing:
       app_store_connect:
