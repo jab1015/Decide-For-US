@@ -7,14 +7,17 @@ workflows:
       xcode: latest
 
       groups:
-        - app_store_credentials  # make sure this exists in Codemagic
+        - app_store_credentials
+
+    integrations:
+      app_store_connect: Codemagic
 
     scripts:
       - name: Get Flutter packages
         script: |
           flutter pub get
 
-      - name: Build iOS
+      - name: Build iOS IPA
         script: |
           flutter build ipa --release
 
