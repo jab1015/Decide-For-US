@@ -22,11 +22,9 @@ workflows:
         script: |
           xcode-project use-profiles
 
-      - name: Build IPA (override bad flags)
+      - name: Build IPA
         script: |
-          flutter build ipa --release -- \
-            OTHER_CFLAGS="" \
-            OTHER_SWIFT_FLAGS=""
+          flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
