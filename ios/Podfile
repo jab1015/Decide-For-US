@@ -37,7 +37,10 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
-      # Remove invalid '-G' flag from ALL pods
+      # ✅ FIX 1: Force ALL pods to iOS 13
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+
+      # ✅ FIX 2: Remove invalid '-G' flag if injected
       if config.build_settings['OTHER_CFLAGS']
         config.build_settings['OTHER_CFLAGS'] = config.build_settings['OTHER_CFLAGS'].reject { |f| f == '-G' }
       end
