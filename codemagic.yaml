@@ -6,6 +6,9 @@ workflows:
       flutter: master
       xcode: latest
 
+      vars:
+        FLUTTER_XCODE_DISABLE_SWIFT_PACKAGE_MANAGER: "true"
+
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.decideforus.app
@@ -14,9 +17,9 @@ workflows:
       app_store_connect: Codemagic
 
     scripts:
-      - name: Disable Swift Package Manager (FIX)
+      - name: Clean project
         script: |
-          rm -rf ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm || true
+          flutter clean
 
       - name: Get Flutter packages
         script: |
