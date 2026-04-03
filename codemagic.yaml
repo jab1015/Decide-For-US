@@ -4,7 +4,7 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: latest
+      xcode: 15.4   # 🔥 FIX: downgrade Xcode
 
       ios_signing:
         distribution_type: app_store
@@ -17,22 +17,6 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter pub get
-
-      - name: Install Pods
-        script: |
-          cd ios
-          pod install
-          cd ..
-
-      - name: 🔥 Remove invalid -G flag (FINAL FIX)
-        script: |
-          echo "Fixing invalid compiler flags..."
-
-          # Remove from Pods project (MOST IMPORTANT)
-          sed -i '' 's/-G//g' ios/Pods/Pods.xcodeproj/project.pbxproj || true
-
-          # Remove from main project
-          sed -i '' 's/-G//g' ios/Runner.xcodeproj/project.pbxproj || true
 
       - name: Apply code signing
         script: |
