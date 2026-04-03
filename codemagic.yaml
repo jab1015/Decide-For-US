@@ -18,6 +18,18 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Install Pods
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: 🔥 FORCE REMOVE -G FROM ALL BUILD SETTINGS
+        script: |
+          echo "Removing invalid -G flags everywhere..."
+
+          find ios -name "*.pbxproj" -exec sed -i '' 's/-G//g' {} +
+
       - name: Apply code signing
         script: |
           xcode-project use-profiles
