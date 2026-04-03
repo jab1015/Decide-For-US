@@ -18,17 +18,16 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Fix iOS invalid compiler flags
+      - name: Fix iOS compiler flags (PROJECT LEVEL)
         script: |
-          echo "Cleaning invalid compiler flags..."
-          if [ -f ios/Flutter/Generated.xcconfig ]; then
-            sed -i '' 's/-G//g' ios/Flutter/Generated.xcconfig || true
-          fi
-          if [ -f ios/Flutter/Release.xcconfig ]; then
-            sed -i '' 's/-G//g' ios/Flutter/Release.xcconfig || true
-          fi
-          if [ -f ios/Flutter/Debug.xcconfig ]; then
-            sed -i '' 's/-G//g' ios/Flutter/Debug.xcconfig || true
+          echo "Removing invalid -G flags from Xcode project..."
+
+          # Remove from project file
+          sed -i '' 's/-G//g' ios/Runner.xcodeproj/project.pbxproj || true
+
+          # Remove from Pods project if exists
+          if [ -f ios/Pods/Pods.xcodeproj/project.pbxproj ]; then
+            sed -i '' 's/-G//g' ios/Pods/Pods.xcodeproj/project.pbxproj || true
           fi
 
       - name: Apply code signing
