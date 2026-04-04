@@ -7,29 +7,57 @@ class AIService {
     String? group,
     String? budget,
     String? energy,
-    bool isDateNight = false,
-    List<String> history = const [],
+    bool? isDateNight,
+    List<String>? history,
   }) async {
-    final response = await http.post(
-      Uri.parse('https://your-api-endpoint.com/generate'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        "group": group,
-        "budget": budget,
-        "energy": energy,
-        "dateNight": isDateNight,
-        "history": history,
-      }),
+    final url = Uri.parse(
+      "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getIdeas",
     );
 
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "group": group,
+          "budget": budget,
+          "energy": energy,
+          "isDateNight": isDateNight,
+          "history": history ?? [],
+        }),
+      );
 
-      return data
-          .map((e) => Activity.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } else {
-      throw Exception("Failed to load ideas");
+      if (response.statusCode != 200) {
+        throw Exception("API failed");
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      /// 🔥 HANDLE BOTH LIST + SINGLE OBJECT (just in case)
+      final List<dynamic> data =
+          decoded is List ? decoded : [decoded];
+
+      final ideas = data.map<Activity>((e) {
+        return Activity(
+          title: e['title'] ?? '',
+          description: e['description'] ?? '',
+          group: e['group'] ?? '',
+          budget: e['budget'] ?? '',
+        );
+      }).toList();
+
+      /// 🔥 RETURN ALL RESULTS (NO LIMITING)
+      return ideas;
+
+    } catch (e) {
+      return [
+        Activity(
+          title: "Error",
+          description: "Unable to load ideas.",
+          group: "Error",
+          budget: "Error",
+        )
+      ];
     }
   }
 }

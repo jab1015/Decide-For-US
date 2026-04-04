@@ -41,7 +41,7 @@ class _DecideScreenState extends State<DecideScreen> {
   final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
 
-  final AudioPlayer player = AudioPlayer();
+  final player = AudioPlayer();
 
   bool get isSubscribed => SubscriptionService.isSubscribed;
 
@@ -51,14 +51,6 @@ class _DecideScreenState extends State<DecideScreen> {
     loadUsage();
     loadStreak();
     loadHistory();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _confetti.dispose();
-    player.dispose();
-    super.dispose();
   }
 
   Future<void> loadHistory() async {
@@ -106,21 +98,7 @@ class _DecideScreenState extends State<DecideScreen> {
     return true;
   }
 
-  Future<void> _scrollToResults() async {
-    if (!_scrollController.hasClients) return;
-
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final target = _scrollController.position.maxScrollExtent;
-
-    await _scrollController.animateTo(
-      target,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOut,
-    );
-  }
-
-  Future<void> spin() async {
+  void spin() async {
     if (isLoading) return;
 
     if (isDateNight && !isSubscribed) {
@@ -133,7 +111,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
     if (!await canUseApp()) return;
 
-    await player.play(AssetSource('assets/sounds/spin.mp3'));
+    await player.play(AssetSource('sounds/spin.mp3'));
 
     final group = selectedGroup;
     final budget = selectedBudget;
@@ -157,7 +135,7 @@ class _DecideScreenState extends State<DecideScreen> {
       history: history,
     );
 
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 2));
 
     try {
       final aiResults = await futureIdeas;
@@ -169,14 +147,12 @@ class _DecideScreenState extends State<DecideScreen> {
       await saveHistory();
 
       setState(() {
-        results = aiResults.take(2).toList();
+        results = aiResults;
         isLoading = false;
       });
 
-      await player.play(AssetSource('assets/sounds/win.mp3'));
+      await player.play(AssetSource('sounds/win.mp3'));
       _confetti.play();
-
-      await _scrollToResults();
     } catch (e) {
       setState(() {
         results = [
@@ -189,8 +165,6 @@ class _DecideScreenState extends State<DecideScreen> {
         ];
         isLoading = false;
       });
-
-      await _scrollToResults();
     }
   }
 
@@ -211,12 +185,7 @@ class _DecideScreenState extends State<DecideScreen> {
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.deepPurple : Colors.black,
-          ),
-        ),
+        child: Text(label),
       ),
     );
   }
@@ -257,36 +226,121 @@ class _DecideScreenState extends State<DecideScreen> {
           controller: _scrollController,
           padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text("Decide For Us",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              const Text(
+                "Decide For Us",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 10),
               Text("🔥 $streak Day Streak"),
               const SizedBox(height: 20),
 
-              GestureDetector(
-                onTap: spin,
-                child: Container(
-                  height: 160,
-                  width: 160,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Colors.deepPurple, Colors.blue],
-                    ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Date Night 💎"),
+                  const SizedBox(width: 10),
+                  Switch(
+                    value: isDateNight,
+                    onChanged: (val) {
+                      if (!isSubscribed && val) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const PaywallScreen()),
+                        );
+                        return;
+                      }
+                      setState(() => isDateNight = val);
+                    },
                   ),
-                  child: const Center(
-                    child: Text("SPIN 🎡",
-                        style: TextStyle(color: Colors.white)),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              /// 🔥 RESTORED FILTERS
+              section("Who’s involved?"),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                children: ["Couple","Friends","Family","Solo"]
+                    .map((e) => chip(e, selectedGroup,
+                        (v) => setState(() => selectedGroup = v)))
+                    .toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              section("Budget"),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                children: ["Free","\$","\$\$"]
+                    .map((e) => chip(e, selectedBudget,
+                        (v) => setState(() => selectedBudget = v)))
+                    .toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              section("Energy"),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                children: ["Low","Medium","High"]
+                    .map((e) => chip(e, selectedEnergy,
+                        (v) => setState(() => selectedEnergy = v)))
+                    .toList(),
+              ),
+
+              const SizedBox(height: 30),
+
+              Center(
+                child: GestureDetector(
+                  onTap: spin,
+                  child: AnimatedRotation(
+                    turns: rotation,
+                    duration: const Duration(seconds: 9),
+                    curve: Curves.easeOut,
+                    child: Container(
+                      height: 160,
+                      width: 160,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [Colors.deepPurple, Colors.blue],
+                        ),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "SPIN 🎡",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              if (isLoading) const CircularProgressIndicator(),
+              if (isLoading)
+                const CircularProgressIndicator(),
 
-              ...results.map((r) => DecisionCard(activity: r)),
+              const SizedBox(height: 20),
+
+             if (!isLoading && results.isEmpty)
+  const Padding(
+    padding: EdgeInsets.only(top: 40),
+    child: Text(
+      "Tap SPIN to get ideas",
+      style: TextStyle(color: Colors.grey),
+    ),
+  ),
+
+...results.take(2).map((r) => DecisionCard(activity: r)),
             ],
           ),
         ),

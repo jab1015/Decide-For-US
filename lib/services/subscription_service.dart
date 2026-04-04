@@ -19,7 +19,7 @@ class SubscriptionService {
       String apiKey;
 
       if (Platform.isIOS) {
-        apiKey = "appl_PUSUzSUTwTnqCKYmRlKutkZUeLvY";
+        apiKey = "appl_PUSUzSUTwTnqCKYmRlKutkZUeLv";
       } else if (Platform.isAndroid) {
         apiKey = "goog_lnWIfTDSTBOqFJIxpYcUjFRWRql";
       } else {
