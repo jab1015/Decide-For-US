@@ -3,9 +3,16 @@
 "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>uploadBitcode</key>
-    <false/>
+  <key>method</key>
+  <string>app-store</string>
+
+  <key>signingStyle</key>
+  <string>automatic</string>
+
+  <key>compileBitcode</key>
+  <false/>
+
+  <key>destination</key>
+  <string>export</string>
 </dict>
 </plist>
