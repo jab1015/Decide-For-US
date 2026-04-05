@@ -32,8 +32,10 @@ app.post("/", async (req, res) => {
       location = "United States",
     } = req.body;
 
-    /// 🔥 EVENTS ONLY IF NOT DATE NIGHT
-    if (!isDateNight && ticketKey) {
+    /// 🔥 STEP 1: FETCH EVENTS (ALWAYS, NOT CONDITIONAL)
+    let eventSummary = "";
+
+    if (ticketKey) {
       try {
         const eventRes = await fetch(
           `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${ticketKey}&keyword=${location}&size=5`
@@ -42,17 +44,16 @@ app.post("/", async (req, res) => {
         const eventData = await eventRes.json();
 
         if (eventData._embedded?.events?.length > 0) {
-          return res.json(
-            eventData._embedded.events.slice(0, 2).map((e) => ({
-              title: `🎟 ${e.name}`,
-              description: `${e.dates.start.localDate} at ${e._embedded.venues[0].name}`,
-              group,
-              budget,
-            }))
-          );
+          eventSummary = eventData._embedded.events
+            .slice(0, 5)
+            .map(
+              (e) =>
+                `${e.name} at ${e._embedded.venues[0].name} (${e.dates.start.localDate})`
+            )
+            .join("\n");
         }
       } catch (e) {
-        console.log("Event fetch failed, using AI");
+        console.log("⚠️ Ticketmaster failed:", e.message);
       }
     }
 
@@ -74,6 +75,18 @@ app.post("/", async (req, res) => {
     const dateNightPrompt = `
 You are a DATE NIGHT PLANNER.
 
+Use real local places and events when possible:
+
+${eventSummary}
+
+STRICT RULES:
+- MUST include 2–3 different places
+- MUST feel like a real evening plan
+- MUST be romantic or fun
+- NEVER generic ideas
+- NEVER repeat: ${history.join(", ")}
+- ALL places MUST be near: ${location}
+
 Return ONLY JSON:
 
 [
@@ -85,32 +98,33 @@ Return ONLY JSON:
     "vibe": "short emotional hook"
   }
 ]
-
-Rules:
-- MUST include 2–3 different places
-- MUST feel like a real evening plan
-- MUST be romantic or fun
-- NO generic ideas
-- NEVER repeat: ${history.join(", ")}
-- ALL places MUST be in or near: ${location}
-- DO NOT mix cities or states
 `;
 
-    /// 🔥 NORMAL MODE PROMPT
+    /// 🔥 NORMAL MODE PROMPT (FIXED)
     const normalPrompt = `
-Generate 3 fun activity ideas.
+You are a creative local planner.
 
-Location: ${location}
+Use REAL events when helpful:
 
-STRICT:
-- ALL places MUST be within the SAME city or nearby area
-- DO NOT mix cities or states
+${eventSummary}
+
+Filters:
+Group: ${group}
+Budget: ${budget}
+Energy: ${energy}
+
+STRICT RULES:
+- NEVER suggest "dinner and a movie"
+- Avoid generic ideas completely
+- Use real places or realistic local ideas
+- Respect ALL filters
+- Make ideas feel like something someone would actually do
 
 Return JSON:
 [
   {
     "title": "Short name",
-    "description": "Include place name + address",
+    "description": "Include real place + what to do",
     "group": "${group}",
     "budget": "${budget}"
   }
@@ -119,6 +133,7 @@ Return JSON:
 
     const prompt = isDateNight ? dateNightPrompt : normalPrompt;
 
+    /// 🔥 CALL OPENAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
@@ -127,7 +142,7 @@ Return JSON:
 
     let data = safeParse(completion.choices[0].message.content);
 
-    /// 🔥 FORMAT DATE NIGHT INTO UI
+    /// 💎 FORMAT DATE NIGHT FOR UI
     if (isDateNight) {
       data = data.map((item) => ({
         title: item.title,
@@ -138,6 +153,7 @@ Return JSON:
       }));
     }
 
+    /// 🔥 FINAL RESPONSE
     return res.json(data);
 
   } catch (err) {
