@@ -1,51 +1,24 @@
 workflows:
   ios-release:
     name: iOS Release Build
-
+    max_build_duration: 60
     environment:
       flutter: stable
-      xcode: latest
-
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.decideforus.app
-
-    integrations:
-      app_store_connect: Codemagic
 
     scripts:
-      - name: Clean project
+      - name: Clean & Install
         script: |
           flutter clean
-
-      - name: Get packages
-        script: |
           flutter pub get
 
-      - name: Build iOS (no codesign)
+      - name: Build iOS IPA
         script: |
-          flutter build ios --release --no-codesign
-
-      - name: Archive with Xcode (FINAL FIX)
-        script: |
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/Runner.xcarchive \
-            archive
-
-      - name: Export IPA
-        script: |
-          cd ios
-          xcodebuild -exportArchive \
-            -archivePath build/Runner.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/ipa
+          flutter build ipa --release
 
     artifacts:
-      - ios/build/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
         auth: integration
+        submit_to_testflight: true
