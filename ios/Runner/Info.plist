@@ -3,51 +3,58 @@
 <plist version="1.0">
 <dict>
 
-	<!-- App Info -->
-	<key>CFBundleDisplayName</key>
-	<string>Decide For Us</string>
-	<key>CFBundleName</key>
-	<string>decide_for_us</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleDisplayName</key>
+    <string>Decide For Us</string>
 
-	<!-- 🔥 THIS WAS MISSING (CRITICAL FIX) -->
-	<key>CFBundleExecutable</key>
-	<string>Runner</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.decideforus.app</string>
 
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
+    <key>CFBundleName</key>
+    <string>decide_for_us</string>
 
-	<!-- iOS Requirements -->
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
 
-	<!-- Orientation -->
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
 
-	<!-- Status Bar -->
-	<key>UIStatusBarHidden</key>
-	<false/>
+    <!-- 🔥 REQUIRED FIX -->
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
 
-	<!-- Location Permission -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to find activities and events near you.</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
 
-	<!-- Network Permissions -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+
+    <!-- LOCATION -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Your location is used to generate personalized nearby experiences.</string>
+
+    <!-- NETWORK -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+
+    <!-- BACKGROUND -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+    </array>
+
+    <!-- APP STORE -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 
 </dict>
 </plist>

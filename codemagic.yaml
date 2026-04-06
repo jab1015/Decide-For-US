@@ -6,19 +6,40 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
+
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ios/Pods
 
     scripts:
-      - name: Flutter clean
+      - name: Clean everything (CRITICAL FIX)
         script: |
+          echo "Cleaning project..."
           flutter clean
-
-      - name: Get dependencies
+          rm -rf ios/Pods
+          rm -rf ios/Podfile.lock
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+      
+      - name: Get Flutter packages
         script: |
           flutter pub get
 
-      - name: Build IPA
+      - name: Install CocoaPods
         script: |
-          flutter build ipa
+          cd ios
+          pod install
+          cd ..
+
+      - name: Verify Info.plist fix
+        script: |
+          echo "Checking CFBundlePackageType..."
+          grep -q "CFBundlePackageType" ios/Runner/Info.plist || (echo "Missing CFBundlePackageType" && exit 1)
+
+      - name: Build IPA (Release)
+        script: |
+          flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
