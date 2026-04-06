@@ -8,15 +8,9 @@ workflows:
       xcode: latest
       cocoapods: default
 
-    cache:
-      cache_paths:
-        - ~/.pub-cache
-        - ios/Pods
-
     scripts:
-      - name: Clean project (FULL RESET)
+      - name: Clean project
         script: |
-          echo "Cleaning project..."
           flutter clean
           rm -rf ios/Pods
           rm -rf ios/Podfile.lock
@@ -32,16 +26,17 @@ workflows:
           pod install
           cd ..
 
-      - name: Validate Info.plist (CRITICAL)
-        script: |
-          echo "Checking CFBundlePackageType..."
-          grep -q "CFBundlePackageType" ios/Runner/Info.plist || (echo "Missing CFBundlePackageType" && exit 1)
-
-      - name: Set automatic build number
+      - name: Force build number (CRITICAL FIX)
         script: |
           BUILD_NUMBER=$(date +%s)
-          echo "Using build number: $BUILD_NUMBER"
-          flutter build ipa --release --build-number=$BUILD_NUMBER
+          echo "Setting build number to $BUILD_NUMBER"
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Runner/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/Runner/Info.plist
+
+      - name: Build IPA
+        script: |
+          flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
