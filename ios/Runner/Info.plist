@@ -3,73 +3,50 @@
 <plist version="1.0">
 <dict>
 
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-
+	<!-- App Info -->
 	<key>CFBundleDisplayName</key>
 	<string>Decide For Us</string>
-
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-
 	<key>CFBundleName</key>
 	<string>decide_for_us</string>
-
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 
-	<key>CFBundleSignature</key>
-	<string>????</string>
-
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-
+	<!-- iOS Requirements -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
-
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 
+	<!-- Supported Orientations -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
+	<!-- Status Bar -->
+	<key>UIStatusBarHidden</key>
+	<false/>
 
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-
-	<!-- ✅ REQUIRED LOCATION PERMISSIONS (FIX FOR YOUR ERROR) -->
-
+	<!-- Location Permission (REQUIRED) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to suggest nearby date ideas and activities.</string>
+	<string>We use your location to find activities and events near you.</string>
 
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>We use your location to improve recommendations based on your area.</string>
+	<!-- Network Fix (CRITICAL for API calls) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- Allow HTTP (if needed for some APIs) -->
+	<key>NSAllowsArbitraryLoadsInWebContent</key>
+	<true/>
 
 </dict>
 </plist>
