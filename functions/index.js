@@ -29,7 +29,7 @@ app.post("/", async (req, res) => {
       energy = "Any",
       isDateNight = false,
       history = [],
-      location = "Jacksonville, FL",
+      location = "United States",
     } = req.body;
 
     /// 🎟️ FETCH LOCAL EVENTS

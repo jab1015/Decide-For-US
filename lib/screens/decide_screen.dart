@@ -359,7 +359,18 @@ final futureIdeas = AIService.getIdeas(
 
               const SizedBox(height: 20),
 
-              if (isLoading) const CircularProgressIndicator(),
+              if (isLoading)
+  Column(
+    children: const [
+      SizedBox(height: 20),
+      CircularProgressIndicator(),
+      SizedBox(height: 10),
+      Text(
+        "Finding the perfect plan near you...",
+        style: TextStyle(color: Colors.grey),
+      ),
+    ],
+  ),
 
               const SizedBox(height: 20),
 
