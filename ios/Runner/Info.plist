@@ -10,6 +10,11 @@
 	<string>decide_for_us</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+	<!-- 🔥 THIS WAS MISSING (CRITICAL FIX) -->
+	<key>CFBundleExecutable</key>
+	<string>Runner</string>
+
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>CFBundleShortVersionString</key>
@@ -23,7 +28,7 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 
-	<!-- Supported Orientations -->
+	<!-- Orientation -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -33,20 +38,16 @@
 	<key>UIStatusBarHidden</key>
 	<false/>
 
-	<!-- Location Permission (REQUIRED) -->
+	<!-- Location Permission -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We use your location to find activities and events near you.</string>
 
-	<!-- Network Fix (CRITICAL for API calls) -->
+	<!-- Network Permissions -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-
-	<!-- Allow HTTP (if needed for some APIs) -->
-	<key>NSAllowsArbitraryLoadsInWebContent</key>
-	<true/>
 
 </dict>
 </plist>
