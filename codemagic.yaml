@@ -14,15 +14,15 @@ workflows:
         - ios/Pods
 
     scripts:
-      - name: Clean everything (CRITICAL FIX)
+      - name: Clean project (FULL RESET)
         script: |
           echo "Cleaning project..."
           flutter clean
           rm -rf ios/Pods
           rm -rf ios/Podfile.lock
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
-      
-      - name: Get Flutter packages
+
+      - name: Get dependencies
         script: |
           flutter pub get
 
@@ -32,14 +32,16 @@ workflows:
           pod install
           cd ..
 
-      - name: Verify Info.plist fix
+      - name: Validate Info.plist (CRITICAL)
         script: |
           echo "Checking CFBundlePackageType..."
           grep -q "CFBundlePackageType" ios/Runner/Info.plist || (echo "Missing CFBundlePackageType" && exit 1)
 
-      - name: Build IPA (Release)
+      - name: Set automatic build number
         script: |
-          flutter build ipa --release
+          BUILD_NUMBER=$(date +%s)
+          echo "Using build number: $BUILD_NUMBER"
+          flutter build ipa --release --build-number=$BUILD_NUMBER
 
     artifacts:
       - build/ios/ipa/*.ipa
