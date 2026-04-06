@@ -12,6 +12,7 @@ import '../services/subscription_service.dart';
 import '../services/streak_service.dart';
 import 'paywall_screen.dart';
 import 'favorites_screen.dart';
+import '../services/location_service.dart';
 
 class DecideScreen extends StatefulWidget {
   const DecideScreen({super.key});
@@ -33,8 +34,6 @@ class _DecideScreenState extends State<DecideScreen> {
   int usageCount = 0;
   int streak = 1;
 
-  double rotation = 0;
-
   List<String> history = [];
 
   final ScrollController _scrollController = ScrollController();
@@ -42,6 +41,8 @@ class _DecideScreenState extends State<DecideScreen> {
       ConfettiController(duration: const Duration(seconds: 2));
 
   final player = AudioPlayer();
+
+  double rotation = 0;
 
   bool get isSubscribed => SubscriptionService.isSubscribed;
 
@@ -118,38 +119,61 @@ class _DecideScreenState extends State<DecideScreen> {
     final energy = selectedEnergy;
 
     setState(() {
+      isLoading = true;
+      results = [];
+
+      /// CLEAR FILTERS
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
-      isLoading = true;
-      results = [];
+
+      /// SPIN
+      rotation += Random().nextDouble() * 25 + 35;
     });
 
-    rotation += Random().nextDouble() * 10 + 20;
+    final location = await LocationService.getCityState();
 
-    final futureIdeas = AIService.getIdeas(
-      group: group,
-      budget: budget,
-      energy: energy,
-      isDateNight: isDateNight,
-      history: history,
-    );
+final futureIdeas = AIService.getIdeas(
+  group: group,
+  budget: budget,
+  energy: energy,
+  isDateNight: isDateNight,
+  history: history,
+  location: location, // 🔥 NEW
+);
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 8));
 
     try {
       final aiResults = await futureIdeas;
 
-      history.addAll(aiResults.map((e) => e.title));
-      if (history.length > 200) {
-        history = history.sublist(history.length - 200);
+      /// 🔥 FORCE ONLY 2 RESULTS
+      final limitedResults = aiResults.take(2).toList();
+
+      /// 🔥 HISTORY (NO DUPES)
+      for (var item in limitedResults) {
+        if (!history.contains(item.title)) {
+          history.add(item.title);
+        }
       }
+
+      if (history.length > 100) {
+        history = history.sublist(history.length - 100);
+      }
+
       await saveHistory();
 
       setState(() {
-        results = aiResults;
+        results = limitedResults;
         isLoading = false;
       });
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOut,
+      );
 
       await player.play(AssetSource('sounds/win.mp3'));
       _confetti.play();
@@ -158,9 +182,9 @@ class _DecideScreenState extends State<DecideScreen> {
         results = [
           Activity(
             title: "Error loading ideas",
-            description: "Please try again.",
-            group: "Error",
-            budget: "Error",
+            description: "Try again.",
+            group: "",
+            budget: "",
           )
         ];
         isLoading = false;
@@ -232,15 +256,13 @@ class _DecideScreenState extends State<DecideScreen> {
                 "Decide For Us",
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
+
               const SizedBox(height: 10),
-              Text("🔥 $streak Day Streak"),
-              const SizedBox(height: 20),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Date Night 💎"),
-                  const SizedBox(width: 10),
                   Switch(
                     value: isDateNight,
                     onChanged: (val) {
@@ -260,15 +282,20 @@ class _DecideScreenState extends State<DecideScreen> {
 
               const SizedBox(height: 20),
 
-              /// 🔥 RESTORED FILTERS
               section("Who’s involved?"),
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 10,
-                children: ["Couple","Friends","Family","Solo"]
-                    .map((e) => chip(e, selectedGroup,
-                        (v) => setState(() => selectedGroup = v)))
-                    .toList(),
+                children: [
+                  chip("Couple", selectedGroup,
+                      (v) => setState(() => selectedGroup = v)),
+                  chip("Friends", selectedGroup,
+                      (v) => setState(() => selectedGroup = v)),
+                  chip("Family", selectedGroup,
+                      (v) => setState(() => selectedGroup = v)),
+                  chip("Solo", selectedGroup,
+                      (v) => setState(() => selectedGroup = v)),
+                ],
               ),
 
               const SizedBox(height: 20),
@@ -277,10 +304,14 @@ class _DecideScreenState extends State<DecideScreen> {
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 10,
-                children: ["Free","\$","\$\$"]
-                    .map((e) => chip(e, selectedBudget,
-                        (v) => setState(() => selectedBudget = v)))
-                    .toList(),
+                children: [
+                  chip("Free", selectedBudget,
+                      (v) => setState(() => selectedBudget = v)),
+                  chip("\$", selectedBudget,
+                      (v) => setState(() => selectedBudget = v)),
+                  chip("\$\$", selectedBudget,
+                      (v) => setState(() => selectedBudget = v)),
+                ],
               ),
 
               const SizedBox(height: 20),
@@ -289,35 +320,37 @@ class _DecideScreenState extends State<DecideScreen> {
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 10,
-                children: ["Low","Medium","High"]
-                    .map((e) => chip(e, selectedEnergy,
-                        (v) => setState(() => selectedEnergy = v)))
-                    .toList(),
+                children: [
+                  chip("Low", selectedEnergy,
+                      (v) => setState(() => selectedEnergy = v)),
+                  chip("Medium", selectedEnergy,
+                      (v) => setState(() => selectedEnergy = v)),
+                  chip("High", selectedEnergy,
+                      (v) => setState(() => selectedEnergy = v)),
+                ],
               ),
 
               const SizedBox(height: 30),
 
-              Center(
-                child: GestureDetector(
-                  onTap: spin,
-                  child: AnimatedRotation(
-                    turns: rotation,
-                    duration: const Duration(seconds: 9),
-                    curve: Curves.easeOut,
-                    child: Container(
-                      height: 160,
-                      width: 160,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Colors.deepPurple, Colors.blue],
-                        ),
+              GestureDetector(
+                onTap: spin,
+                child: AnimatedRotation(
+                  turns: rotation,
+                  duration: const Duration(seconds: 8),
+                  curve: Curves.easeOutCubic,
+                  child: Container(
+                    height: 150,
+                    width: 150,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.deepPurple, Colors.blue],
                       ),
-                      child: const Center(
-                        child: Text(
-                          "SPIN 🎡",
-                          style: TextStyle(color: Colors.white),
-                        ),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "SPIN 🎡",
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
                   ),
@@ -326,21 +359,11 @@ class _DecideScreenState extends State<DecideScreen> {
 
               const SizedBox(height: 20),
 
-              if (isLoading)
-                const CircularProgressIndicator(),
+              if (isLoading) const CircularProgressIndicator(),
 
               const SizedBox(height: 20),
 
-             if (!isLoading && results.isEmpty)
-  const Padding(
-    padding: EdgeInsets.only(top: 40),
-    child: Text(
-      "Tap SPIN to get ideas",
-      style: TextStyle(color: Colors.grey),
-    ),
-  ),
-
-...results.take(2).map((r) => DecisionCard(activity: r)),
+              ...results.map((r) => DecisionCard(activity: r)),
             ],
           ),
         ),

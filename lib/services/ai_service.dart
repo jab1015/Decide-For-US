@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import '../models/activity.dart';
 
 class AIService {
-  /// 🔥 YOUR DEPLOYED CLOUD RUN URL (NO /getIdeas)
   static const String baseUrl =
       "https://getideas-33mweuhvmq-uc.a.run.app/";
 
@@ -13,65 +12,29 @@ class AIService {
     String? energy,
     bool? isDateNight,
     List<String>? history,
+    String? location, // 🔥 NEW
   }) async {
-    try {
-      print("🚀 CALLING BACKEND...");
-      print("Filters → group:$group budget:$budget energy:$energy");
+    history ??= [];
 
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "group": group,
-          "budget": budget,
-          "energy": energy,
-          "isDateNight": isDateNight,
-          "history": history ?? [],
-          "location": "Jacksonville, FL" // 🔥 TEMP (we'll auto-detect later)
-        }),
-      );
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "group": group,
+        "budget": budget,
+        "energy": energy,
+        "isDateNight": isDateNight,
+        "history": history,
+        "location": location ?? "Jacksonville, FL", // 🔥
+      }),
+    );
 
-      print("📡 STATUS: ${response.statusCode}");
-      print("📦 RAW RESPONSE:");
-      print(response.body);
+    final decoded = jsonDecode(response.body);
+    final List<dynamic> data =
+        decoded is List ? decoded : [decoded];
 
-      if (response.statusCode != 200) {
-        throw Exception("Backend error: ${response.body}");
-      }
-
-      final decoded = jsonDecode(response.body);
-
-      final List<dynamic> data =
-          decoded is List ? decoded : [decoded];
-
-      final results = data.map<Activity>((e) {
-        return Activity(
-          title: e['title'] ?? "No Title",
-          description: e['description'] ?? "",
-          group: e['group'] ?? group ?? "",
-          budget: e['budget'] ?? budget ?? "",
-        );
-      }).toList();
-
-      if (results.isEmpty) {
-        throw Exception("No results returned");
-      }
-
-      return results;
-
-    } catch (e) {
-      print("❌ AI SERVICE ERROR: $e");
-
-      return [
-        Activity(
-          title: "Something went wrong",
-          description: "Try again in a moment.",
-          group: "Error",
-          budget: "Error",
-        )
-      ];
-    }
+    return data.map<Activity>((e) => Activity.fromJson(e)).toList();
   }
 }

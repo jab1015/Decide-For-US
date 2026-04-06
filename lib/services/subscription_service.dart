@@ -3,7 +3,8 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SubscriptionService {
-  static const bool debugForceSubscribed = false;
+  /// 🔥 ENABLE TEST MODE
+  static const bool debugForceSubscribed = true;
 
   static bool _isSubscribed = false;
 
@@ -12,50 +13,33 @@ class SubscriptionService {
     return _isSubscribed;
   }
 
-  /// 🔥 INIT — called when app starts
   static Future<void> init() async {
     try {
-      /// ✅ PICK CORRECT KEY BASED ON PLATFORM
       String apiKey;
 
       if (Platform.isIOS) {
         apiKey = "appl_PUSUzSUTwTnqCKYmRlKutkZUeLv";
-      } else if (Platform.isAndroid) {
-        apiKey = "goog_lnWIfTDSTBOqFJIxpYcUjFRWRql";
       } else {
-        throw UnsupportedError("Unsupported platform");
+        apiKey = "goog_lnWIfTDSTBOqFJIxpYcUjFRWRql";
       }
 
-      /// ✅ CONFIGURE REVENUECAT
-      await Purchases.configure(
-        PurchasesConfiguration(apiKey),
-      );
+      await Purchases.configure(PurchasesConfiguration(apiKey));
 
-      /// ✅ LOGIN USER
       final user = FirebaseAuth.instance.currentUser;
-
       if (user != null) {
         await Purchases.logIn(user.uid);
       }
 
-      /// ✅ GET SUB STATUS
       final info = await Purchases.getCustomerInfo();
-
       _isSubscribed =
           info.entitlements.active.containsKey('premium');
-
-      print("SUB STATUS (INIT): $_isSubscribed");
     } catch (e) {
-      print("Subscription init error: $e");
       _isSubscribed = false;
     }
   }
 
-  /// 🔥 AFTER PURCHASE / RESTORE
   static void updateStatus(CustomerInfo info) {
     _isSubscribed =
         info.entitlements.active.containsKey('premium');
-
-    print("SUB STATUS (UPDATE): $_isSubscribed");
   }
 }

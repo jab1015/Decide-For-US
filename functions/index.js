@@ -29,10 +29,10 @@ app.post("/", async (req, res) => {
       energy = "Any",
       isDateNight = false,
       history = [],
-      location = "United States",
+      location = "Jacksonville, FL",
     } = req.body;
 
-    /// 🔥 STEP 1: FETCH EVENTS (ALWAYS, NOT CONDITIONAL)
+    /// 🎟️ FETCH LOCAL EVENTS
     let eventSummary = "";
 
     if (ticketKey) {
@@ -46,23 +46,23 @@ app.post("/", async (req, res) => {
         if (eventData._embedded?.events?.length > 0) {
           eventSummary = eventData._embedded.events
             .slice(0, 5)
-            .map(
-              (e) =>
-                `${e.name} at ${e._embedded.venues[0].name} (${e.dates.start.localDate})`
-            )
+            .map((e) => {
+              const venue = e._embedded.venues[0];
+              return `${e.name} at ${venue.name}, ${venue.address?.line1 || ""}, ${venue.city.name}, ${venue.state?.stateCode || ""}`;
+            })
             .join("\n");
         }
       } catch (e) {
-        console.log("⚠️ Ticketmaster failed:", e.message);
+        console.log("Ticketmaster error:", e.message);
       }
     }
 
-    /// ❌ NO OPENAI KEY
     if (!openaiKey) {
       return res.json([
         {
-          title: "❌ ERROR",
-          description: "Missing OpenAI API Key",
+          title: "Error",
+          description: "Missing OpenAI key",
+          address: "",
           group: "Error",
           budget: "Error",
         },
@@ -71,60 +71,88 @@ app.post("/", async (req, res) => {
 
     const openai = new OpenAI({ apiKey: openaiKey });
 
-    /// 💎 DATE NIGHT PROMPT
+    /// 💎 PREMIUM DATE NIGHT PROMPT
     const dateNightPrompt = `
-You are a DATE NIGHT PLANNER.
+You are a HIGH-END ROMANTIC EXPERIENCE PLANNER.
 
-Use real local places and events when possible:
+Location: ${location}
 
+Here are real local events:
 ${eventSummary}
 
+GOAL:
+Create a UNIQUE, MEMORABLE DATE NIGHT that feels intentional, romantic, and special.
+
 STRICT RULES:
-- MUST include 2–3 different places
-- MUST feel like a real evening plan
-- MUST be romantic or fun
-- NEVER generic ideas
-- NEVER repeat: ${history.join(", ")}
-- ALL places MUST be near: ${location}
+- MUST include 2–3 REAL locations
+- MUST feel romantic, cozy, fun, or exciting
+- MUST include FULL ADDRESS (street, city, state)
+- MUST NOT be generic (no "dinner and a movie")
+- MUST feel like something worth dressing up for
+- MUST avoid repeats: ${history.join(", ")}
+
+EXPERIENCE STYLE:
+- Think: atmosphere, mood, flow
+- Include variety (drinks → activity → dessert)
+- Use aesthetic or unique places (rooftops, waterfronts, live music, hidden gems)
+
+FLOW:
+- Start: engaging opener (views, drinks, fun start)
+- Middle: main experience (dinner/event/activity)
+- Optional Finish: dessert, scenic walk, relaxed ending
+
+TONE:
+- Romantic, exciting, elevated
 
 Return ONLY JSON:
 
 [
   {
-    "title": "Short catchy name",
-    "start": "Place + address",
-    "then": "Place + address",
-    "optional": "Place + address",
-    "vibe": "short emotional hook"
+    "title": "Romantic experience name",
+    "description": "Start at [place + full address] for [vibe], then head to [place + full address], and optionally finish at [place + full address]",
+    "address": "First location full address",
+    "group": "Couple",
+    "budget": "$$"
   }
 ]
 `;
 
-    /// 🔥 NORMAL MODE PROMPT (FIXED)
+    /// 🔥 PREMIUM NORMAL PROMPT
     const normalPrompt = `
-You are a creative local planner.
+You are a HIGH-END LOCAL EXPERIENCE CURATOR.
 
-Use REAL events when helpful:
+Location: ${location}
 
+Here are real local events:
 ${eventSummary}
 
-Filters:
+GOAL:
+Create PREMIUM, curated experiences — not simple ideas.
+
+STRICT RULES:
+- MUST include real businesses or events
+- MUST include FULL address
+- MUST chain 2–3 steps together
+- MUST feel intentional and exciting
+- NEVER generic ideas
+- NEVER repeat: ${history.join(", ")}
+
+FILTERS:
 Group: ${group}
 Budget: ${budget}
 Energy: ${energy}
 
-STRICT RULES:
-- NEVER suggest "dinner and a movie"
-- Avoid generic ideas completely
-- Use real places or realistic local ideas
-- Respect ALL filters
-- Make ideas feel like something someone would actually do
+STYLE:
+- Think like a concierge
+- Make it feel planned and special
 
-Return JSON:
+Return ONLY JSON:
+
 [
   {
-    "title": "Short name",
-    "description": "Include real place + what to do",
+    "title": "Experience name",
+    "description": "Start at [place + full address], then go to [place + full address], optional final stop [place + full address]",
+    "address": "First location full address",
     "group": "${group}",
     "budget": "${budget}"
   }
@@ -133,7 +161,7 @@ Return JSON:
 
     const prompt = isDateNight ? dateNightPrompt : normalPrompt;
 
-    /// 🔥 CALL OPENAI
+    /// 🤖 CALL OPENAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
@@ -142,27 +170,25 @@ Return JSON:
 
     let data = safeParse(completion.choices[0].message.content);
 
-    /// 💎 FORMAT DATE NIGHT FOR UI
-    if (isDateNight) {
-      data = data.map((item) => ({
-        title: item.title,
-        description:
-          `✨ ${item.vibe}\n\nStart: ${item.start}\nThen: ${item.then}\nOptional: ${item.optional}`,
-        group: "Couple",
-        budget: "$$",
-      }));
-    }
+    /// 🧹 CLEAN RESPONSE
+    data = data.map((item) => ({
+      title: item.title || "",
+      description: item.description || "",
+      address: item.address || "",
+      group: item.group || group,
+      budget: item.budget || budget,
+    }));
 
-    /// 🔥 FINAL RESPONSE
     return res.json(data);
 
   } catch (err) {
-    console.error("❌ ERROR:", err);
+    console.error("ERROR:", err);
 
     return res.json([
       {
-        title: "❌ ERROR",
+        title: "Error",
         description: err.message,
+        address: "",
         group: "Error",
         budget: "Error",
       },
