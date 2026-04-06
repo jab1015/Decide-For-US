@@ -26,17 +26,15 @@ workflows:
           pod install
           cd ..
 
-      - name: Force build number (CRITICAL FIX)
+      - name: Build IPA with forced build number (CRITICAL)
         script: |
           BUILD_NUMBER=$(date +%s)
-          echo "Setting build number to $BUILD_NUMBER"
+          echo "Using build number: $BUILD_NUMBER"
 
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Runner/Info.plist || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/Runner/Info.plist
-
-      - name: Build IPA
-        script: |
-          flutter build ipa --release
+          flutter build ipa \
+            --release \
+            --build-name=1.0.15 \
+            --build-number=$BUILD_NUMBER
 
     artifacts:
       - build/ios/ipa/*.ipa
