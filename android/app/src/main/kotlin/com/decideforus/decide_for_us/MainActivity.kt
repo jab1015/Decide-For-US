@@ -1,4 +1,4 @@
-package com.decideforus.decide_for_us
+package com.decideforus.app
 
 import io.flutter.embedding.android.FlutterActivity
 
