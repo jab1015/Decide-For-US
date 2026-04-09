@@ -339,7 +339,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
                 CODE_SIGN_STYLE = Manual;
                 DEVELOPMENT_TEAM = 6222UBUK7Q;
-                PROVISIONING_PROFILE_SPECIFIER = DecideForUs_AppStore_FINAL;
+                PROVISIONING_PROFILE_SPECIFIER = Decide-For-Us;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -462,7 +462,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
                 CODE_SIGN_STYLE = Manual;
                 DEVELOPMENT_TEAM = 6222UBUK7Q;
-                PROVISIONING_PROFILE_SPECIFIER = DecideForUs_AppStore_FINAL;
+                PROVISIONING_PROFILE_SPECIFIER = Decide-For-Us;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -522,7 +522,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
                 CODE_SIGN_STYLE = Manual;
                 DEVELOPMENT_TEAM = 6222UBUK7Q;
-                PROVISIONING_PROFILE_SPECIFIER = DecideForUs_AppStore_FINAL;
+                PROVISIONING_PROFILE_SPECIFIER = Decide-For-Us;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
