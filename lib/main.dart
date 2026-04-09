@@ -15,7 +15,6 @@ void main() async {
 
   await FirebaseAuth.instance.signInAnonymously();
 
-  /// 🔥 THIS IS CRITICAL
   await SubscriptionService.init();
 
   runApp(const MyApp());
