@@ -122,67 +122,54 @@ class _DecideScreenState extends State<DecideScreen> {
       isLoading = true;
       results = [];
 
-      /// CLEAR FILTERS
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
 
-      /// SPIN
       rotation += Random().nextDouble() * 25 + 35;
     });
 
-    final location = await LocationService.getCityState();
-
-final futureIdeas = AIService.getIdeas(
-  group: group,
-  budget: budget,
-  energy: energy,
-  isDateNight: isDateNight,
-  history: history,
-  location: location, // 🔥 NEW
-);
-
-    await Future.delayed(const Duration(seconds: 8));
-
     try {
-      final aiResults = await futureIdeas;
+      // 🚀 START LOCATION + API IMMEDIATELY
+      final locationFuture = LocationService.getCityState();
 
-      /// 🔥 FORCE ONLY 2 RESULTS
+      final ideasFuture = locationFuture.then((location) {
+        return AIService.getIdeas(
+          group: group,
+          budget: budget,
+          energy: energy,
+          isDateNight: isDateNight,
+          history: history,
+          location: location,
+        );
+      });
+
+      // ⏱ FORCE 8 SECOND SPIN
+      final spinDelay = Future.delayed(const Duration(seconds: 8));
+
+      // ⏱ WAIT FOR BOTH
+      final resultsData = await Future.wait([
+        ideasFuture.timeout(const Duration(seconds: 10)),
+        spinDelay,
+      ]);
+
+      final aiResults = resultsData[0] as List<Activity>;
       final limitedResults = aiResults.take(2).toList();
-
-      /// 🔥 HISTORY (NO DUPES)
-      for (var item in limitedResults) {
-        if (!history.contains(item.title)) {
-          history.add(item.title);
-        }
-      }
-
-      if (history.length > 100) {
-        history = history.sublist(history.length - 100);
-      }
-
-      await saveHistory();
 
       setState(() {
         results = limitedResults;
         isLoading = false;
       });
 
-      await Future.delayed(const Duration(milliseconds: 300));
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOut,
-      );
-
       await player.play(AssetSource('sounds/win.mp3'));
       _confetti.play();
+
     } catch (e) {
       setState(() {
         results = [
           Activity(
-            title: "Error loading ideas",
-            description: "Try again.",
+            title: "Something went wrong",
+            description: "Please try again.",
             group: "",
             budget: "",
           )
@@ -250,7 +237,6 @@ final futureIdeas = AIService.getIdeas(
           controller: _scrollController,
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Text(
                 "Decide For Us",
@@ -284,17 +270,12 @@ final futureIdeas = AIService.getIdeas(
 
               section("Who’s involved?"),
               Wrap(
-                alignment: WrapAlignment.center,
                 spacing: 10,
                 children: [
-                  chip("Couple", selectedGroup,
-                      (v) => setState(() => selectedGroup = v)),
-                  chip("Friends", selectedGroup,
-                      (v) => setState(() => selectedGroup = v)),
-                  chip("Family", selectedGroup,
-                      (v) => setState(() => selectedGroup = v)),
-                  chip("Solo", selectedGroup,
-                      (v) => setState(() => selectedGroup = v)),
+                  chip("Couple", selectedGroup, (v) => setState(() => selectedGroup = v)),
+                  chip("Friends", selectedGroup, (v) => setState(() => selectedGroup = v)),
+                  chip("Family", selectedGroup, (v) => setState(() => selectedGroup = v)),
+                  chip("Solo", selectedGroup, (v) => setState(() => selectedGroup = v)),
                 ],
               ),
 
@@ -302,15 +283,11 @@ final futureIdeas = AIService.getIdeas(
 
               section("Budget"),
               Wrap(
-                alignment: WrapAlignment.center,
                 spacing: 10,
                 children: [
-                  chip("Free", selectedBudget,
-                      (v) => setState(() => selectedBudget = v)),
-                  chip("\$", selectedBudget,
-                      (v) => setState(() => selectedBudget = v)),
-                  chip("\$\$", selectedBudget,
-                      (v) => setState(() => selectedBudget = v)),
+                  chip("Free", selectedBudget, (v) => setState(() => selectedBudget = v)),
+                  chip("\$", selectedBudget, (v) => setState(() => selectedBudget = v)),
+                  chip("\$\$", selectedBudget, (v) => setState(() => selectedBudget = v)),
                 ],
               ),
 
@@ -318,15 +295,11 @@ final futureIdeas = AIService.getIdeas(
 
               section("Energy"),
               Wrap(
-                alignment: WrapAlignment.center,
                 spacing: 10,
                 children: [
-                  chip("Low", selectedEnergy,
-                      (v) => setState(() => selectedEnergy = v)),
-                  chip("Medium", selectedEnergy,
-                      (v) => setState(() => selectedEnergy = v)),
-                  chip("High", selectedEnergy,
-                      (v) => setState(() => selectedEnergy = v)),
+                  chip("Low", selectedEnergy, (v) => setState(() => selectedEnergy = v)),
+                  chip("Medium", selectedEnergy, (v) => setState(() => selectedEnergy = v)),
+                  chip("High", selectedEnergy, (v) => setState(() => selectedEnergy = v)),
                 ],
               ),
 
@@ -348,10 +321,8 @@ final futureIdeas = AIService.getIdeas(
                       ),
                     ),
                     child: const Center(
-                      child: Text(
-                        "SPIN 🎡",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: Text("SPIN 🎡",
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ),
@@ -360,17 +331,13 @@ final futureIdeas = AIService.getIdeas(
               const SizedBox(height: 20),
 
               if (isLoading)
-  Column(
-    children: const [
-      SizedBox(height: 20),
-      CircularProgressIndicator(),
-      SizedBox(height: 10),
-      Text(
-        "Finding the perfect plan near you...",
-        style: TextStyle(color: Colors.grey),
-      ),
-    ],
-  ),
+                Column(
+                  children: const [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 10),
+                    Text("Finding the perfect plan near you..."),
+                  ],
+                ),
 
               const SizedBox(height: 20),
 
