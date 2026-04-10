@@ -20,7 +20,7 @@ class PaywallScreen extends StatelessWidget {
   void _goBack(BuildContext context) {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const DecideScreen()),
+      MaterialPageRoute(builder: (_) => DecideScreen()),
       (route) => false,
     );
   }
