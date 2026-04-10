@@ -16,7 +16,7 @@ class AIService {
   }) async {
     history ??= [];
 
-    try {
+    Future<List<Activity>> fetch() async {
       final response = await http
           .post(
             Uri.parse(baseUrl),
@@ -29,14 +29,10 @@ class AIService {
               "energy": energy,
               "isDateNight": isDateNight,
               "history": history,
-              "location": location ?? "Jacksonville, FL",
+              "location": location ?? "Unknown",
             }),
           )
-          .timeout(const Duration(seconds: 15));
-
-      /// 🔥 DEBUG (keep this for now)
-      print("AI STATUS: ${response.statusCode}");
-      print("AI BODY: ${response.body}");
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw Exception("Backend error: ${response.statusCode}");
@@ -50,19 +46,41 @@ class AIService {
       return data
           .map<Activity>((e) => Activity.fromJson(e))
           .toList();
+    }
+
+    try {
+      var results = await fetch();
+
+      if (results.isEmpty) {
+        results = await fetch();
+      }
+
+      final map = <String, Activity>{};
+      for (var item in results) {
+        map[item.title.toLowerCase()] = item;
+      }
+
+      return map.values.toList();
 
     } catch (e) {
       print("AI ERROR: $e");
 
-      /// 🔥 FAILSAFE (prevents infinite loading)
+      // 🔥 FIXED FALLBACK (includes required group)
       return [
         Activity(
-          title: "Something went wrong",
-          description: "Please try again.",
-          group: "Error",
-          budget: "Error",
-          address: "",
-        )
+          title: "Try a Local Coffee Spot ☕",
+          description: "Find a cozy café nearby and relax.",
+          group: group ?? "Any",
+          budget: budget ?? "Any",
+          address: location ?? "",
+        ),
+        Activity(
+          title: "Go for a Scenic Walk 🌿",
+          description: "Enjoy fresh air and explore your area.",
+          group: group ?? "Any",
+          budget: budget ?? "Free",
+          address: location ?? "",
+        ),
       ];
     }
   }
