@@ -16,7 +16,7 @@ class AIService {
   }) async {
     history ??= [];
 
-    Future<List<Activity>> fetch() async {
+    try {
       final response = await http
           .post(
             Uri.parse(baseUrl),
@@ -35,7 +35,7 @@ class AIService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
-        throw Exception("Backend error: ${response.statusCode}");
+        throw Exception("Backend error");
       }
 
       final decoded = jsonDecode(response.body);
@@ -46,26 +46,10 @@ class AIService {
       return data
           .map<Activity>((e) => Activity.fromJson(e))
           .toList();
-    }
-
-    try {
-      var results = await fetch();
-
-      if (results.isEmpty) {
-        results = await fetch();
-      }
-
-      final map = <String, Activity>{};
-      for (var item in results) {
-        map[item.title.toLowerCase()] = item;
-      }
-
-      return map.values.toList();
-
     } catch (e) {
       print("AI ERROR: $e");
 
-      // 🔥 FIXED FALLBACK (includes required group)
+      // 🔥 CLEAN FALLBACK (NO LOCATION SERVICE HERE)
       return [
         Activity(
           title: "Try a Local Coffee Spot ☕",

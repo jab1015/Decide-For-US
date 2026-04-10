@@ -21,6 +21,8 @@ dependencies:
   purchases_flutter: 9.16.0
 
   geolocator: 11.0.0
+  geocoding: ^2.1.1  # 🔥 ADDED
+
   http: ^1.6.0
   confetti: 0.7.0
   share_plus: 7.2.2
