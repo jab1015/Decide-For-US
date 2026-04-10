@@ -11,6 +11,7 @@ import '../services/location_service.dart';
 import '../services/decision_service.dart';
 import '../services/streak_service.dart';
 import '../services/subscription_service.dart';
+
 import 'paywall_screen.dart';
 import 'favorites_screen.dart';
 
@@ -30,13 +31,12 @@ class _DecideScreenState extends State<DecideScreen> {
   String? selectedGroup;
   String? selectedBudget;
   String? selectedEnergy;
-  bool isDateNight = false; // 🔥 ADDED
+  bool isDateNight = false;
 
   int usageCount = 0;
   int streak = 1;
 
   double rotation = 0;
-  int _sessionId = 0;
 
   String? userLocation;
   bool locationRequested = false;
@@ -93,8 +93,6 @@ class _DecideScreenState extends State<DecideScreen> {
   void spin() async {
     if (isLoading) return;
 
-    final currentSession = _sessionId;
-
     if (!SubscriptionService.isSubscribed && usageCount >= 3) {
       goToPaywall();
       return;
@@ -119,28 +117,29 @@ class _DecideScreenState extends State<DecideScreen> {
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
-      isDateNight = false; // 🔥 reset toggle
+      isDateNight = false;
     });
 
     unawaited(requestLocationIfNeeded());
 
     try {
-      final aiFuture = Future.wait([
-        AIService.getIdeas(
-          group: group,
-          budget: budget,
-          energy: energy,
-          isDateNight: dateNight, // 🔥 USED
-          location: userLocation,
-        ),
-        AIService.getIdeas(
-          group: group,
-          budget: budget,
-          energy: energy,
-          isDateNight: dateNight,
-          location: userLocation,
-        ),
-      ]);
+      final Future<List<Activity>> f1 = AIService.getIdeas(
+        group: group,
+        budget: budget,
+        energy: energy,
+        isDateNight: dateNight,
+        location: userLocation,
+      );
+
+      final Future<List<Activity>> f2 = AIService.getIdeas(
+        group: group,
+        budget: budget,
+        energy: energy,
+        isDateNight: dateNight,
+        location: userLocation,
+      );
+
+      final aiFuture = Future.wait<List<Activity>>([f1, f2]);
 
       List<List<Activity>>? aiResults;
 
@@ -160,18 +159,16 @@ class _DecideScreenState extends State<DecideScreen> {
 
       if (aiResults != null && aiResults.isNotEmpty) {
         final combined = [...aiResults[0], ...aiResults[1]];
-
         final map = <String, Activity>{};
         for (var item in combined) {
           map[item.title] = item;
         }
-
         finalResults = map.values.take(2).toList();
       } else {
         finalResults = DecisionService.getFiltered().take(2).toList();
       }
 
-      if (!mounted || currentSession != _sessionId) return;
+      if (!mounted) return;
 
       setState(() {
         results = finalResults;
@@ -219,6 +216,7 @@ class _DecideScreenState extends State<DecideScreen> {
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Wrap(
+          alignment: WrapAlignment.center,
           spacing: 10,
           children: options.map((o) => chip(o, selected, onTap)).toList(),
         ),
@@ -227,7 +225,6 @@ class _DecideScreenState extends State<DecideScreen> {
     );
   }
 
-  /// 🔥 DATE NIGHT TOGGLE UI
   Widget dateNightToggle() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -236,9 +233,7 @@ class _DecideScreenState extends State<DecideScreen> {
         const SizedBox(width: 10),
         Switch(
           value: isDateNight,
-          onChanged: (val) {
-            setState(() => isDateNight = val);
-          },
+          onChanged: (val) => setState(() => isDateNight = val),
         )
       ],
     );
@@ -248,7 +243,6 @@ class _DecideScreenState extends State<DecideScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
-
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -264,7 +258,6 @@ class _DecideScreenState extends State<DecideScreen> {
           )
         ],
       ),
-
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
@@ -273,18 +266,15 @@ class _DecideScreenState extends State<DecideScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-
                 const Text(
                   "Decide For Us",
                   style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
                 ),
-
                 const SizedBox(height: 6),
                 Text("🔥 $streak Day Streak"),
 
                 const SizedBox(height: 20),
-
-                dateNightToggle(), // 🔥 ADDED
+                dateNightToggle(),
 
                 const SizedBox(height: 20),
 
@@ -317,10 +307,8 @@ class _DecideScreenState extends State<DecideScreen> {
                         ),
                       ),
                       child: const Center(
-                        child: Text(
-                          "SPIN 🎡",
-                          style: TextStyle(color: Colors.white),
-                        ),
+                        child: Text("SPIN 🎡",
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ),
                   ),
