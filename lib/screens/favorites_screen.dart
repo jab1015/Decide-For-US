@@ -11,7 +11,6 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   List<Activity> favorites = [];
-  bool isLoading = true;
 
   @override
   void initState() {
@@ -20,68 +19,72 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> loadFavorites() async {
-    final data = await FavoritesService.getFavorites();
-    setState(() {
-      favorites = data;
-      isLoading = false;
-    });
+    final favs = await FavoritesService.getFavorites();
+    setState(() => favorites = favs);
+  }
+
+  Future<void> removeFavorite(Activity activity) async {
+    await FavoritesService.toggleFavorite(activity);
+    loadFavorites();
+  }
+
+  Color baseColor(String title) {
+    final colors = [
+      const Color(0xFF7B61FF),
+      const Color(0xFFFF6B6B),
+      const Color(0xFF00C9A7),
+      const Color(0xFFFFA726),
+    ];
+    return colors[title.hashCode % colors.length];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Your Favorites ❤️"),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : favorites.isEmpty
-              ? const Center(child: Text("No favorites yet"))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: favorites.map((e) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [
-                          BoxShadow(
-                            blurRadius: 10,
-                            color: Colors.black12,
-                          )
-                        ],
+      appBar: AppBar(title: const Text("Favorites")),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: favorites.map((item) {
+          final color = baseColor(item.title);
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: color.withOpacity(0.12),
+              border: Border.all(color: color.withOpacity(0.3)),
+            ),
+            child: Stack(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: color,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            e.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(e.description),
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.red),
-                              onPressed: () async {
-                                await FavoritesService.toggle(e);
-                                loadFavorites();
-                              },
-                            ),
-                          )
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(item.description),
+                  ],
                 ),
+
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => removeFavorite(item),
+                  ),
+                )
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

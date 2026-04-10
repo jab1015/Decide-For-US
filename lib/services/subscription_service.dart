@@ -1,20 +1,21 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SubscriptionService {
-  /// 🔥 ENABLE TEST MODE
-  static const bool debugForceSubscribed = true;
-
   static bool _isSubscribed = false;
 
-  static bool get isSubscribed {
-    if (debugForceSubscribed) return true;
-    return _isSubscribed;
-  }
+  static bool get isSubscribed => _isSubscribed;
 
   static Future<void> init() async {
     try {
+      // 🚫 BLOCK WEB
+      if (kIsWeb) {
+        _isSubscribed = false;
+        return;
+      }
+
       String apiKey;
 
       if (Platform.isIOS) {
@@ -31,8 +32,13 @@ class SubscriptionService {
       }
 
       final info = await Purchases.getCustomerInfo();
-      _isSubscribed =
-          info.entitlements.active.containsKey('premium');
+      _isSubscribed = info.entitlements.active.containsKey('premium');
+
+      Purchases.addCustomerInfoUpdateListener((info) {
+        _isSubscribed =
+            info.entitlements.active.containsKey('premium');
+      });
+
     } catch (e) {
       _isSubscribed = false;
     }
