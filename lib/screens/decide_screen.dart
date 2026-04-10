@@ -10,13 +10,11 @@ import '../widgets/decision_card.dart';
 import '../services/ai_service.dart';
 import '../services/subscription_service.dart';
 import '../services/streak_service.dart';
-import 'paywall_screen.dart';
-import 'favorites_screen.dart';
+import '../services/decision_service.dart';
 import '../services/location_service.dart';
+import 'paywall_screen.dart';
 
 class DecideScreen extends StatefulWidget {
-  const DecideScreen({super.key});
-
   @override
   State<DecideScreen> createState() => _DecideScreenState();
 }
@@ -36,7 +34,6 @@ class _DecideScreenState extends State<DecideScreen> {
 
   List<String> history = [];
 
-  final ScrollController _scrollController = ScrollController();
   final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
 
@@ -60,11 +57,6 @@ class _DecideScreenState extends State<DecideScreen> {
     if (stored != null) {
       history = List<String>.from(jsonDecode(stored));
     }
-  }
-
-  Future<void> saveHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("history", jsonEncode(history));
   }
 
   Future<void> loadUsage() async {
@@ -112,6 +104,8 @@ class _DecideScreenState extends State<DecideScreen> {
 
     if (!await canUseApp()) return;
 
+    // 🔊 SPIN SOUND
+    await player.setVolume(1.0);
     await player.play(AssetSource('sounds/spin.mp3'));
 
     final group = selectedGroup;
@@ -119,18 +113,18 @@ class _DecideScreenState extends State<DecideScreen> {
     final energy = selectedEnergy;
 
     setState(() {
-      isLoading = true;
-      results = [];
-
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
+
+      isLoading = true;
+      results = [];
 
       rotation += Random().nextDouble() * 25 + 35;
     });
 
     try {
-      // 🚀 START LOCATION + API IMMEDIATELY
+      // 🚀 PARALLEL EXECUTION
       final locationFuture = LocationService.getCityState();
 
       final ideasFuture = locationFuture.then((location) {
@@ -144,36 +138,50 @@ class _DecideScreenState extends State<DecideScreen> {
         );
       });
 
-      // ⏱ FORCE 8 SECOND SPIN
       final spinDelay = Future.delayed(const Duration(seconds: 8));
 
-      // ⏱ WAIT FOR BOTH
-      final resultsData = await Future.wait([
-        ideasFuture.timeout(const Duration(seconds: 10)),
+      final data = await Future.wait([
+        ideasFuture,
         spinDelay,
       ]);
 
-      final aiResults = resultsData[0] as List<Activity>;
-      final limitedResults = aiResults.take(2).toList();
+      List<Activity> aiResults = data[0] as List<Activity>;
+
+      // 🔥 ENSURE 2 AI RESULTS (NO GENERIC FALLBACK)
+      if (aiResults.length < 2) {
+        final more = await AIService.getIdeas(
+          group: group,
+          budget: budget,
+          energy: energy,
+          isDateNight: isDateNight,
+          history: history,
+          location: await locationFuture,
+        );
+
+        for (var item in more) {
+          if (!aiResults.any((e) => e.title == item.title)) {
+            aiResults.add(item);
+          }
+          if (aiResults.length >= 2) break;
+        }
+      }
 
       setState(() {
-        results = limitedResults;
+        results = aiResults.take(2).toList();
         isLoading = false;
       });
 
+      // 🔊 WIN SOUND
       await player.play(AssetSource('sounds/win.mp3'));
       _confetti.play();
-
     } catch (e) {
+      final fallback = DecisionService.getFiltered(
+        group: group,
+        budget: budget,
+      );
+
       setState(() {
-        results = [
-          Activity(
-            title: "Something went wrong",
-            description: "Please try again.",
-            group: "",
-            budget: "",
-          )
-        ];
+        results = fallback.take(2).toList();
         isLoading = false;
       });
     }
@@ -193,7 +201,6 @@ class _DecideScreenState extends State<DecideScreen> {
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
             color: isSelected ? Colors.deepPurple : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
           ),
         ),
         child: Text(label),
@@ -218,132 +225,106 @@ class _DecideScreenState extends State<DecideScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite, color: Colors.red),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FavoritesScreen(),
-                ),
-              );
-            },
-          )
-        ],
+        title: const Text("Decide For Us"),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const Text(
-                "Decide For Us",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Date Night 💎"),
+                Switch(
+                  value: isDateNight,
+                  onChanged: (val) =>
+                      setState(() => isDateNight = val),
+                ),
+              ],
+            ),
 
-              const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Date Night 💎"),
-                  Switch(
-                    value: isDateNight,
-                    onChanged: (val) {
-                      if (!isSubscribed && val) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const PaywallScreen()),
-                        );
-                        return;
-                      }
-                      setState(() => isDateNight = val);
-                    },
-                  ),
-                ],
-              ),
+            section("Who’s involved?"),
+            Wrap(
+              spacing: 10,
+              children: [
+                chip("Couple", selectedGroup,
+                    (v) => setState(() => selectedGroup = v)),
+                chip("Friends", selectedGroup,
+                    (v) => setState(() => selectedGroup = v)),
+                chip("Family", selectedGroup,
+                    (v) => setState(() => selectedGroup = v)),
+                chip("Solo", selectedGroup,
+                    (v) => setState(() => selectedGroup = v)),
+              ],
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-              section("Who’s involved?"),
-              Wrap(
-                spacing: 10,
-                children: [
-                  chip("Couple", selectedGroup, (v) => setState(() => selectedGroup = v)),
-                  chip("Friends", selectedGroup, (v) => setState(() => selectedGroup = v)),
-                  chip("Family", selectedGroup, (v) => setState(() => selectedGroup = v)),
-                  chip("Solo", selectedGroup, (v) => setState(() => selectedGroup = v)),
-                ],
-              ),
+            section("Budget"),
+            Wrap(
+              spacing: 10,
+              children: [
+                chip("Free", selectedBudget,
+                    (v) => setState(() => selectedBudget = v)),
+                chip("\$", selectedBudget,
+                    (v) => setState(() => selectedBudget = v)),
+                chip("\$\$", selectedBudget,
+                    (v) => setState(() => selectedBudget = v)),
+              ],
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-              section("Budget"),
-              Wrap(
-                spacing: 10,
-                children: [
-                  chip("Free", selectedBudget, (v) => setState(() => selectedBudget = v)),
-                  chip("\$", selectedBudget, (v) => setState(() => selectedBudget = v)),
-                  chip("\$\$", selectedBudget, (v) => setState(() => selectedBudget = v)),
-                ],
-              ),
+            section("Energy"),
+            Wrap(
+              spacing: 10,
+              children: [
+                chip("Low", selectedEnergy,
+                    (v) => setState(() => selectedEnergy = v)),
+                chip("Medium", selectedEnergy,
+                    (v) => setState(() => selectedEnergy = v)),
+                chip("High", selectedEnergy,
+                    (v) => setState(() => selectedEnergy = v)),
+              ],
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 30),
 
-              section("Energy"),
-              Wrap(
-                spacing: 10,
-                children: [
-                  chip("Low", selectedEnergy, (v) => setState(() => selectedEnergy = v)),
-                  chip("Medium", selectedEnergy, (v) => setState(() => selectedEnergy = v)),
-                  chip("High", selectedEnergy, (v) => setState(() => selectedEnergy = v)),
-                ],
-              ),
-
-              const SizedBox(height: 30),
-
-              GestureDetector(
-                onTap: spin,
-                child: AnimatedRotation(
-                  turns: rotation,
-                  duration: const Duration(seconds: 8),
-                  curve: Curves.easeOutCubic,
-                  child: Container(
-                    height: 150,
-                    width: 150,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Colors.deepPurple, Colors.blue],
-                      ),
+            GestureDetector(
+              onTap: spin,
+              child: AnimatedRotation(
+                turns: rotation,
+                duration: const Duration(seconds: 8),
+                child: Container(
+                  height: 150,
+                  width: 150,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Colors.deepPurple, Colors.blue],
                     ),
-                    child: const Center(
-                      child: Text("SPIN 🎡",
-                          style: TextStyle(color: Colors.white)),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "SPIN 🎡",
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
                 ),
               ),
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-              if (isLoading)
-                Column(
-                  children: const [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 10),
-                    Text("Finding the perfect plan near you..."),
-                  ],
-                ),
+            if (isLoading)
+              const CircularProgressIndicator(),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-              ...results.map((r) => DecisionCard(activity: r)),
-            ],
-          ),
+            ...results.map((r) => DecisionCard(activity: r)),
+          ],
         ),
       ),
     );
