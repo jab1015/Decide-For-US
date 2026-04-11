@@ -12,26 +12,32 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # CORE
+  cupertino_icons: ^1.0.6
+  http: ^1.6.0
+  shared_preferences: ^2.2.2
+
+  # FIREBASE
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.0
-  cloud_firestore: 6.2.0
+  cloud_firestore: ^6.2.0
 
-  cupertino_icons: 1.0.6
-  shared_preferences: 2.2.2
-  purchases_flutter: 9.16.0
+  # PURCHASES
+  purchases_flutter: ^9.16.0
 
-  geolocator: 11.0.0
-  geocoding: ^2.1.1  # 🔥 ADDED
+  # LOCATION
+  geolocator: ^11.0.0
+  geocoding: ^2.1.1
 
-  http: ^1.6.0
-  confetti: 0.7.0
-  share_plus: 7.2.2
+  # UI / EFFECTS
+  confetti: ^0.7.0
+  share_plus: ^7.2.2
   audioplayers: ^5.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: 3.0.0
+  flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
 flutter_icons:
@@ -43,4 +49,5 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/sounds/
+    - assets/sounds/spin.mp3
+    - assets/sounds/win.mp3

@@ -1,199 +1,141 @@
-const functions = require("firebase-functions");
-const express = require("express");
-const cors = require("cors");
-const OpenAI = require("openai");
-const fetch = require("node-fetch");
+import { onRequest } from "firebase-functions/v2/https";
+import { defineString } from "firebase-functions/params";
+import fetch from "node-fetch";
 
-const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json());
+const GOOGLE_API_KEY = defineString("GOOGLE_API_KEY");
 
-function safeParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error("Invalid JSON from AI");
-  }
-}
+export const getIdeas = onRequest(
+  { region: "us-central1" },
+  async (req, res) => {
 
-app.post("/", async (req, res) => {
-  try {
-    const openaiKey = process.env.OPENAI_API_KEY;
-    const ticketKey = process.env.TICKETMASTER_API_KEY;
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
 
-    const {
-      group = "Any",
-      budget = "Any",
-      energy = "Any",
-      isDateNight = false,
-      history = [],
-      location = "United States",
-    } = req.body;
-
-    /// 🎟️ FETCH LOCAL EVENTS
-    let eventSummary = "";
-
-    if (ticketKey) {
-      try {
-        const eventRes = await fetch(
-          `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${ticketKey}&keyword=${location}&size=5`
-        );
-
-        const eventData = await eventRes.json();
-
-        if (eventData._embedded?.events?.length > 0) {
-          eventSummary = eventData._embedded.events
-            .slice(0, 5)
-            .map((e) => {
-              const venue = e._embedded.venues[0];
-              return `${e.name} at ${venue.name}, ${venue.address?.line1 || ""}, ${venue.city.name}, ${venue.state?.stateCode || ""}`;
-            })
-            .join("\n");
-        }
-      } catch (e) {
-        console.log("Ticketmaster error:", e.message);
-      }
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
     }
 
-    if (!openaiKey) {
-      return res.json([
+    try {
+      const { lat, lng, isDateNight } = req.body || {};
+
+      const centerLat = lat || 30.8;
+      const centerLng = lng || -81.6;
+
+      const apiKey = GOOGLE_API_KEY.value();
+
+      // 🔥 TRUE VARIETY (NOT JUST FOOD)
+      const queries = isDateNight
+        ? [
+            "live music",
+            "art gallery",
+            "cocktail bar",
+            "dessert cafe",
+            "scenic overlook",
+            "walkable downtown",
+          ]
+        : [
+            "things to do",
+            "local attractions",
+            "parks",
+            "bowling",
+            "mini golf",
+            "museum",
+            "arcade",
+            "hiking trail",
+            "bookstore",
+          ];
+
+      let places = [];
+
+      for (const q of queries) {
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${centerLat},${centerLng}&radius=50000&keyword=${encodeURIComponent(q)}&key=${apiKey}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+          places = places.concat(data.results);
+        }
+      }
+
+      if (places.length === 0) {
+        return res.json([
+          {
+            title: "Explore nearby",
+            description: "Try expanding your distance or preferences.",
+            address: "",
+            lat: centerLat,
+            lng: centerLng,
+          },
+        ]);
+      }
+
+      function pick(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      const activities = [
+        "grab a drink after",
+        "take a scenic walk",
+        "watch the sunset",
+        "explore nearby shops",
+        "get dessert somewhere new",
+        "wander and see what you find",
+      ];
+
+      const twists = [
+        "something you probably wouldn’t normally pick",
+        "a different kind of night out",
+        "a change from your usual routine",
+        "a fun spontaneous choice",
+        "an unexpected but great option",
+      ];
+
+      function buildExperience(place, isDateNight) {
+        if (isDateNight) {
+          return `Start at ${place.name}, then ${pick(
+            activities
+          )}. A ${pick(twists)} for a memorable night together.`;
+        }
+
+        return `Check out ${place.name}, then ${pick(
+          activities
+        )}. It’s ${pick(twists)}.`;
+      }
+
+      // 🎯 RANDOMIZE + DEDUPE
+      const unique = Array.from(
+        new Map(places.map((p) => [p.place_id, p])).values()
+      );
+
+      const selected = unique
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2);
+
+      const results = selected.map((p) => ({
+        title: p.name,
+        description: buildExperience(p, isDateNight),
+        address: p.vicinity || "Nearby location",
+        lat: p.geometry?.location?.lat || 0,
+        lng: p.geometry?.location?.lng || 0,
+      }));
+
+      res.json(results);
+
+    } catch (err) {
+      console.error(err);
+
+      res.json([
         {
           title: "Error",
-          description: "Missing OpenAI key",
+          description: "Something went wrong.",
           address: "",
-          group: "Error",
-          budget: "Error",
+          lat: 0,
+          lng: 0,
         },
       ]);
     }
-
-    const openai = new OpenAI({ apiKey: openaiKey });
-
-    /// 💎 PREMIUM DATE NIGHT PROMPT
-    const dateNightPrompt = `
-You are a HIGH-END ROMANTIC EXPERIENCE PLANNER.
-
-Location: ${location}
-
-Here are real local events:
-${eventSummary}
-
-GOAL:
-Create a UNIQUE, MEMORABLE DATE NIGHT that feels intentional, romantic, and special.
-
-STRICT RULES:
-- MUST include 2–3 REAL locations
-- MUST feel romantic, cozy, fun, or exciting
-- MUST include FULL ADDRESS (street, city, state)
-- MUST NOT be generic (no "dinner and a movie")
-- MUST feel like something worth dressing up for
-- MUST avoid repeats: ${history.join(", ")}
-
-EXPERIENCE STYLE:
-- Think: atmosphere, mood, flow
-- Include variety (drinks → activity → dessert)
-- Use aesthetic or unique places (rooftops, waterfronts, live music, hidden gems)
-
-FLOW:
-- Start: engaging opener (views, drinks, fun start)
-- Middle: main experience (dinner/event/activity)
-- Optional Finish: dessert, scenic walk, relaxed ending
-
-TONE:
-- Romantic, exciting, elevated
-
-Return ONLY JSON:
-
-[
-  {
-    "title": "Romantic experience name",
-    "description": "Start at [place + full address] for [vibe], then head to [place + full address], and optionally finish at [place + full address]",
-    "address": "First location full address",
-    "group": "Couple",
-    "budget": "$$"
   }
-]
-`;
-
-    /// 🔥 PREMIUM NORMAL PROMPT
-    const normalPrompt = `
-You are a HIGH-END LOCAL EXPERIENCE CURATOR.
-
-Location: ${location}
-
-Here are real local events:
-${eventSummary}
-
-GOAL:
-Create PREMIUM, curated experiences — not simple ideas.
-
-STRICT RULES:
-- MUST include real businesses or events
-- MUST include FULL address
-- MUST chain 2–3 steps together
-- MUST feel intentional and exciting
-- NEVER generic ideas
-- NEVER repeat: ${history.join(", ")}
-
-FILTERS:
-Group: ${group}
-Budget: ${budget}
-Energy: ${energy}
-
-STYLE:
-- Think like a concierge
-- Make it feel planned and special
-
-Return ONLY JSON:
-
-[
-  {
-    "title": "Experience name",
-    "description": "Start at [place + full address], then go to [place + full address], optional final stop [place + full address]",
-    "address": "First location full address",
-    "group": "${group}",
-    "budget": "${budget}"
-  }
-]
-`;
-
-    const prompt = isDateNight ? dateNightPrompt : normalPrompt;
-
-    /// 🤖 CALL OPENAI
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 1.2,
-    });
-
-    let data = safeParse(completion.choices[0].message.content);
-
-    /// 🧹 CLEAN RESPONSE
-    data = data.map((item) => ({
-      title: item.title || "",
-      description: item.description || "",
-      address: item.address || "",
-      group: item.group || group,
-      budget: item.budget || budget,
-    }));
-
-    return res.json(data);
-
-  } catch (err) {
-    console.error("ERROR:", err);
-
-    return res.json([
-      {
-        title: "Error",
-        description: err.message,
-        address: "",
-        group: "Error",
-        budget: "Error",
-      },
-    ]);
-  }
-});
-
-exports.getIdeas = functions.https.onRequest(app);
+);

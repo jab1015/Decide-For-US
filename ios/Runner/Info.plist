@@ -3,42 +3,25 @@
 <plist version="1.0">
 <dict>
 
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-
+	<!-- App Info -->
 	<key>CFBundleDisplayName</key>
 	<string>Decide For Us</string>
-
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
 
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-
 	<key>CFBundleName</key>
 	<string>decide_for_us</string>
 
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 
 	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
+	<string>$(MARKETING_VERSION)</string>
 
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-
+	<!-- iOS Required -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-
-	<!-- 🔥 REQUIRED FOR LOCATION (THIS FIXES YOUR APP STORE WARNING) -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to suggest nearby activities tailored to you.</string>
-
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Your location helps us provide better local recommendations when using the app.</string>
 
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -46,22 +29,38 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 
+	<!-- Orientation -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
-	<key>UISupportedInterfaceOrientations~ipad</key>
+	<!-- Status Bar -->
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+
+	<!-- NETWORK (IMPORTANT FOR APIs) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- 📍 LOCATION PERMISSIONS (GPS) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to show nearby activities and date ideas.</string>
+
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your location helps us suggest better local experiences.</string>
+
+	<!-- 🔊 AUDIO (for spinner/confetti sounds) -->
+	<key>UIBackgroundModes</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>audio</string>
 	</array>
 
-	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<!-- Flutter -->
+	<key>io.flutter.embedded_views_preview</key>
 	<true/>
 
 </dict>

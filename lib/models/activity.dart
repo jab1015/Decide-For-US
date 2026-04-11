@@ -1,25 +1,25 @@
 class Activity {
   final String title;
   final String description;
-  final String group;
-  final String budget;
   final String address;
+  final double lat;
+  final double lng;
 
   Activity({
     required this.title,
     required this.description,
-    required this.group,
-    required this.budget,
-    this.address = "", // 🔥 NOT REQUIRED ANYMORE
+    required this.address,
+    required this.lat,
+    required this.lng,
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
-      title: json['title'] ?? "",
-      description: json['description'] ?? "",
-      group: json['group'] ?? "",
-      budget: json['budget'] ?? "",
-      address: json['address'] ?? "",
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      address: json['address'] ?? '',
+      lat: (json['lat'] ?? 0).toDouble(),
+      lng: (json['lng'] ?? 0).toDouble(),
     );
   }
 
@@ -27,9 +27,9 @@ class Activity {
     return {
       "title": title,
       "description": description,
-      "group": group,
-      "budget": budget,
       "address": address,
+      "lat": lat,
+      "lng": lng,
     };
   }
 }

@@ -1,19 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity.dart';
-import '../widgets/decision_card.dart';
 import '../services/ai_service.dart';
 import '../services/location_service.dart';
-import '../services/decision_service.dart';
-import '../services/streak_service.dart';
-import '../services/subscription_service.dart';
-
-import 'paywall_screen.dart';
+import '../widgets/decision_card.dart';
 import 'favorites_screen.dart';
+import 'paywall_screen.dart';
 
 class DecideScreen extends StatefulWidget {
   const DecideScreen({super.key});
@@ -23,169 +19,112 @@ class DecideScreen extends StatefulWidget {
 }
 
 class _DecideScreenState extends State<DecideScreen> {
-  final AudioPlayer player = AudioPlayer();
+  final player = AudioPlayer();
+  late ConfettiController confetti;
+
+  List<Activity> results = [];
 
   bool isLoading = false;
-  List<Activity> results = [];
+  bool isDateNight = false;
 
   String? selectedGroup;
   String? selectedBudget;
   String? selectedEnergy;
-  bool isDateNight = false;
 
-  int usageCount = 0;
-  int streak = 1;
+  Map<String, double>? userCoords;
 
   double rotation = 0;
+  int spinCount = 0;
 
-  String? userLocation;
-  bool locationRequested = false;
+  int selectedRadius = 50;
 
   @override
   void initState() {
     super.initState();
+    confetti = ConfettiController(duration: const Duration(seconds: 2));
+    loadLocation();
     loadUsage();
-    loadStreak();
-  }
-
-  Future<void> loadStreak() async {
-    final s = await StreakService.updateStreak();
-    if (mounted) setState(() => streak = s);
   }
 
   Future<void> loadUsage() async {
     final prefs = await SharedPreferences.getInstance();
-    usageCount = prefs.getInt("usageCount") ?? 0;
-    if (mounted) setState(() {});
+    spinCount = prefs.getInt("spinCount") ?? 0;
   }
 
-  Future<void> saveUsage() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("usageCount", usageCount);
+  Future<void> loadLocation() async {
+    userCoords = await LocationService.getLatLng();
   }
 
-  Future<void> requestLocationIfNeeded() async {
-    if (locationRequested) return;
-    locationRequested = true;
-
-    try {
-      userLocation = await LocationService.getCityState();
-    } catch (_) {
-      userLocation = null;
-    }
-  }
-
-  void goToPaywall() async {
-    await Navigator.push(
+  Future<void> openPaywall() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PaywallScreen()),
     );
 
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const DecideScreen(),
-        transitionDuration: Duration.zero,
-      ),
-    );
+    if (result == true) {
+      final prefs = await SharedPreferences.getInstance();
+
+      setState(() {
+        spinCount = prefs.getInt("spinCount") ?? 0;
+
+        // reset UI
+        selectedGroup = null;
+        selectedBudget = null;
+        selectedEnergy = null;
+        isDateNight = false;
+      });
+    }
   }
 
-  void spin() async {
+  Future<void> spin() async {
     if (isLoading) return;
 
-    if (!SubscriptionService.isSubscribed && usageCount >= 3) {
-      goToPaywall();
+    if (spinCount >= 3) {
+      await openPaywall();
       return;
     }
 
-    usageCount++;
-    await saveUsage();
-
-    HapticFeedback.mediumImpact();
-    unawaited(player.play(AssetSource('sounds/spin.mp3')));
-
-    final group = selectedGroup;
-    final budget = selectedBudget;
-    final energy = selectedEnergy;
-    final dateNight = isDateNight;
+    final prefs = await SharedPreferences.getInstance();
+    spinCount++;
+    await prefs.setInt("spinCount", spinCount);
 
     setState(() {
       isLoading = true;
       results.clear();
-      rotation += 8;
+      rotation += 10;
+    });
+
+    await player.play(AssetSource('sounds/spin.mp3'));
+
+    final apiFuture = AIService.getIdeas(
+      group: selectedGroup,
+      budget: selectedBudget,
+      energy: selectedEnergy,
+      isDateNight: isDateNight,
+      lat: userCoords?['lat'],
+      lng: userCoords?['lng'],
+      radius: selectedRadius,
+    );
+
+    final result = await Future.wait([
+      apiFuture,
+      Future.delayed(const Duration(seconds: 8)),
+    ]);
+
+    final data = result[0] as List<Activity>;
+
+    await player.play(AssetSource('sounds/win.mp3'));
+
+    setState(() {
+      results = data;
+      isLoading = false;
 
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
-      isDateNight = false;
     });
 
-    unawaited(requestLocationIfNeeded());
-
-    try {
-      final Future<List<Activity>> f1 = AIService.getIdeas(
-        group: group,
-        budget: budget,
-        energy: energy,
-        isDateNight: dateNight,
-        location: userLocation,
-      );
-
-      final Future<List<Activity>> f2 = AIService.getIdeas(
-        group: group,
-        budget: budget,
-        energy: energy,
-        isDateNight: dateNight,
-        location: userLocation,
-      );
-
-      final aiFuture = Future.wait<List<Activity>>([f1, f2]);
-
-      List<List<Activity>>? aiResults;
-
-      try {
-        aiResults = await aiFuture.timeout(const Duration(seconds: 2));
-      } catch (_) {}
-
-      await Future.delayed(const Duration(seconds: 8));
-
-      if (aiResults == null) {
-        try {
-          aiResults = await aiFuture;
-        } catch (_) {}
-      }
-
-      List<Activity> finalResults;
-
-      if (aiResults != null && aiResults.isNotEmpty) {
-        final combined = [...aiResults[0], ...aiResults[1]];
-        final map = <String, Activity>{};
-        for (var item in combined) {
-          map[item.title] = item;
-        }
-        finalResults = map.values.take(2).toList();
-      } else {
-        finalResults = DecisionService.getFiltered().take(2).toList();
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        results = finalResults;
-        isLoading = false;
-      });
-
-      unawaited(player.play(AssetSource('sounds/win.mp3')));
-    } catch (_) {
-      final fallback = DecisionService.getFiltered();
-
-      await Future.delayed(const Duration(seconds: 8));
-
-      setState(() {
-        results = fallback.take(2).toList();
-        isLoading = false;
-      });
-    }
+    confetti.play();
   }
 
   Widget chip(String label, String? selected, Function(String) onTap) {
@@ -196,13 +135,13 @@ class _DecideScreenState extends State<DecideScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.deepPurple : Colors.white,
+          color: isSelected ? const Color(0xFF6A5AE0) : Colors.white,
           borderRadius: BorderRadius.circular(25),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
+            color: isSelected ? Colors.white : Colors.black,
           ),
         ),
       ),
@@ -213,7 +152,9 @@ class _DecideScreenState extends State<DecideScreen> {
       Function(String) onTap) {
     return Column(
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(title,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.center,
@@ -225,109 +166,115 @@ class _DecideScreenState extends State<DecideScreen> {
     );
   }
 
-  Widget dateNightToggle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text("💖 Date Night"),
-        const SizedBox(width: 10),
-        Switch(
-          value: isDateNight,
-          onChanged: (val) => setState(() => isDateNight = val),
-        )
-      ],
+  Widget spinner() {
+    return GestureDetector(
+      onTap: spin,
+      child: AnimatedRotation(
+        turns: rotation,
+        duration: const Duration(seconds: 8),
+        child: Container(
+          width: 200,
+          height: 200,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6A5AE0), Color(0xFF4FC3F7)],
+            ),
+            shape: BoxShape.circle,
+          ),
+          child: const Text(
+            "SPIN",
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text("Decide For Us"),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite, color: Colors.red),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const FavoritesScreen(),
+                ),
               );
             },
-          )
+          ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 10),
-                const Text(
-                  "Decide For Us",
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Text("🔥 $streak Day Streak"),
 
-                const SizedBox(height: 20),
-                dateNightToggle(),
-
-                const SizedBox(height: 20),
-
-                section("Who’s involved?",
-                    ["Couple", "Friends", "Family", "Solo"],
-                    selectedGroup, (v) => setState(() => selectedGroup = v)),
-
-                section("Budget",
-                    ["Free", "\$", "\$\$"],
-                    selectedBudget, (v) => setState(() => selectedBudget = v)),
-
-                section("Energy",
-                    ["Low", "Medium", "High"],
-                    selectedEnergy, (v) => setState(() => selectedEnergy = v)),
-
-                const SizedBox(height: 20),
-
-                AnimatedRotation(
-                  turns: rotation,
-                  duration: const Duration(seconds: 8),
-                  child: GestureDetector(
-                    onTap: spin,
-                    child: Container(
-                      height: 170,
-                      width: 170,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Colors.deepPurple, Colors.blue],
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text("SPIN 🎡",
-                            style: TextStyle(color: Colors.white)),
-                      ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("💖 Date Night"),
+                    Switch(
+                      value: isDateNight,
+                      onChanged: (v) =>
+                          setState(() => isDateNight = v),
                     ),
-                  ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),
 
-                if (isLoading)
-                  const CircularProgressIndicator(),
+                section(
+                  "Who’s involved?",
+                  ["Couple", "Friends", "Family", "Solo"],
+                  selectedGroup,
+                  (v) => setState(() => selectedGroup = v),
+                ),
+
+                section(
+                  "Budget",
+                  ["Free", "\$", "\$\$"],
+                  selectedBudget,
+                  (v) => setState(() => selectedBudget = v),
+                ),
+
+                section(
+                  "Energy",
+                  ["Low", "Medium", "High"],
+                  selectedEnergy,
+                  (v) => setState(() => selectedEnergy = v),
+                ),
 
                 const SizedBox(height: 20),
 
-                ...results.map((r) => DecisionCard(activity: r)),
+                Center(child: spinner()),
+
+                const SizedBox(height: 30),
+
+                ...results.map((e) => DecisionCard(activity: e)),
 
                 const SizedBox(height: 40),
               ],
             ),
           ),
-        ),
+
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(confettiController: confetti),
+          ),
+        ],
       ),
     );
   }

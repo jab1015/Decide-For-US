@@ -1,122 +1,139 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
 import '../models/activity.dart';
-import '../services/favorites_service.dart';
+import '../services/location_service.dart';
 
 class DecisionCard extends StatefulWidget {
   final Activity activity;
+  final bool showFavorite;
 
-  const DecisionCard({super.key, required this.activity});
+  const DecisionCard({
+    super.key,
+    required this.activity,
+    this.showFavorite = true,
+  });
 
   @override
   State<DecisionCard> createState() => _DecisionCardState();
 }
 
 class _DecisionCardState extends State<DecisionCard> {
-  bool isFav = false;
+  double? distance;
+  bool isFavorite = false;
 
   @override
   void initState() {
     super.initState();
-    loadFavorite();
+    calculateDistance();
+    checkFavorite();
   }
 
-  void loadFavorite() async {
-    final fav = await FavoritesService.isFavorite(widget.activity);
-    setState(() => isFav = fav);
+  Future<void> calculateDistance() async {
+    final coords = await LocationService.getLatLng();
+
+    if (coords != null &&
+        widget.activity.lat != 0 &&
+        widget.activity.lng != 0) {
+      final d = LocationService.calculateDistance(
+        coords['lat']!,
+        coords['lng']!,
+        widget.activity.lat,
+        widget.activity.lng,
+      );
+
+      setState(() => distance = d);
+    }
   }
 
-  void toggleFavorite() async {
-    await FavoritesService.toggleFavorite(widget.activity);
-    setState(() => isFav = !isFav);
+  Future<void> checkFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList("favorites") ?? [];
+
+    setState(() {
+      isFavorite = favs.contains(widget.activity.title);
+    });
   }
 
-  Color baseColor() {
-    final colors = [
-      const Color(0xFF7B61FF),
-      const Color(0xFFFF6B6B),
-      const Color(0xFF00C9A7),
-      const Color(0xFFFFA726),
-    ];
-    return colors[widget.activity.title.hashCode % colors.length];
+  Future<void> toggleFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> favs = prefs.getStringList("favorites") ?? [];
+
+    final item = jsonEncode({
+      "title": widget.activity.title,
+      "description": widget.activity.description,
+      "address": widget.activity.address,
+      "lat": widget.activity.lat,
+      "lng": widget.activity.lng,
+    });
+
+    if (isFavorite) {
+      favs.removeWhere((e) => e.contains(widget.activity.title));
+    } else {
+      favs.add(item);
+    }
+
+    await prefs.setStringList("favorites", favs);
+
+    setState(() => isFavorite = !isFavorite);
   }
 
   @override
   Widget build(BuildContext context) {
-    final a = widget.activity;
-    final color = baseColor();
-
     return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: color.withOpacity(0.12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: Colors.blue.withOpacity(0.25),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Stack(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                a.title,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: color.withOpacity(0.9),
-                ),
-              ),
+              Text(widget.activity.title,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+
+              const SizedBox(height: 6),
+
+              Text(widget.activity.description),
 
               const SizedBox(height: 10),
 
               Text(
-                a.description,
+                distance != null
+                    ? "${widget.activity.address} • ${distance!.toStringAsFixed(1)} miles away"
+                    : widget.activity.address,
                 style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
+                    fontSize: 12, color: Colors.black54),
               ),
-
-              const SizedBox(height: 14),
-
-              if (a.address != null)
-                Text(
-                  a.address!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
-                ),
             ],
           ),
 
-          // ❤️ FIXED FAVORITE BUTTON
-          Positioned(
-            top: 6,
-            right: 6,
-            child: GestureDetector(
-              onTap: toggleFavorite,
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 6,
-                    )
-                  ],
-                ),
-                child: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  color: color,
-                  size: 20,
+          if (widget.showFavorite)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: GestureDetector(
+                onTap: toggleFavorite,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    color: Colors.red,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
