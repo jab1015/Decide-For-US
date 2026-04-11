@@ -3,68 +3,69 @@ import 'package:http/http.dart' as http;
 import '../models/activity.dart';
 
 class AIService {
-  static const String baseUrl =
-      "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getIdeas";
-
   static Future<List<Activity>> getIdeas({
     String? group,
     String? budget,
     String? energy,
     bool? isDateNight,
-    List<String>? history,
     String? location,
+    List<String>? history,
+    double? lat,
+    double? lng,
+    int? radius,
   }) async {
-    history ??= [];
-
     try {
+      final url = Uri.parse(
+        "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getIdeas",
+      );
+
       final response = await http
           .post(
-            Uri.parse(baseUrl),
-            headers: {
-              "Content-Type": "application/json",
-            },
+            url,
+            headers: {"Content-Type": "application/json"},
             body: jsonEncode({
               "group": group,
               "budget": budget,
               "energy": energy,
               "isDateNight": isDateNight,
-              "history": history,
-              "location": location ?? "Unknown",
+              "location": location,
+              "history": history ?? [],
+              "lat": lat,
+              "lng": lng,
+              "radius": radius ?? 50,
             }),
           )
           .timeout(const Duration(seconds: 10));
 
+      print("🌐 STATUS: ${response.statusCode}");
+      print("🌐 BODY: ${response.body}");
+
       if (response.statusCode != 200) {
-        throw Exception("Backend error");
+        return [
+          Activity(
+            title: "Server error",
+            description: "Please try again.",
+            address: "",
+            lat: 0, // ✅ REQUIRED
+            lng: 0, // ✅ REQUIRED
+          )
+        ];
       }
 
-      final decoded = jsonDecode(response.body);
+      final List data = jsonDecode(response.body);
 
-      final List<dynamic> data =
-          decoded is List ? decoded : [decoded];
-
-      return data
-          .map<Activity>((e) => Activity.fromJson(e))
-          .toList();
+      return data.map((e) => Activity.fromJson(e)).toList();
     } catch (e) {
-      print("AI ERROR: $e");
+      print("❌ API ERROR: $e");
 
-      // 🔥 CLEAN FALLBACK (NO LOCATION SERVICE HERE)
       return [
         Activity(
-          title: "Try a Local Coffee Spot ☕",
-          description: "Find a cozy café nearby and relax.",
-          group: group ?? "Any",
-          budget: budget ?? "Any",
-          address: location ?? "",
-        ),
-        Activity(
-          title: "Go for a Scenic Walk 🌿",
-          description: "Enjoy fresh air and explore your area.",
-          group: group ?? "Any",
-          budget: budget ?? "Free",
-          address: location ?? "",
-        ),
+          title: "Connection issue",
+          description: "Check your internet or try again.",
+          address: "",
+          lat: 0, // ✅ REQUIRED
+          lng: 0, // ✅ REQUIRED
+        )
       ];
     }
   }

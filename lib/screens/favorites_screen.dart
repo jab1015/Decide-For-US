@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/activity.dart';
-import '../services/favorites_service.dart';
+import '../widgets/decision_card.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -19,71 +22,53 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> loadFavorites() async {
-    final favs = await FavoritesService.getFavorites();
-    setState(() => favorites = favs);
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList('favorites') ?? [];
+
+    favorites =
+        favs.map((f) => Activity.fromJson(jsonDecode(f))).toList();
+
+    setState(() {});
   }
 
   Future<void> removeFavorite(Activity activity) async {
-    await FavoritesService.toggleFavorite(activity);
-    loadFavorites();
-  }
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList('favorites') ?? [];
 
-  Color baseColor(String title) {
-    final colors = [
-      const Color(0xFF7B61FF),
-      const Color(0xFFFF6B6B),
-      const Color(0xFF00C9A7),
-      const Color(0xFFFFA726),
-    ];
-    return colors[title.hashCode % colors.length];
+    favs.removeWhere((f) =>
+        jsonDecode(f)['title'] == activity.title);
+
+    await prefs.setStringList('favorites', favs);
+
+    loadFavorites();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Favorites")),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: favorites.map((item) {
-          final color = baseColor(item.title);
+      body: ListView.builder(
+        itemCount: favorites.length,
+        itemBuilder: (context, index) {
+          final activity = favorites[index];
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: color.withOpacity(0.12),
-              border: Border.all(color: color.withOpacity(0.3)),
-            ),
-            child: Stack(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(item.description),
-                  ],
+          return Stack(
+            children: [
+              DecisionCard(
+                activity: activity,
+                showFavorite: false, // 🔥 HARD OFF
+              ),
+              Positioned(
+                right: 10,
+                top: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => removeFavorite(activity),
                 ),
-
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () => removeFavorite(item),
-                  ),
-                )
-              ],
-            ),
+              ),
+            ],
           );
-        }).toList(),
+        },
       ),
     );
   }

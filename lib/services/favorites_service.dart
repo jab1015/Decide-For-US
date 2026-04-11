@@ -1,42 +1,80 @@
-import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
 import '../models/activity.dart';
+import '../widgets/decision_card.dart';
 
-class FavoritesService {
-  static const _key = "favorites";
+class FavoritesScreen extends StatefulWidget {
+  const FavoritesScreen({super.key});
 
-  static Future<List<Activity>> getFavorites() async {
+  @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  List<Activity> favorites = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadFavorites();
+  }
+
+  Future<void> loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_key);
+    final favs = prefs.getStringList("favorites") ?? [];
 
-    if (data == null) return [];
-
-    final decoded = jsonDecode(data) as List;
-    return decoded.map((e) => Activity.fromJson(e)).toList();
+    setState(() {
+      favorites = favs.map((e) {
+        final data = jsonDecode(e);
+        return Activity(
+          title: data['title'],
+          description: data['description'],
+          address: data['address'],
+          lat: data['lat'],
+          lng: data['lng'],
+        );
+      }).toList();
+    });
   }
 
-  static Future<void> saveFavorites(List<Activity> list) async {
+  Future<void> removeFavorite(Activity activity) async {
     final prefs = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(list.map((e) => e.toJson()).toList());
-    await prefs.setString(_key, encoded);
+    List<String> favs = prefs.getStringList("favorites") ?? [];
+
+    favs.removeWhere((e) => e.contains(activity.title));
+
+    await prefs.setStringList("favorites", favs);
+
+    loadFavorites();
   }
 
-  static Future<void> toggleFavorite(Activity activity) async {
-    final favorites = await getFavorites();
-
-    final exists = favorites.any((a) => a.title == activity.title);
-
-    if (exists) {
-      favorites.removeWhere((a) => a.title == activity.title);
-    } else {
-      favorites.add(activity);
-    }
-
-    await saveFavorites(favorites);
-  }
-
-  static Future<bool> isFavorite(Activity activity) async {
-    final favorites = await getFavorites();
-    return favorites.any((a) => a.title == activity.title);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Favorites")),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: favorites.map((item) {
+          return Stack(
+            children: [
+              DecisionCard(
+                activity: item,
+                showFavorite: false,
+              ),
+              Positioned(
+                right: 10,
+                top: 10,
+                child: GestureDetector(
+                  onTap: () => removeFavorite(item),
+                  child: const Icon(Icons.delete, color: Colors.red),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
   }
 }
