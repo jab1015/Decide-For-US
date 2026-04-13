@@ -1,31 +1,19 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/activity.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
-class DecisionCard extends StatefulWidget {
+class DecisionCard extends StatelessWidget {
   final Activity activity;
   final bool showFavorite;
+  final int index;
 
   const DecisionCard({
     super.key,
     required this.activity,
     this.showFavorite = true,
+    required this.index,
   });
 
-  @override
-  State<DecisionCard> createState() => _DecisionCardState();
-}
-
-class _DecisionCardState extends State<DecisionCard> {
-  bool isFavorite = false;
-
-  // 🔥 GLOBAL ROTATION INDEX (changes per rebuild)
-  static int globalSeed = DateTime.now().millisecondsSinceEpoch;
-
-  // 🎨 COLOR SETS
-  final List<List<Color>> gradients = [
+  static final List<List<Color>> gradients = [
     [Colors.green, Colors.greenAccent],
     [Colors.orange, Colors.deepOrangeAccent],
     [Colors.blue, Colors.lightBlueAccent],
@@ -33,172 +21,107 @@ class _DecisionCardState extends State<DecisionCard> {
     [Colors.purple, Colors.deepPurpleAccent],
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    checkFavorite();
-  }
-
-  Future<void> checkFavorite() async {
-    final prefs = await SharedPreferences.getInstance();
-    final favs = prefs.getStringList("favorites") ?? [];
-
-    setState(() {
-      isFavorite =
-          favs.any((f) => jsonDecode(f)['title'] == widget.activity.title);
-    });
-  }
-
-  Future<void> toggleFavorite() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> favs = prefs.getStringList("favorites") ?? [];
-
-    final activityJson = jsonEncode({
-      "title": widget.activity.title,
-      "description": widget.activity.description,
-      "address": widget.activity.address,
-      "lat": widget.activity.lat,
-      "lng": widget.activity.lng,
-    });
-
-    if (isFavorite) {
-      favs.removeWhere((f) => jsonDecode(f)['title'] == widget.activity.title);
-    } else {
-      favs.add(activityJson);
-    }
-
-    await prefs.setStringList("favorites", favs);
-
-    setState(() {
-      isFavorite = !isFavorite;
-    });
-  }
-
-  // 🔥 NEW COLOR LOGIC
   List<Color> getGradient() {
-    final base = (widget.activity.title.hashCode + globalSeed).abs();
+    return gradients[index % gradients.length];
+  }
 
-    final index = base % gradients.length;
+  // 🔥 FORCE DIFFERENT VISUAL CROPPING
+  Alignment getImageAlignment() {
+    final positions = [
+      Alignment.center,
+      Alignment.topCenter,
+      Alignment.bottomCenter,
+      Alignment.centerLeft,
+      Alignment.centerRight,
+    ];
 
-    return gradients[index];
+    return positions[index % positions.length];
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = getGradient();
+    final alignment = getImageAlignment();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: LinearGradient(
-                colors: [
-                  colors[0].withOpacity(0.35),
-                  colors[1].withOpacity(0.35),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        child: Stack(
+          children: [
+            // 🔥 IMAGE WITH DIFFERENT CROP PER CARD
+            if (activity.photoUrl != null)
+              SizedBox(
+                height: 200,
+                width: double.infinity,
+                child: Image.network(
+                  activity.photoUrl!,
+                  fit: BoxFit.cover,
+                  alignment: alignment, // 🔥 KEY DIFFERENCE
+                  errorBuilder: (context, error, stackTrace) {
+                    return Image.network(
+                      "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
+                      fit: BoxFit.cover,
+                    );
+                  },
+                ),
               ),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.5),
+
+            // 🔥 STRONG COLOR OVERLAY (DIFFERENT PER CARD)
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colors[0].withOpacity(0.55),
+                    colors[1].withOpacity(0.55),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors[0].withOpacity(0.25),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                )
-              ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+
+            // 🔥 TEXT PANEL
+            Container(
+              margin: const EdgeInsets.only(top: 140),
+              decoration: BoxDecoration(
+                color: colors[0].withOpacity(0.9),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(22),
+                ),
+              ),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.activity.title,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      if (widget.showFavorite)
-                        GestureDetector(
-                          onTap: toggleFavorite,
-                          child: Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: Colors.red,
-                          ),
-                        )
-                    ],
-                  ),
-                  const SizedBox(height: 6),
                   Text(
-                    _getVibe(widget.activity.description),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.black.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.activity.description,
+                    activity.title,
                     style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
+                  Text(
+                    activity.description,
+                    style: const TextStyle(color: Colors.black),
+                  ),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.location_on,
-                          size: 16, color: Colors.black54),
+                      const Icon(Icons.location_on, size: 16),
                       const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          widget.activity.address,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ),
+                      Expanded(child: Text(activity.address)),
                     ],
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
-  }
-
-  String _getVibe(String description) {
-    final d = description.toLowerCase();
-
-    if (d.contains("walk") || d.contains("scenic")) {
-      return "🌅 Scenic & Relaxed";
-    }
-    if (d.contains("cozy") || d.contains("quiet")) {
-      return "✨ Cozy & Intimate";
-    }
-    if (d.contains("fun") || d.contains("explore")) {
-      return "🎉 Fun & Playful";
-    }
-    if (d.contains("dinner")) {
-      return "🍽 Classic Date Night";
-    }
-
-    return "💫 Something Different";
   }
 }

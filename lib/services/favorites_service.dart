@@ -1,80 +1,41 @@
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity.dart';
-import '../widgets/decision_card.dart';
 
-class FavoritesScreen extends StatefulWidget {
-  const FavoritesScreen({super.key});
+class FavoritesService {
+  static const String key = "favorites";
 
-  @override
-  State<FavoritesScreen> createState() => _FavoritesScreenState();
-}
-
-class _FavoritesScreenState extends State<FavoritesScreen> {
-  List<Activity> favorites = [];
-
-  @override
-  void initState() {
-    super.initState();
-    loadFavorites();
-  }
-
-  Future<void> loadFavorites() async {
+  static Future<List<Activity>> getFavorites() async {
     final prefs = await SharedPreferences.getInstance();
-    final favs = prefs.getStringList("favorites") ?? [];
+    final data = prefs.getStringList(key) ?? [];
 
-    setState(() {
-      favorites = favs.map((e) {
-        final data = jsonDecode(e);
-        return Activity(
-          title: data['title'],
-          description: data['description'],
-          address: data['address'],
-          lat: data['lat'],
-          lng: data['lng'],
-        );
-      }).toList();
-    });
+    return data.map((e) {
+      final jsonMap = json.decode(e);
+      return Activity.fromJson(jsonMap);
+    }).toList();
   }
 
-  Future<void> removeFavorite(Activity activity) async {
+  static Future<void> addFavorite(Activity activity) async {
     final prefs = await SharedPreferences.getInstance();
-    List<String> favs = prefs.getStringList("favorites") ?? [];
+    final current = prefs.getStringList(key) ?? [];
 
-    favs.removeWhere((e) => e.contains(activity.title));
+    final updated = [
+      ...current,
+      json.encode(activity.toJson()),
+    ];
 
-    await prefs.setStringList("favorites", favs);
-
-    loadFavorites();
+    await prefs.setStringList(key, updated);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Favorites")),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: favorites.map((item) {
-          return Stack(
-            children: [
-              DecisionCard(
-                activity: item,
-                showFavorite: false,
-              ),
-              Positioned(
-                right: 10,
-                top: 10,
-                child: GestureDetector(
-                  onTap: () => removeFavorite(item),
-                  child: const Icon(Icons.delete, color: Colors.red),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
+  static Future<void> removeFavorite(Activity activity) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getStringList(key) ?? [];
+
+    final updated = current.where((item) {
+      final jsonMap = json.decode(item);
+      return jsonMap['title'] != activity.title;
+    }).toList();
+
+    await prefs.setStringList(key, updated);
   }
 }

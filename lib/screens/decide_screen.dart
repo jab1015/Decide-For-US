@@ -278,7 +278,15 @@ class _DecideScreenState extends State<DecideScreen> {
                 const SizedBox(height: 20),
                 Center(child: spinner()),
                 const SizedBox(height: 30),
-                ...results.map((e) => DecisionCard(activity: e)),
+
+                // 🔥 CRITICAL FIX FOR UNIQUE IMAGES
+                ...results.asMap().entries.map(
+                      (entry) => DecisionCard(
+                        activity: entry.value,
+                        index: entry.key,
+                      ),
+                    ),
+
                 const SizedBox(height: 40),
               ],
             ),

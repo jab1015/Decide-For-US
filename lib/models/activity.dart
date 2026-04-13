@@ -5,12 +5,16 @@ class Activity {
   final double lat;
   final double lng;
 
+  // 🔥 ADD THIS
+  final String? photoUrl;
+
   Activity({
     required this.title,
     required this.description,
     required this.address,
     required this.lat,
     required this.lng,
+    this.photoUrl,
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
@@ -20,16 +24,20 @@ class Activity {
       address: json['address'] ?? '',
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
+
+      // 🔥 MAP PHOTO
+      photoUrl: json['photoUrl'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      "title": title,
-      "description": description,
-      "address": address,
-      "lat": lat,
-      "lng": lng,
+      'title': title,
+      'description': description,
+      'address': address,
+      'lat': lat,
+      'lng': lng,
+      'photoUrl': photoUrl,
     };
   }
 }
