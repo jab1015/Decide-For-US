@@ -36,7 +36,7 @@ class _DecideScreenState extends State<DecideScreen> {
   double rotation = 0;
   int spinCount = 0;
 
-  int selectedRadius = 50;
+  int selectedRadius = 25;
 
   @override
   void initState() {
@@ -66,8 +66,6 @@ class _DecideScreenState extends State<DecideScreen> {
 
       setState(() {
         spinCount = prefs.getInt("spinCount") ?? 0;
-
-        // reset UI
         selectedGroup = null;
         selectedBudget = null;
         selectedEnergy = null;
@@ -108,7 +106,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
     final result = await Future.wait([
       apiFuture,
-      Future.delayed(const Duration(seconds: 8)),
+      Future.delayed(const Duration(seconds: 6)),
     ]);
 
     final data = result[0] as List<Activity>;
@@ -118,7 +116,6 @@ class _DecideScreenState extends State<DecideScreen> {
     setState(() {
       results = data;
       isLoading = false;
-
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
@@ -153,8 +150,7 @@ class _DecideScreenState extends State<DecideScreen> {
     return Column(
       children: [
         Text(title,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 16)),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.center,
@@ -171,7 +167,7 @@ class _DecideScreenState extends State<DecideScreen> {
       onTap: spin,
       child: AnimatedRotation(
         turns: rotation,
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 6),
         child: Container(
           width: 200,
           height: 200,
@@ -185,12 +181,41 @@ class _DecideScreenState extends State<DecideScreen> {
           child: const Text(
             "SPIN",
             style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold),
+                color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
         ),
       ),
+    );
+  }
+
+  Widget distanceSelector() {
+    final options = ["10 mi", "25 mi", "50 mi", "Explore"];
+
+    return Column(
+      children: [
+        const Text("How far are you willing to go?",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          children: options.map((o) {
+            final isSelected = (o == "10 mi" && selectedRadius == 10) ||
+                (o == "25 mi" && selectedRadius == 25) ||
+                (o == "50 mi" && selectedRadius == 50) ||
+                (o == "Explore" && selectedRadius == 100);
+
+            return chip(o, isSelected ? o : null, (v) {
+              setState(() {
+                if (v == "10 mi") selectedRadius = 10;
+                if (v == "25 mi") selectedRadius = 25;
+                if (v == "50 mi") selectedRadius = 50;
+                if (v == "Explore") selectedRadius = 100;
+              });
+            });
+          }).toList(),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 
@@ -219,57 +244,45 @@ class _DecideScreenState extends State<DecideScreen> {
           SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("💖 Date Night"),
                     Switch(
                       value: isDateNight,
-                      onChanged: (v) =>
-                          setState(() => isDateNight = v),
+                      onChanged: (v) => setState(() => isDateNight = v),
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
+                distanceSelector(),
                 section(
                   "Who’s involved?",
                   ["Couple", "Friends", "Family", "Solo"],
                   selectedGroup,
                   (v) => setState(() => selectedGroup = v),
                 ),
-
                 section(
                   "Budget",
                   ["Free", "\$", "\$\$"],
                   selectedBudget,
                   (v) => setState(() => selectedBudget = v),
                 ),
-
                 section(
                   "Energy",
                   ["Low", "Medium", "High"],
                   selectedEnergy,
                   (v) => setState(() => selectedEnergy = v),
                 ),
-
                 const SizedBox(height: 20),
-
                 Center(child: spinner()),
-
                 const SizedBox(height: 30),
-
                 ...results.map((e) => DecisionCard(activity: e)),
-
                 const SizedBox(height: 40),
               ],
             ),
           ),
-
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(confettiController: confetti),
