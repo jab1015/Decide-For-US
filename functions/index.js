@@ -2,14 +2,14 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import fetch from "node-fetch";
 
-console.log("🔥 REAL EXPERIENCE ENGINE v28");
+console.log("🔥 PREMIUM CURATED ENGINE v29");
 
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 
 let usedFood = [];
 let usedExp = [];
 
-// 🔥 FILTER REAL RESTAURANTS
+// 🔥 STRICT RESTAURANT FILTER
 function isRestaurant(p) {
   if (!p.types.includes("restaurant")) return false;
 
@@ -17,11 +17,19 @@ function isRestaurant(p) {
 
   const banned = [
     "bar","lounge","grill","pub",
-    "bbq","smokehouse","buffalo",
-    "fast food","pizza","burger"
+    "bbq","fast food","pizza","burger"
   ];
 
   return !banned.some(b => name.includes(b));
+}
+
+// 🔥 REMOVE LOW QUALITY EXPERIENCES
+function isBadExperience(name) {
+  const bad = [
+    "park","village","playground",
+    "community","trail","sports complex"
+  ];
+  return bad.some(b => name.toLowerCase().includes(b));
 }
 
 // 🔥 FETCH RESTAURANTS
@@ -45,12 +53,24 @@ async function fetchRestaurants(apiKey, lat, lng) {
   return all;
 }
 
-// 🔥 FETCH REAL EXPERIENCES
+// 🔥 FETCH PREMIUM EXPERIENCES ONLY
 async function fetchExperiences(apiKey, lat, lng, isDateNight) {
 
   const queries = isDateNight
-    ? ["romantic park", "waterfront", "scenic view", "beach"]
-    : ["park", "tourist attraction", "bowling alley", "mini golf"];
+    ? [
+        "waterfront view",
+        "scenic overlook",
+        "beach access",
+        "dessert cafe",
+        "nightlife area"
+      ]
+    : [
+        "bowling alley",
+        "mini golf",
+        "tourist attraction",
+        "beach",
+        "park"
+      ];
 
   let all = [];
 
@@ -66,6 +86,21 @@ async function fetchExperiences(apiKey, lat, lng, isDateNight) {
 
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// 🔥 MATCH EXPERIENCE TYPE TO RESTAURANT LOCATION
+function matchExperience(food, expList) {
+  const addr = (food.formatted_address || "").toLowerCase();
+
+  let filtered = expList;
+
+  if (addr.includes("beach")) {
+    filtered = expList.filter(e => e.name.toLowerCase().includes("beach"));
+  } else if (addr.includes("downtown")) {
+    filtered = expList.filter(e => e.name.toLowerCase().includes("downtown"));
+  }
+
+  return filtered.length > 0 ? pick(filtered) : pick(expList);
 }
 
 export const getIdeas = onRequest(
@@ -92,7 +127,7 @@ export const getIdeas = onRequest(
 
       const apiKey = GOOGLE_API_KEY.value();
 
-      // 🔥 RESTAURANTS
+      // 🔥 FOOD
       const restaurants = await fetchRestaurants(apiKey, lat, lng);
 
       let foodOptions = restaurants.filter(p =>
@@ -114,12 +149,13 @@ export const getIdeas = onRequest(
       const food = pick(availableFood);
       usedFood.push(food.place_id);
 
-      // 🔥 EXPERIENCES (REAL LOCATIONS)
+      // 🔥 EXPERIENCE
       const experiences = await fetchExperiences(apiKey, lat, lng, isDateNight);
 
       let expOptions = experiences.filter(p =>
         p.name !== food.name &&
-        (p.rating || 0) >= 4.2
+        (p.rating || 0) >= 4.2 &&
+        (isDateNight ? !isBadExperience(p.name) : true)
       );
 
       const uniqueExp = Array.from(
@@ -132,7 +168,7 @@ export const getIdeas = onRequest(
         availableExp = uniqueExp;
       }
 
-      const exp = pick(availableExp);
+      const exp = matchExperience(food, availableExp);
       usedExp.push(exp.place_id);
 
       return res.json([
@@ -149,7 +185,7 @@ export const getIdeas = onRequest(
         {
           title: exp.name,
           description: isDateNight
-            ? "A curated romantic destination."
+            ? "A curated, high-end experience to elevate your evening."
             : "A real activity to continue your outing.",
           address: exp.formatted_address,
           lat: exp.geometry.location.lat,
