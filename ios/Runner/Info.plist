@@ -3,26 +3,29 @@
 <plist version="1.0">
 <dict>
 
-	<!-- App Info -->
+	<!-- App Identity -->
 	<key>CFBundleDisplayName</key>
 	<string>Decide For Us</string>
-
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 
 	<key>CFBundleName</key>
 	<string>decide_for_us</string>
 
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
 
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.18</string>
+	<string>$(FLUTTER_BUILD_NAME)</string>
 
 	<key>CFBundleVersion</key>
-	<string>8</string>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
 
-	<!-- iOS Required -->
+	<!-- iOS Requirements -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
@@ -32,39 +35,53 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 
-	<!-- Orientation -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
 	<!-- Status Bar -->
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 
-	<!-- NETWORK (IMPORTANT FOR APIs) -->
+	<!-- Networking -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
 
-	<!-- 📍 LOCATION PERMISSIONS (GPS) -->
+	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to show nearby activities and date ideas.</string>
+	<string>We use your location to find nearby activities and experiences.</string>
 
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Your location helps us suggest better local experiences.</string>
+	<string>Your location helps us recommend better nearby options.</string>
 
-	<!-- 🔊 AUDIO (for spinner/confetti sounds) -->
+	<!-- Tracking (optional but safe) -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This helps us improve your experience with better suggestions.</string>
+
+	<!-- Background Modes (safe default) -->
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>audio</string>
+		<string>fetch</string>
 	</array>
 
-	<!-- Flutter -->
-	<key>io.flutter.embedded_views_preview</key>
-	<true/>
+	<!-- Scene support (modern iOS requirement) -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 
 </dict>
 </plist>
