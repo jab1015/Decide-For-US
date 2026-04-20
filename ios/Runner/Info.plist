@@ -17,7 +17,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 
 	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
+	<string>1.0.18</string>
+
+	<key>CFBundleVersion</key>
+	<string>8</string>
 
 	<!-- iOS Required -->
 	<key>LSRequiresIPhoneOS</key>
