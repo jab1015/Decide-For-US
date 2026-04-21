@@ -24,7 +24,6 @@ class _DecideScreenState extends State<DecideScreen> {
 
   final ScrollController _scrollController = ScrollController();
 
-  // 🔥 KEY: anchor for scrolling
   final GlobalKey _resultsKey = GlobalKey();
 
   List<Activity> results = [];
@@ -79,19 +78,27 @@ class _DecideScreenState extends State<DecideScreen> {
     }
   }
 
-  // 🔥 FINAL SCROLL FIX (platform-safe)
-  void _scrollToResults() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = _resultsKey.currentContext;
-      if (context == null) return;
+  // 🔥 FINAL iOS-SAFE SCROLL
+  Future<void> _scrollToResults() async {
+    await Future.delayed(const Duration(milliseconds: 300));
 
-      Scrollable.ensureVisible(
-        context,
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeOutCubic,
-        alignment: 0.1, // slight offset from top = premium feel
-      );
-    });
+    if (!_scrollController.hasClients) return;
+
+    final context = _resultsKey.currentContext;
+    if (context == null) return;
+
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+
+    final position = box.localToGlobal(Offset.zero).dy;
+
+    final offset = _scrollController.offset + position - 100;
+
+    _scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> spin() async {
@@ -143,8 +150,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
     confetti.play();
 
-    // 🔥 THIS now works everywhere
-    _scrollToResults();
+    await _scrollToResults();
   }
 
   Widget chip(String label, String? selected, Function(String) onTap) {
@@ -302,20 +308,13 @@ class _DecideScreenState extends State<DecideScreen> {
                 const SizedBox(height: 20),
                 Center(child: spinner()),
                 const SizedBox(height: 30),
-
-                // 🔥 ANCHOR POINT
-                if (results.isNotEmpty)
-                  Container(
-                    key: _resultsKey,
-                  ),
-
+                if (results.isNotEmpty) Container(key: _resultsKey),
                 ...results.asMap().entries.map(
                       (entry) => DecisionCard(
                         activity: entry.value,
                         index: entry.key,
                       ),
                     ),
-
                 const SizedBox(height: 40),
               ],
             ),

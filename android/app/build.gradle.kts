@@ -7,7 +7,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 🔐 LOAD KEYSTORE
+// 🔐 Load keystore
 val keystoreProperties = Properties()
 val keystoreFile = rootProject.file("key.properties")
 
@@ -22,10 +22,10 @@ android {
 
     defaultConfig {
         applicationId = "com.decideforus.app"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
 
-        versionCode = 24 // 🔥 increment this
+        versionCode = 24
         versionName = "1.0.24"
     }
 
@@ -47,6 +47,7 @@ android {
         }
     }
 
+    // 🔥 KEEP THIS — prevents strip crash
     packaging {
         jniLibs {
             useLegacyPackaging = true
@@ -61,6 +62,13 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+}
+
+// 🔥 CRITICAL: disable strip tasks completely
+tasks.configureEach {
+    if (name.contains("strip", ignoreCase = true)) {
+        enabled = false
     }
 }
 
