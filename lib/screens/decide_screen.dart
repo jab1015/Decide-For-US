@@ -24,6 +24,9 @@ class _DecideScreenState extends State<DecideScreen> {
 
   final ScrollController _scrollController = ScrollController();
 
+  // 🔥 KEY: anchor for scrolling
+  final GlobalKey _resultsKey = GlobalKey();
+
   List<Activity> results = [];
 
   bool isLoading = false;
@@ -76,17 +79,17 @@ class _DecideScreenState extends State<DecideScreen> {
     }
   }
 
-  // ✅ FIXED SCROLL FUNCTION (THIS IS THE KEY CHANGE)
-  Future<void> _scrollToResults() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-
+  // 🔥 FINAL SCROLL FIX (platform-safe)
+  void _scrollToResults() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
+      final context = _resultsKey.currentContext;
+      if (context == null) return;
 
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+      Scrollable.ensureVisible(
+        context,
         duration: const Duration(milliseconds: 900),
         curve: Curves.easeOutCubic,
+        alignment: 0.1, // slight offset from top = premium feel
       );
     });
   }
@@ -140,7 +143,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
     confetti.play();
 
-    // ✅ SCROLL AFTER RESULTS RENDER
+    // 🔥 THIS now works everywhere
     _scrollToResults();
   }
 
@@ -299,12 +302,20 @@ class _DecideScreenState extends State<DecideScreen> {
                 const SizedBox(height: 20),
                 Center(child: spinner()),
                 const SizedBox(height: 30),
+
+                // 🔥 ANCHOR POINT
+                if (results.isNotEmpty)
+                  Container(
+                    key: _resultsKey,
+                  ),
+
                 ...results.asMap().entries.map(
                       (entry) => DecisionCard(
                         activity: entry.value,
                         index: entry.key,
                       ),
                     ),
+
                 const SizedBox(height: 40),
               ],
             ),

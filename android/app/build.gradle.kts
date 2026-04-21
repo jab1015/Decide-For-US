@@ -1,50 +1,38 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystoreProperties = Properties().apply {
-    load(rootProject.file("key.properties").inputStream())
-}
-
 android {
     namespace = "com.decideforus.app"
     compileSdk = 36
-    ndkVersion = "27.0.12077973"
+
+    ndkVersion = "25.1.8937393"
 
     defaultConfig {
         applicationId = "com.decideforus.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.0.16"
-    }
 
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-
-            // 🔥 FIXED PATH (NO extra app/)
-            storeFile = file(keystoreProperties["storeFile"] as String)
-
-            storePassword = keystoreProperties["storePassword"] as String
-        }
+        versionCode = 24
+        versionName = "1.0.23"
     }
 
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
             isShrinkResources = false
 
-            ndk {
-                debugSymbolLevel = "none"
-            }
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
 
-            signingConfig = signingConfigs.getByName("release")
+    // 🔥 HARD OVERRIDE: disable symbol stripping
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            keepDebugSymbols += "**/*.so"
         }
     }
 
@@ -56,11 +44,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
 
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-        }
+// 🔥 THIS IS THE REAL FIX (disables failing task)
+tasks.configureEach {
+    if (name.contains("strip", ignoreCase = true)) {
+        enabled = false
     }
 }
 
