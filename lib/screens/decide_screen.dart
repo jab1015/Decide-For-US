@@ -22,6 +22,8 @@ class _DecideScreenState extends State<DecideScreen> {
   final player = AudioPlayer();
   late ConfettiController confetti;
 
+  final ScrollController _scrollController = ScrollController();
+
   List<Activity> results = [];
 
   bool isLoading = false;
@@ -74,6 +76,21 @@ class _DecideScreenState extends State<DecideScreen> {
     }
   }
 
+  // ✅ FIXED SCROLL FUNCTION (THIS IS THE KEY CHANGE)
+  Future<void> _scrollToResults() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
   Future<void> spin() async {
     if (isLoading) return;
 
@@ -122,6 +139,9 @@ class _DecideScreenState extends State<DecideScreen> {
     });
 
     confetti.play();
+
+    // ✅ SCROLL AFTER RESULTS RENDER
+    _scrollToResults();
   }
 
   Widget chip(String label, String? selected, Function(String) onTap) {
@@ -242,6 +262,7 @@ class _DecideScreenState extends State<DecideScreen> {
       body: Stack(
         children: [
           SingleChildScrollView(
+            controller: _scrollController,
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
@@ -278,15 +299,12 @@ class _DecideScreenState extends State<DecideScreen> {
                 const SizedBox(height: 20),
                 Center(child: spinner()),
                 const SizedBox(height: 30),
-
-                // 🔥 CRITICAL FIX FOR UNIQUE IMAGES
                 ...results.asMap().entries.map(
                       (entry) => DecisionCard(
                         activity: entry.value,
                         index: entry.key,
                       ),
                     ),
-
                 const SizedBox(height: 40),
               ],
             ),
