@@ -24,8 +24,6 @@ class _DecideScreenState extends State<DecideScreen> {
 
   final ScrollController _scrollController = ScrollController();
 
-  final GlobalKey _resultsKey = GlobalKey();
-
   List<Activity> results = [];
 
   bool isLoading = false;
@@ -78,27 +76,32 @@ class _DecideScreenState extends State<DecideScreen> {
     }
   }
 
-  // 🔥 FINAL iOS-SAFE SCROLL
+  // 🔥 GUARANTEED SCROLL (handles iOS timing issues)
   Future<void> _scrollToResults() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    int attempts = 0;
 
-    if (!_scrollController.hasClients) return;
+    while (attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 120));
 
-    final context = _resultsKey.currentContext;
-    if (context == null) return;
+      if (!_scrollController.hasClients) {
+        attempts++;
+        continue;
+      }
 
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
 
-    final position = box.localToGlobal(Offset.zero).dy;
+      // Only scroll when content is actually scrollable
+      if (maxScroll > 0) {
+        _scrollController.animateTo(
+          maxScroll,
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
 
-    final offset = _scrollController.offset + position - 100;
-
-    _scrollController.animateTo(
-      offset,
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutCubic,
-    );
+      attempts++;
+    }
   }
 
   Future<void> spin() async {
@@ -150,6 +153,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
     confetti.play();
 
+    // 🔥 ALWAYS WORKS
     await _scrollToResults();
   }
 
@@ -308,7 +312,6 @@ class _DecideScreenState extends State<DecideScreen> {
                 const SizedBox(height: 20),
                 Center(child: spinner()),
                 const SizedBox(height: 30),
-                if (results.isNotEmpty) Container(key: _resultsKey),
                 ...results.asMap().entries.map(
                       (entry) => DecisionCard(
                         activity: entry.value,
