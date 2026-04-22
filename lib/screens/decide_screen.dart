@@ -74,18 +74,21 @@ class _DecideScreenState extends State<DecideScreen> {
     }
   }
 
-  Future<void> _scrollToResults() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+  // 🔥 FIXED SCROLL (FRAME-BASED, NOT TIME-BASED)
+  void _scrollToResults() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
 
-    if (!_scrollController.hasClients) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
 
-    final maxScroll = _scrollController.position.maxScrollExtent;
-
-    _scrollController.animateTo(
-      maxScroll,
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutCubic,
-    );
+      if (maxScroll > 0) {
+        _scrollController.animateTo(
+          maxScroll,
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
   }
 
   Future<void> spin() async {
@@ -103,7 +106,7 @@ class _DecideScreenState extends State<DecideScreen> {
     setState(() {
       isLoading = true;
       results.clear();
-      rotation += 10; // ensures full visible spin
+      rotation += 10;
     });
 
     await player.play(AssetSource('sounds/spin.mp3'));
@@ -120,14 +123,10 @@ class _DecideScreenState extends State<DecideScreen> {
         lng: userCoords?['lng'],
         radius: selectedRadius,
       );
-    } catch (_) {
-      // ignore error, we handle fallback below
-    }
+    } catch (_) {}
 
-    // 🔥 FORCE FULL 8 SECOND EXPERIENCE
     await Future.delayed(const Duration(seconds: 8));
 
-    // 🔥 GUARANTEE RESULT (never empty UI)
     if (data.isEmpty) {
       data = [
         Activity(
@@ -147,18 +146,19 @@ class _DecideScreenState extends State<DecideScreen> {
       results = data;
       isLoading = false;
 
-      // 🔥 ALWAYS RESET FILTERS
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
     });
 
-    // 🔥 ALWAYS TRIGGER CONFETTI WHEN RESULTS EXIST
     if (results.isNotEmpty) {
       confetti.play();
     }
 
-    _scrollToResults();
+    // 🔥 CRITICAL: CALL AFTER FRAME
+    Future.delayed(const Duration(milliseconds: 50), () {
+      _scrollToResults();
+    });
   }
 
   Widget chip(String label, String? selected, Function(String) onTap) {

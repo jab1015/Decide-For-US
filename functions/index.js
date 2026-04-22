@@ -26,7 +26,7 @@ export const getPhoto = onRequest(
 );
 
 // -----------------------------
-// SCORING
+// ELITE SCORING
 // -----------------------------
 function eliteScore(p) {
   let score = (p.rating || 0) * 4;
@@ -49,17 +49,22 @@ function eliteScore(p) {
 }
 
 // -----------------------------
-// UNIQUE DESCRIPTION GENERATOR
+// 💎 ROMANTIC DESCRIPTION ENGINE
 // -----------------------------
-function romanticDescription(a, b, variant = 1) {
-  const options = [
-    `Begin the evening at ${a.title} with an intimate, romantic atmosphere, then continue to ${b.title} for a memorable and elevated experience together.`,
-    `Start with a cozy, romantic moment at ${a.title}, then head to ${b.title} to deepen the connection and enjoy the night.`,
-    `Enjoy a refined and intimate start at ${a.title}, followed by ${b.title} where the evening becomes truly special.`,
-    `Kick off the night at ${a.title} with a warm, romantic setting, then transition into ${b.title} for a perfect continuation.`,
+function romanticDescription(a, b, variant) {
+  const styles = [
+    `Ease into the evening at ${a.title}, where the atmosphere invites you to slow down and connect. As the night unfolds, wander into ${b.title} and let the moment linger a little longer.`,
+
+    `Begin your night at ${a.title}, a place that naturally sets a warm, intimate tone. From there, drift into ${b.title} and enjoy a quiet, shared moment away from everything else.`,
+
+    `Start with an elegant experience at ${a.title}, where everything feels just a bit more refined. Then continue into ${b.title}, letting the night take on a relaxed, romantic rhythm.`,
+
+    `The night begins at ${a.title}, setting the stage for something special. From there, ${b.title} becomes the perfect place to unwind together and let the evening stretch on.`,
+
+    `Take in the moment at ${a.title}, where the setting naturally draws you closer. Then make your way to ${b.title}, where the night feels calm, intimate, and unhurried.`,
   ];
 
-  return options[variant % options.length];
+  return styles[variant % styles.length];
 }
 
 // -----------------------------
@@ -79,6 +84,7 @@ export const getIdeas = onRequest(
       const buildUrl = (query) =>
         `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radiusMeters}&key=${key}`;
 
+      // ⚡ FAST PARALLEL CALLS
       const [foodRes, expRes] = await Promise.all([
         fetch(buildUrl(
           isDateNight
@@ -126,7 +132,7 @@ export const getIdeas = onRequest(
         return res.json([]);
       }
 
-      // 🔥 ENSURE UNIQUE PICKS
+      // 🚫 NO DUPLICATES
       const usedIds = new Set();
 
       const pickUnique = (list) => {
@@ -165,34 +171,40 @@ export const getIdeas = onRequest(
       const a2 = build(f2);
       const b2 = build(e2);
 
+      // 🔥 GUARANTEED DIFFERENT DESCRIPTIONS
+      const v1 = Math.floor(Math.random() * 5);
+      let v2;
+      do {
+        v2 = Math.floor(Math.random() * 5);
+      } while (v2 === v1);
+
       res.json([
         {
-          ...combine(a1, b1),
+          id: a1.id,
+          title: `${a1.title} → ${b1.title}`,
           description: isDateNight
-            ? romanticDescription(a1, b1, 1)
+            ? romanticDescription(a1, b1, v1)
             : `Start with ${a1.title}, then head to ${b1.title}.`,
+          address: a1.address,
+          lat: a1.lat,
+          lng: a1.lng,
+          photoUrl: a1.photoUrl,
         },
         {
-          ...combine(a2, b2),
+          id: a2.id,
+          title: `${a2.title} → ${b2.title}`,
           description: isDateNight
-            ? romanticDescription(a2, b2, 2)
+            ? romanticDescription(a2, b2, v2)
             : `Start with ${a2.title}, then head to ${b2.title}.`,
+          address: a2.address,
+          lat: a2.lat,
+          lng: a2.lng,
+          photoUrl: a2.photoUrl,
         },
       ]);
     } catch (err) {
+      console.error(err);
       res.status(500).send("Error");
     }
   }
 );
-
-// -----------------------------
-function combine(a, b) {
-  return {
-    id: a.id,
-    title: `${a.title} → ${b.title}`,
-    address: a.address,
-    lat: a.lat,
-    lng: a.lng,
-    photoUrl: a.photoUrl,
-  };
-}
