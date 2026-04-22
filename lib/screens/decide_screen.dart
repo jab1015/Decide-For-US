@@ -55,49 +55,51 @@ class _DecideScreenState extends State<DecideScreen> {
     userCoords = await LocationService.getLatLng();
   }
 
-  Future<void> openPaywall() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PaywallScreen()),
-    );
+  void _scrollToResultsIOSSafe() {
+    print("🔥🔥🔥 SCROLL TRIGGERED 🔥🔥🔥");
 
-    if (result == true) {
-      final prefs = await SharedPreferences.getInstance();
+    Future.delayed(const Duration(milliseconds: 50), () {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scrollController.hasClients) {
+          print("❌ NO SCROLL CLIENTS");
+          return;
+        }
 
-      setState(() {
-        spinCount = prefs.getInt("spinCount") ?? 0;
-        selectedGroup = null;
-        selectedBudget = null;
-        selectedEnergy = null;
-        isDateNight = false;
+        final maxScroll = _scrollController.position.maxScrollExtent;
+
+        print("📏 MAX SCROLL: $maxScroll");
+
+        if (maxScroll > 0) {
+          print("✅ SCROLLING NOW");
+
+          _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+          );
+        } else {
+          print("⚠️ MAX SCROLL IS ZERO — RETRYING");
+
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (_scrollController.hasClients) {
+              final retryScroll = _scrollController.position.maxScrollExtent;
+
+              print("🔁 RETRY MAX SCROLL: $retryScroll");
+
+              _scrollController.animateTo(
+                retryScroll,
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOutCubic,
+              );
+            }
+          });
+        }
       });
-    }
-  }
-
-  // 🔥 FIXED SCROLL (FRAME-BASED, NOT TIME-BASED)
-  void _scrollToResults() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-
-      final maxScroll = _scrollController.position.maxScrollExtent;
-
-      if (maxScroll > 0) {
-        _scrollController.animateTo(
-          maxScroll,
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOutCubic,
-        );
-      }
     });
   }
 
   Future<void> spin() async {
     if (isLoading) return;
-
-    if (spinCount >= 3) {
-      await openPaywall();
-      return;
-    }
 
     final prefs = await SharedPreferences.getInstance();
     spinCount++;
@@ -123,7 +125,9 @@ class _DecideScreenState extends State<DecideScreen> {
         lng: userCoords?['lng'],
         radius: selectedRadius,
       );
-    } catch (_) {}
+    } catch (e) {
+      print("❌ ERROR FETCHING IDEAS: $e");
+    }
 
     await Future.delayed(const Duration(seconds: 8));
 
@@ -151,113 +155,20 @@ class _DecideScreenState extends State<DecideScreen> {
       selectedEnergy = null;
     });
 
+    print("✅ RESULTS SET");
+    print("📊 Results count: ${results.length}");
+
     if (results.isNotEmpty) {
       confetti.play();
     }
 
-    // 🔥 CRITICAL: CALL AFTER FRAME
-    Future.delayed(const Duration(milliseconds: 50), () {
-      _scrollToResults();
-    });
-  }
-
-  Widget chip(String label, String? selected, Function(String) onTap) {
-    final isSelected = selected == label;
-
-    return GestureDetector(
-      onTap: () => onTap(label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6A5AE0) : Colors.white,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget section(String title, List<String> options, String? selected,
-      Function(String) onTap) {
-    return Column(
-      children: [
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 10),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 10,
-          children: options.map((o) => chip(o, selected, onTap)).toList(),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget spinner() {
-    return GestureDetector(
-      onTap: spin,
-      child: AnimatedRotation(
-        turns: rotation,
-        duration: const Duration(seconds: 8),
-        child: Container(
-          width: 200,
-          height: 200,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6A5AE0), Color(0xFF4FC3F7)],
-            ),
-            shape: BoxShape.circle,
-          ),
-          child: const Text(
-            "SPIN",
-            style: TextStyle(
-                color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget distanceSelector() {
-    final options = ["10 mi", "25 mi", "50 mi", "Explore"];
-
-    return Column(
-      children: [
-        const Text("How far are you willing to go?",
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          children: options.map((o) {
-            final isSelected = (o == "10 mi" && selectedRadius == 10) ||
-                (o == "25 mi" && selectedRadius == 25) ||
-                (o == "50 mi" && selectedRadius == 50) ||
-                (o == "Explore" && selectedRadius == 100);
-
-            return chip(o, isSelected ? o : null, (v) {
-              setState(() {
-                if (v == "10 mi") selectedRadius = 10;
-                if (v == "25 mi") selectedRadius = 25;
-                if (v == "50 mi") selectedRadius = 50;
-                if (v == "Explore") selectedRadius = 100;
-              });
-            });
-          }).toList(),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
+    _scrollToResultsIOSSafe();
   }
 
   @override
   Widget build(BuildContext context) {
+    print("🧱 BUILD RUN - results length: ${results.length}");
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Decide For Us"),
@@ -294,29 +205,38 @@ class _DecideScreenState extends State<DecideScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                distanceSelector(),
-                section(
-                  "Who’s involved?",
-                  ["Couple", "Friends", "Family", "Solo"],
-                  selectedGroup,
-                  (v) => setState(() => selectedGroup = v),
+                GestureDetector(
+                  onTap: spin,
+                  child: AnimatedRotation(
+                    turns: rotation,
+                    duration: const Duration(seconds: 8),
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF6A5AE0), Color(0xFF4FC3F7)],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text(
+                        "SPIN",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
                 ),
-                section(
-                  "Budget",
-                  ["Free", "\$", "\$\$"],
-                  selectedBudget,
-                  (v) => setState(() => selectedBudget = v),
-                ),
-                section(
-                  "Energy",
-                  ["Low", "Medium", "High"],
-                  selectedEnergy,
-                  (v) => setState(() => selectedEnergy = v),
-                ),
-                const SizedBox(height: 20),
-                Center(child: spinner()),
                 const SizedBox(height: 30),
-                ...results.map((r) => DecisionCard(activity: r, index: 0)),
+                ...results.map(
+                  (r) => DecisionCard(
+                    activity: r,
+                    index: results.indexOf(r),
+                  ),
+                ),
                 const SizedBox(height: 40),
               ],
             ),
