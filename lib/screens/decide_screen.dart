@@ -23,6 +23,10 @@ class _DecideScreenState extends State<DecideScreen> {
   late ConfettiController confetti;
   final ScrollController _scrollController = ScrollController();
 
+  // 🔥 DEBUG PANEL
+  final ScrollController _debugScrollController = ScrollController();
+  final List<String> debugLogs = [];
+
   List<Activity> results = [];
 
   bool isLoading = false;
@@ -37,6 +41,26 @@ class _DecideScreenState extends State<DecideScreen> {
   double rotation = 0;
   int spinCount = 0;
   int selectedRadius = 25;
+
+  void log(String msg) {
+    debugLogs.add(msg);
+    if (debugLogs.length > 30) {
+      debugLogs.removeAt(0);
+    }
+
+    setState(() {});
+
+    // auto scroll debug panel
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (_debugScrollController.hasClients) {
+        _debugScrollController.animateTo(
+          _debugScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -55,22 +79,21 @@ class _DecideScreenState extends State<DecideScreen> {
     userCoords = await LocationService.getLatLng();
   }
 
-  void _scrollToResultsIOSSafe() {
-    print("🔥🔥🔥 SCROLL TRIGGERED 🔥🔥🔥");
+  void _scrollToResults() {
+    log("🔥 SCROLL TRIGGERED");
 
     Future.delayed(const Duration(milliseconds: 50), () {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) {
-          print("❌ NO SCROLL CLIENTS");
+          log("❌ NO SCROLL CLIENTS");
           return;
         }
 
         final maxScroll = _scrollController.position.maxScrollExtent;
-
-        print("📏 MAX SCROLL: $maxScroll");
+        log("📏 MAX SCROLL: $maxScroll");
 
         if (maxScroll > 0) {
-          print("✅ SCROLLING NOW");
+          log("✅ SCROLLING");
 
           _scrollController.animateTo(
             maxScroll,
@@ -78,16 +101,15 @@ class _DecideScreenState extends State<DecideScreen> {
             curve: Curves.easeOutCubic,
           );
         } else {
-          print("⚠️ MAX SCROLL IS ZERO — RETRYING");
+          log("⚠️ ZERO SCROLL — RETRY");
 
           Future.delayed(const Duration(milliseconds: 150), () {
             if (_scrollController.hasClients) {
-              final retryScroll = _scrollController.position.maxScrollExtent;
-
-              print("🔁 RETRY MAX SCROLL: $retryScroll");
+              final retry = _scrollController.position.maxScrollExtent;
+              log("🔁 RETRY SCROLL: $retry");
 
               _scrollController.animateTo(
-                retryScroll,
+                retry,
                 duration: const Duration(milliseconds: 900),
                 curve: Curves.easeOutCubic,
               );
@@ -111,6 +133,8 @@ class _DecideScreenState extends State<DecideScreen> {
       rotation += 10;
     });
 
+    log("🎯 SPIN STARTED");
+
     await player.play(AssetSource('sounds/spin.mp3'));
 
     List<Activity> data = [];
@@ -126,17 +150,19 @@ class _DecideScreenState extends State<DecideScreen> {
         radius: selectedRadius,
       );
     } catch (e) {
-      print("❌ ERROR FETCHING IDEAS: $e");
+      log("❌ API ERROR: $e");
     }
 
     await Future.delayed(const Duration(seconds: 8));
 
     if (data.isEmpty) {
+      log("⚠️ NO DATA RETURNED");
+
       data = [
         Activity(
           id: "fallback",
           title: "Try Again Nearby",
-          description: "We couldn’t load ideas right now. Try again.",
+          description: "We couldn’t load ideas.",
           address: "",
           lat: 0,
           lng: 0,
@@ -155,19 +181,19 @@ class _DecideScreenState extends State<DecideScreen> {
       selectedEnergy = null;
     });
 
-    print("✅ RESULTS SET");
-    print("📊 Results count: ${results.length}");
+    log("✅ RESULTS SET: ${results.length}");
 
     if (results.isNotEmpty) {
       confetti.play();
+      log("🎉 CONFETTI");
     }
 
-    _scrollToResultsIOSSafe();
+    _scrollToResults();
   }
 
   @override
   Widget build(BuildContext context) {
-    print("🧱 BUILD RUN - results length: ${results.length}");
+    log("🧱 BUILD - results: ${results.length}");
 
     return Scaffold(
       appBar: AppBar(
@@ -194,17 +220,8 @@ class _DecideScreenState extends State<DecideScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("💖 Date Night"),
-                    Switch(
-                      value: isDateNight,
-                      onChanged: (v) => setState(() => isDateNight = v),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 20),
+
                 GestureDetector(
                   onTap: spin,
                   child: AnimatedRotation(
@@ -230,17 +247,48 @@ class _DecideScreenState extends State<DecideScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
+
                 ...results.map(
                   (r) => DecisionCard(
                     activity: r,
                     index: results.indexOf(r),
                   ),
                 ),
-                const SizedBox(height: 40),
+
+                const SizedBox(height: 200), // space for debug panel
               ],
             ),
           ),
+
+          // 🔥 DEBUG PANEL
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 150,
+            child: Container(
+              color: Colors.black.withOpacity(0.85),
+              child: ListView(
+                controller: _debugScrollController,
+                children: debugLogs
+                    .map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        child: Text(
+                          e,
+                          style: const TextStyle(
+                              color: Colors.green, fontSize: 12),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(confettiController: confetti),
