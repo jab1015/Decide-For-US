@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/activity.dart';
-import '../services/favorites_service.dart';
 import '../widgets/decision_card.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -20,50 +21,48 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> loadFavorites() async {
-    final data = await FavoritesService.getFavorites();
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorites') ?? [];
+
+    final loaded = list.map((item) {
+      final data = jsonDecode(item);
+      return Activity(
+        id: data['id'],
+        title: data['title'],
+        description: data['description'],
+        address: data['address'],
+        lat: data['lat'],
+        lng: data['lng'],
+        photoUrl: data['photoUrl'],
+      );
+    }).toList();
+
     setState(() {
-      favorites = data;
+      favorites = loaded;
     });
   }
 
-  Future<void> removeFavorite(Activity activity) async {
-    await FavoritesService.removeFavorite(activity);
-    await loadFavorites();
+  void removeFavorite(String id) {
+    setState(() {
+      favorites.removeWhere((a) => a.id == id);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Favorites"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Favorites")),
       body: favorites.isEmpty
           ? const Center(child: Text("No favorites yet"))
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
               itemCount: favorites.length,
               itemBuilder: (context, index) {
-                final activity = favorites[index];
-
-                return Column(
-                  children: [
-                    DecisionCard(
-                      activity: activity,
-                      index: index, // ✅ REQUIRED
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => removeFavorite(activity),
-                        child: const Text(
-                          "Remove",
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
+                return DecisionCard(
+                  activity: favorites[index],
+                  index: index,
+                  isFavoritesView: true,
+                  onDeleted: () =>
+                      removeFavorite(favorites[index].id), // 🔥 instant removal
                 );
               },
             ),

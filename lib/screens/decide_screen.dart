@@ -21,7 +21,6 @@ class DecideScreen extends StatefulWidget {
 class _DecideScreenState extends State<DecideScreen> {
   final player = AudioPlayer();
   late ConfettiController confetti;
-
   final ScrollController _scrollController = ScrollController();
 
   List<Activity> results = [];
@@ -37,7 +36,6 @@ class _DecideScreenState extends State<DecideScreen> {
 
   double rotation = 0;
   int spinCount = 0;
-
   int selectedRadius = 25;
 
   @override
@@ -76,32 +74,18 @@ class _DecideScreenState extends State<DecideScreen> {
     }
   }
 
-  // 🔥 GUARANTEED SCROLL (handles iOS timing issues)
   Future<void> _scrollToResults() async {
-    int attempts = 0;
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    while (attempts < 10) {
-      await Future.delayed(const Duration(milliseconds: 120));
+    if (!_scrollController.hasClients) return;
 
-      if (!_scrollController.hasClients) {
-        attempts++;
-        continue;
-      }
+    final maxScroll = _scrollController.position.maxScrollExtent;
 
-      final maxScroll = _scrollController.position.maxScrollExtent;
-
-      // Only scroll when content is actually scrollable
-      if (maxScroll > 0) {
-        _scrollController.animateTo(
-          maxScroll,
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOutCubic,
-        );
-        return;
-      }
-
-      attempts++;
-    }
+    _scrollController.animateTo(
+      maxScroll,
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> spin() async {
@@ -119,42 +103,62 @@ class _DecideScreenState extends State<DecideScreen> {
     setState(() {
       isLoading = true;
       results.clear();
-      rotation += 10;
+      rotation += 10; // ensures full visible spin
     });
 
     await player.play(AssetSource('sounds/spin.mp3'));
 
-    final apiFuture = AIService.getIdeas(
-      group: selectedGroup,
-      budget: selectedBudget,
-      energy: selectedEnergy,
-      isDateNight: isDateNight,
-      lat: userCoords?['lat'],
-      lng: userCoords?['lng'],
-      radius: selectedRadius,
-    );
+    List<Activity> data = [];
 
-    final result = await Future.wait([
-      apiFuture,
-      Future.delayed(const Duration(seconds: 6)),
-    ]);
+    try {
+      data = await AIService.getIdeas(
+        group: selectedGroup,
+        budget: selectedBudget,
+        energy: selectedEnergy,
+        isDateNight: isDateNight,
+        lat: userCoords?['lat'],
+        lng: userCoords?['lng'],
+        radius: selectedRadius,
+      );
+    } catch (_) {
+      // ignore error, we handle fallback below
+    }
 
-    final data = result[0] as List<Activity>;
+    // 🔥 FORCE FULL 8 SECOND EXPERIENCE
+    await Future.delayed(const Duration(seconds: 8));
+
+    // 🔥 GUARANTEE RESULT (never empty UI)
+    if (data.isEmpty) {
+      data = [
+        Activity(
+          id: "fallback",
+          title: "Try Again Nearby",
+          description: "We couldn’t load ideas right now. Try again.",
+          address: "",
+          lat: 0,
+          lng: 0,
+        )
+      ];
+    }
 
     await player.play(AssetSource('sounds/win.mp3'));
 
     setState(() {
       results = data;
       isLoading = false;
+
+      // 🔥 ALWAYS RESET FILTERS
       selectedGroup = null;
       selectedBudget = null;
       selectedEnergy = null;
     });
 
-    confetti.play();
+    // 🔥 ALWAYS TRIGGER CONFETTI WHEN RESULTS EXIST
+    if (results.isNotEmpty) {
+      confetti.play();
+    }
 
-    // 🔥 ALWAYS WORKS
-    await _scrollToResults();
+    _scrollToResults();
   }
 
   Widget chip(String label, String? selected, Function(String) onTap) {
@@ -200,7 +204,7 @@ class _DecideScreenState extends State<DecideScreen> {
       onTap: spin,
       child: AnimatedRotation(
         turns: rotation,
-        duration: const Duration(seconds: 6),
+        duration: const Duration(seconds: 8),
         child: Container(
           width: 200,
           height: 200,
@@ -312,12 +316,7 @@ class _DecideScreenState extends State<DecideScreen> {
                 const SizedBox(height: 20),
                 Center(child: spinner()),
                 const SizedBox(height: 30),
-                ...results.asMap().entries.map(
-                      (entry) => DecisionCard(
-                        activity: entry.value,
-                        index: entry.key,
-                      ),
-                    ),
+                ...results.map((r) => DecisionCard(activity: r, index: 0)),
                 const SizedBox(height: 40),
               ],
             ),

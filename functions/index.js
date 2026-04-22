@@ -1,202 +1,198 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import fetch from "node-fetch";
-
-console.log("🔥 PREMIUM CURATED ENGINE v29");
 
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 
-let usedFood = [];
-let usedExp = [];
-
-// 🔥 STRICT RESTAURANT FILTER
-function isRestaurant(p) {
-  if (!p.types.includes("restaurant")) return false;
-
-  const name = p.name.toLowerCase();
-
-  const banned = [
-    "bar","lounge","grill","pub",
-    "bbq","fast food","pizza","burger"
-  ];
-
-  return !banned.some(b => name.includes(b));
-}
-
-// 🔥 REMOVE LOW QUALITY EXPERIENCES
-function isBadExperience(name) {
-  const bad = [
-    "park","village","playground",
-    "community","trail","sports complex"
-  ];
-  return bad.some(b => name.toLowerCase().includes(b));
-}
-
-// 🔥 FETCH RESTAURANTS
-async function fetchRestaurants(apiKey, lat, lng) {
-  const queries = [
-    "fine dining restaurant",
-    "romantic restaurant",
-    "steakhouse",
-    "seafood restaurant"
-  ];
-
-  let all = [];
-
-  for (const q of queries) {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=50000&key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.results) all = all.concat(data.results);
-  }
-
-  return all;
-}
-
-// 🔥 FETCH PREMIUM EXPERIENCES ONLY
-async function fetchExperiences(apiKey, lat, lng, isDateNight) {
-
-  const queries = isDateNight
-    ? [
-        "waterfront view",
-        "scenic overlook",
-        "beach access",
-        "dessert cafe",
-        "nightlife area"
-      ]
-    : [
-        "bowling alley",
-        "mini golf",
-        "tourist attraction",
-        "beach",
-        "park"
-      ];
-
-  let all = [];
-
-  for (const q of queries) {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=50000&key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.results) all = all.concat(data.results);
-  }
-
-  return all;
-}
-
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// 🔥 MATCH EXPERIENCE TYPE TO RESTAURANT LOCATION
-function matchExperience(food, expList) {
-  const addr = (food.formatted_address || "").toLowerCase();
-
-  let filtered = expList;
-
-  if (addr.includes("beach")) {
-    filtered = expList.filter(e => e.name.toLowerCase().includes("beach"));
-  } else if (addr.includes("downtown")) {
-    filtered = expList.filter(e => e.name.toLowerCase().includes("downtown"));
-  }
-
-  return filtered.length > 0 ? pick(filtered) : pick(expList);
-}
-
-export const getIdeas = onRequest(
-  {
-    region: "us-central1",
-    secrets: [GOOGLE_API_KEY],
-  },
+// -----------------------------
+// PHOTO PROXY
+// -----------------------------
+export const getPhoto = onRequest(
+  { cors: true, secrets: [GOOGLE_API_KEY] },
   async (req, res) => {
-
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type");
-
-    if (req.method === "OPTIONS") {
-      return res.status(204).send("");
-    }
-
     try {
-      const data = req.method === "GET" ? req.query : req.body;
+      const ref = req.query.ref;
+      const key = GOOGLE_API_KEY.value();
 
-      const lat = parseFloat(data?.lat) || 30.8;
-      const lng = parseFloat(data?.lng) || -81.7;
-      const isDateNight = data?.isDateNight === "true" || data?.isDateNight === true;
+      const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${key}`;
+      const response = await fetch(url, { redirect: "follow" });
 
-      const apiKey = GOOGLE_API_KEY.value();
-
-      // 🔥 FOOD
-      const restaurants = await fetchRestaurants(apiKey, lat, lng);
-
-      let foodOptions = restaurants.filter(p =>
-        (p.rating || 0) >= (isDateNight ? 4.5 : 4.2) &&
-        (p.user_ratings_total || 0) >= 100 &&
-        isRestaurant(p)
-      );
-
-      const uniqueFood = Array.from(
-        new Map(foodOptions.map(p => [p.place_id, p])).values()
-      );
-
-      let availableFood = uniqueFood.filter(p => !usedFood.includes(p.place_id));
-      if (availableFood.length === 0) {
-        usedFood = [];
-        availableFood = uniqueFood;
-      }
-
-      const food = pick(availableFood);
-      usedFood.push(food.place_id);
-
-      // 🔥 EXPERIENCE
-      const experiences = await fetchExperiences(apiKey, lat, lng, isDateNight);
-
-      let expOptions = experiences.filter(p =>
-        p.name !== food.name &&
-        (p.rating || 0) >= 4.2 &&
-        (isDateNight ? !isBadExperience(p.name) : true)
-      );
-
-      const uniqueExp = Array.from(
-        new Map(expOptions.map(p => [p.place_id, p])).values()
-      );
-
-      let availableExp = uniqueExp.filter(p => !usedExp.includes(p.place_id));
-      if (availableExp.length === 0) {
-        usedExp = [];
-        availableExp = uniqueExp;
-      }
-
-      const exp = matchExperience(food, availableExp);
-      usedExp.push(exp.place_id);
-
-      return res.json([
-        {
-          title: food.name,
-          description: isDateNight
-            ? `Enjoy a premium dinner at ${food.name}.`
-            : `Start with a meal at ${food.name}.`,
-          address: food.formatted_address,
-          lat: food.geometry.location.lat,
-          lng: food.geometry.location.lng,
-          photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5",
-        },
-        {
-          title: exp.name,
-          description: isDateNight
-            ? "A curated, high-end experience to elevate your evening."
-            : "A real activity to continue your outing.",
-          address: exp.formatted_address,
-          lat: exp.geometry.location.lat,
-          lng: exp.geometry.location.lng,
-          photoUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-        },
-      ]);
-
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Function failed" });
+      const buffer = await response.arrayBuffer();
+      res.set("Content-Type", response.headers.get("content-type"));
+      res.send(Buffer.from(buffer));
+    } catch {
+      res.redirect("https://images.unsplash.com/photo-1504674900247-0877df9cc836");
     }
   }
 );
+
+// -----------------------------
+// SCORING
+// -----------------------------
+function eliteScore(p) {
+  let score = (p.rating || 0) * 4;
+  const n = p.name.toLowerCase();
+
+  if (n.includes("steak")) score += 10;
+  if (n.includes("seafood")) score += 10;
+  if (n.includes("rooftop")) score += 12;
+  if (n.includes("wine")) score += 10;
+  if (n.includes("cocktail")) score += 10;
+  if (n.includes("lounge")) score += 10;
+  if (n.includes("view")) score += 12;
+  if (n.includes("water")) score += 10;
+
+  if (n.includes("pizza")) score -= 20;
+  if (n.includes("burger")) score -= 20;
+  if (n.includes("fast")) score -= 30;
+
+  return score;
+}
+
+// -----------------------------
+// UNIQUE DESCRIPTION GENERATOR
+// -----------------------------
+function romanticDescription(a, b, variant = 1) {
+  const options = [
+    `Begin the evening at ${a.title} with an intimate, romantic atmosphere, then continue to ${b.title} for a memorable and elevated experience together.`,
+    `Start with a cozy, romantic moment at ${a.title}, then head to ${b.title} to deepen the connection and enjoy the night.`,
+    `Enjoy a refined and intimate start at ${a.title}, followed by ${b.title} where the evening becomes truly special.`,
+    `Kick off the night at ${a.title} with a warm, romantic setting, then transition into ${b.title} for a perfect continuation.`,
+  ];
+
+  return options[variant % options.length];
+}
+
+// -----------------------------
+// MAIN
+// -----------------------------
+export const getIdeas = onRequest(
+  { cors: true, secrets: [GOOGLE_API_KEY] },
+  async (req, res) => {
+    try {
+      const { lat, lng, isDateNight, radius = 25 } = req.body;
+      const key = GOOGLE_API_KEY.value();
+
+      const latitude = lat || 30.3322;
+      const longitude = lng || -81.6557;
+      const radiusMeters = radius * 1609;
+
+      const buildUrl = (query) =>
+        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radiusMeters}&key=${key}`;
+
+      const [foodRes, expRes] = await Promise.all([
+        fetch(buildUrl(
+          isDateNight
+            ? "fine dining steakhouse romantic upscale restaurant"
+            : "restaurant"
+        )),
+        fetch(buildUrl(
+          isDateNight
+            ? "rooftop bar scenic cocktail lounge waterfront"
+            : "things to do"
+        )),
+      ]);
+
+      const foodData = await foodRes.json();
+      const expData = await expRes.json();
+
+      let food = foodData.results || [];
+      let exp = expData.results || [];
+
+      const clean = (p) =>
+        p.name &&
+        p.rating >= (isDateNight ? 4.4 : 4.0) &&
+        p.user_ratings_total > (isDateNight ? 120 : 50) &&
+        p.photos &&
+        p.photos.length > 0;
+
+      food = food.filter(clean);
+      exp = exp.filter(clean);
+
+      if (isDateNight) {
+        food = food
+          .map(p => ({ ...p, score: eliteScore(p) }))
+          .filter(p => p.score > 40)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 6);
+
+        exp = exp
+          .map(p => ({ ...p, score: eliteScore(p) }))
+          .filter(p => p.score > 40)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 6);
+      }
+
+      if (!food.length || !exp.length) {
+        return res.json([]);
+      }
+
+      // 🔥 ENSURE UNIQUE PICKS
+      const usedIds = new Set();
+
+      const pickUnique = (list) => {
+        let item;
+        do {
+          item = list[Math.floor(Math.random() * list.length)];
+        } while (usedIds.has(item.place_id));
+
+        usedIds.add(item.place_id);
+        return item;
+      };
+
+      const f1 = pickUnique(food);
+      const e1 = pickUnique(exp);
+      const f2 = pickUnique(food);
+      const e2 = pickUnique(exp);
+
+      const getPhotoUrl = (p) => {
+        const ref = p.photos?.[0]?.photo_reference;
+        return ref
+          ? `https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPhoto?ref=${ref}`
+          : null;
+      };
+
+      const build = (p) => ({
+        id: p.place_id,
+        title: p.name,
+        address: p.formatted_address || p.vicinity,
+        lat: p.geometry.location.lat,
+        lng: p.geometry.location.lng,
+        photoUrl: getPhotoUrl(p),
+      });
+
+      const a1 = build(f1);
+      const b1 = build(e1);
+      const a2 = build(f2);
+      const b2 = build(e2);
+
+      res.json([
+        {
+          ...combine(a1, b1),
+          description: isDateNight
+            ? romanticDescription(a1, b1, 1)
+            : `Start with ${a1.title}, then head to ${b1.title}.`,
+        },
+        {
+          ...combine(a2, b2),
+          description: isDateNight
+            ? romanticDescription(a2, b2, 2)
+            : `Start with ${a2.title}, then head to ${b2.title}.`,
+        },
+      ]);
+    } catch (err) {
+      res.status(500).send("Error");
+    }
+  }
+);
+
+// -----------------------------
+function combine(a, b) {
+  return {
+    id: a.id,
+    title: `${a.title} → ${b.title}`,
+    address: a.address,
+    lat: a.lat,
+    lng: a.lng,
+    photoUrl: a.photoUrl,
+  };
+}

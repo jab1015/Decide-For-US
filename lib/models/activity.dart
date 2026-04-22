@@ -1,14 +1,14 @@
 class Activity {
+  final String id; // 🔥 UNIQUE ID (Google place_id)
   final String title;
   final String description;
   final String address;
   final double lat;
   final double lng;
-
-  // 🔥 ADD THIS
   final String? photoUrl;
 
   Activity({
+    required this.id,
     required this.title,
     required this.description,
     required this.address,
@@ -19,19 +19,19 @@ class Activity {
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
+      id: json['id'] ?? json['place_id'] ?? json['title'], // fallback safe
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       address: json['address'] ?? '',
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
-
-      // 🔥 MAP PHOTO
       photoUrl: json['photoUrl'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'title': title,
       'description': description,
       'address': address,

@@ -1,122 +1,187 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/activity.dart';
 
-class DecisionCard extends StatelessWidget {
+class DecisionCard extends StatefulWidget {
   final Activity activity;
-  final bool showFavorite;
   final int index;
+  final bool isFavoritesView;
+  final VoidCallback? onDeleted; // 🔥 NEW
 
   const DecisionCard({
     super.key,
     required this.activity,
-    this.showFavorite = true,
     required this.index,
+    this.isFavoritesView = false,
+    this.onDeleted,
   });
 
-  static final List<List<Color>> gradients = [
-    [Colors.green, Colors.greenAccent],
-    [Colors.orange, Colors.deepOrangeAccent],
-    [Colors.blue, Colors.lightBlueAccent],
-    [Colors.pink, Colors.pinkAccent],
-    [Colors.purple, Colors.deepPurpleAccent],
-  ];
+  @override
+  State<DecisionCard> createState() => _DecisionCardState();
+}
 
-  List<Color> getGradient() {
-    return gradients[index % gradients.length];
+class _DecisionCardState extends State<DecisionCard> {
+  bool isFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorite();
   }
 
-  // 🔥 FORCE DIFFERENT VISUAL CROPPING
-  Alignment getImageAlignment() {
-    final positions = [
-      Alignment.center,
-      Alignment.topCenter,
-      Alignment.bottomCenter,
-      Alignment.centerLeft,
-      Alignment.centerRight,
-    ];
+  Future<void> _loadFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorites') ?? [];
 
-    return positions[index % positions.length];
+    setState(() {
+      isFavorite = list.any((item) {
+        final decoded = jsonDecode(item);
+        return decoded['id'] == widget.activity.id;
+      });
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorites') ?? [];
+
+    if (isFavorite) {
+      list.removeWhere((item) {
+        final decoded = jsonDecode(item);
+        return decoded['id'] == widget.activity.id;
+      });
+    } else {
+      final newItem = jsonEncode({
+        'id': widget.activity.id,
+        'title': widget.activity.title,
+        'description': widget.activity.description,
+        'address': widget.activity.address,
+        'lat': widget.activity.lat,
+        'lng': widget.activity.lng,
+        'photoUrl': widget.activity.photoUrl,
+      });
+
+      list.add(newItem);
+    }
+
+    await prefs.setStringList('favorites', list);
+
+    setState(() {
+      isFavorite = !isFavorite;
+    });
+  }
+
+  Future<void> _deleteFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('favorites') ?? [];
+
+    list.removeWhere((item) {
+      final decoded = jsonDecode(item);
+      return decoded['id'] == widget.activity.id;
+    });
+
+    await prefs.setStringList('favorites', list);
+
+    widget.onDeleted?.call(); // 🔥 notify parent
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Removed from favorites")),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = getGradient();
-    final alignment = getImageAlignment();
+    final gradients = [
+      const LinearGradient(
+        colors: [Color(0xFF00C9A7), Color(0xFF7ED957)],
+      ),
+      const LinearGradient(
+        colors: [Color(0xFFFF7043), Color(0xFFFFA726)],
+      ),
+    ];
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+    final gradient = gradients[widget.index % gradients.length];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Stack(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔥 IMAGE WITH DIFFERENT CROP PER CARD
-            if (activity.photoUrl != null)
-              SizedBox(
-                height: 200,
-                width: double.infinity,
-                child: Image.network(
-                  activity.photoUrl!,
-                  fit: BoxFit.cover,
-                  alignment: alignment, // 🔥 KEY DIFFERENCE
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.network(
-                      "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-                      fit: BoxFit.cover,
-                    );
-                  },
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: widget.activity.photoUrl != null
+                      ? Image.network(
+                          widget.activity.photoUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        )
+                      : Container(color: Colors.grey),
                 ),
-              ),
-
-            // 🔥 STRONG COLOR OVERLAY (DIFFERENT PER CARD)
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colors[0].withOpacity(0.55),
-                    colors[1].withOpacity(0.55),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-
-            // 🔥 TEXT PANEL
-            Container(
-              margin: const EdgeInsets.only(top: 140),
-              decoration: BoxDecoration(
-                color: colors[0].withOpacity(0.9),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(22),
-                ),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    activity.title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      color: Colors.black.withOpacity(0.35),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    activity.description,
-                    style: const TextStyle(color: Colors.black),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: IgnorePointer(
+                    child: Text(
+                      widget.activity.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16),
-                      const SizedBox(width: 6),
-                      Expanded(child: Text(activity.address)),
-                    ],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Material(
+                    color: Colors.white,
+                    shape: const CircleBorder(),
+                    elevation: 4,
+                    child: IconButton(
+                      icon: Icon(
+                        widget.isFavoritesView
+                            ? Icons.delete
+                            : (isFavorite
+                                ? Icons.favorite
+                                : Icons.favorite_border),
+                        color:
+                            widget.isFavoritesView ? Colors.black : Colors.red,
+                      ),
+                      onPressed: widget.isFavoritesView
+                          ? _deleteFavorite
+                          : _toggleFavorite,
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: Colors.white.withOpacity(0.3),
+              child: Text(
+                widget.activity.description,
+                style: const TextStyle(color: Colors.black87),
               ),
             ),
           ],
