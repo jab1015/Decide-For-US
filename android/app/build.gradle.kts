@@ -1,31 +1,26 @@
 import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 🔐 Load keystore
 val keystoreProperties = Properties()
-val keystoreFile = rootProject.file("key.properties")
-
-if (keystoreFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystoreFile))
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 
 android {
     namespace = "com.decideforus.app"
     compileSdk = 36
-    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.decideforus.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-
-        versionCode = 25
+        versionCode = 28
         versionName = "1.0.24"
     }
 
@@ -33,25 +28,16 @@ android {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
+            storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
             storePassword = keystoreProperties["storePassword"] as String
         }
     }
 
     buildTypes {
-        getByName("release") {
+        release {
             signingConfig = signingConfigs.getByName("release")
-
             isMinifyEnabled = false
             isShrinkResources = false
-        }
-    }
-
-    // 🔥 KEEP THIS — prevents strip crash
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-            keepDebugSymbols += "**/*.so"
         }
     }
 
@@ -62,13 +48,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-    }
-}
-
-// 🔥 CRITICAL: disable strip tasks completely
-tasks.configureEach {
-    if (name.contains("strip", ignoreCase = true)) {
-        enabled = false
     }
 }
 
