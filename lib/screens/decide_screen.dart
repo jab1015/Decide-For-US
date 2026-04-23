@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity.dart';
 import '../services/ai_service.dart';
@@ -20,43 +19,64 @@ class DecideScreen extends StatefulWidget {
 class _DecideScreenState extends State<DecideScreen> {
   final player = AudioPlayer();
   late ConfettiController confetti;
-
   final ScrollController _scrollController = ScrollController();
-  final GlobalKey _resultsKey = GlobalKey();
 
   List<Activity> results = [];
 
   bool isLoading = false;
   bool isDateNight = false;
 
+  String? selectedGroup;
+  String? selectedBudget;
+  String? selectedEnergy;
+
+  int selectedRadius = 25;
+  String selectedRadiusLabel = "25 mi";
+
   Map<String, double>? userCoords;
 
   double rotation = 0;
-  int spinCount = 0;
 
   @override
   void initState() {
     super.initState();
     confetti = ConfettiController(duration: const Duration(seconds: 2));
     loadLocation();
-    loadUsage();
-  }
-
-  Future<void> loadUsage() async {
-    final prefs = await SharedPreferences.getInstance();
-    spinCount = prefs.getInt("spinCount") ?? 0;
   }
 
   Future<void> loadLocation() async {
     userCoords = await LocationService.getLatLng();
   }
 
+  // 🔥 iOS-safe scroll fix
+  Future<void> _waitAndScroll() async {
+    int attempts = 0;
+
+    while (attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 120));
+
+      if (!_scrollController.hasClients) {
+        attempts++;
+        continue;
+      }
+
+      final maxScroll = _scrollController.position.maxScrollExtent;
+
+      if (maxScroll > 0) {
+        _scrollController.animateTo(
+          maxScroll,
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
+
+      attempts++;
+    }
+  }
+
   Future<void> spin() async {
     if (isLoading) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    spinCount++;
-    await prefs.setInt("spinCount", spinCount);
 
     setState(() {
       isLoading = true;
@@ -70,9 +90,13 @@ class _DecideScreenState extends State<DecideScreen> {
 
     try {
       data = await AIService.getIdeas(
+        group: selectedGroup,
+        budget: selectedBudget,
+        energy: selectedEnergy,
         isDateNight: isDateNight,
         lat: userCoords?['lat'],
         lng: userCoords?['lng'],
+        radius: selectedRadius,
       );
     } catch (_) {}
 
@@ -83,32 +107,60 @@ class _DecideScreenState extends State<DecideScreen> {
     setState(() {
       results = data;
       isLoading = false;
+
+      selectedGroup = null;
+      selectedBudget = null;
+      selectedEnergy = null;
     });
 
     if (results.isNotEmpty) {
       confetti.play();
     }
 
-    _forceScrollToResults();
+    _waitAndScroll();
   }
 
-  void _forceScrollToResults() async {
-    // Try multiple times to ensure layout is ready (iOS fix)
-    for (int i = 0; i < 5; i++) {
-      await Future.delayed(const Duration(milliseconds: 120));
-
-      final context = _resultsKey.currentContext;
-
-      if (context != null) {
-        Scrollable.ensureVisible(
-          context,
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOutCubic,
-          alignment: 0.1,
+  Widget buildChips(
+      List<String> options, String? selected, Function(String) onTap) {
+    return Wrap(
+      spacing: 10,
+      children: options.map((option) {
+        final isSelected = selected == option;
+        return ChoiceChip(
+          label: Text(option),
+          selected: isSelected,
+          onSelected: (_) => setState(() => onTap(option)),
+          selectedColor: Colors.deepPurple,
         );
-        return;
-      }
-    }
+      }).toList(),
+    );
+  }
+
+  Widget buildRadiusChips() {
+    final options = ["10 mi", "25 mi", "50 mi", "Explore"];
+
+    return Wrap(
+      spacing: 10,
+      children: options.map((label) {
+        final isSelected = selectedRadiusLabel == label;
+
+        return ChoiceChip(
+          label: Text(label),
+          selected: isSelected,
+          onSelected: (_) {
+            setState(() {
+              selectedRadiusLabel = label;
+
+              if (label == "10 mi") selectedRadius = 10;
+              if (label == "25 mi") selectedRadius = 25;
+              if (label == "50 mi") selectedRadius = 50;
+              if (label == "Explore") selectedRadius = 100; // wide search
+            });
+          },
+          selectedColor: Colors.deepPurple,
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -137,9 +189,65 @@ class _DecideScreenState extends State<DecideScreen> {
             controller: _scrollController,
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                const SizedBox(height: 10),
+
+                // 💖 Date Night
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("💖 Date Night"),
+                    Switch(
+                      value: isDateNight,
+                      onChanged: (v) => setState(() => isDateNight = v),
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 20),
 
+                // 📍 Distance
+                const Text("How far are you willing to go?"),
+                const SizedBox(height: 10),
+                buildRadiusChips(),
+
+                const SizedBox(height: 20),
+
+                // 👥 Group
+                const Text("Who’s involved?"),
+                const SizedBox(height: 10),
+                buildChips(
+                  ["Couple", "Friends", "Family", "Solo"],
+                  selectedGroup,
+                  (v) => selectedGroup = v,
+                ),
+
+                const SizedBox(height: 20),
+
+                // 💰 Budget
+                const Text("Budget"),
+                const SizedBox(height: 10),
+                buildChips(
+                  ["Free", "\$", "\$\$"],
+                  selectedBudget,
+                  (v) => selectedBudget = v,
+                ),
+
+                const SizedBox(height: 20),
+
+                // ⚡ Energy
+                const Text("Energy"),
+                const SizedBox(height: 10),
+                buildChips(
+                  ["Low", "Medium", "High"],
+                  selectedEnergy,
+                  (v) => selectedEnergy = v,
+                ),
+
+                const SizedBox(height: 30),
+
+                // 🎯 Spin Button
                 GestureDetector(
                   onTap: spin,
                   child: AnimatedRotation(
@@ -169,17 +277,12 @@ class _DecideScreenState extends State<DecideScreen> {
 
                 const SizedBox(height: 30),
 
-                // 👇 THIS is the anchor for scroll
-                Column(
-                  key: _resultsKey,
-                  children: [
-                    ...results.map(
-                      (r) => DecisionCard(
-                        activity: r,
-                        index: results.indexOf(r),
-                      ),
-                    ),
-                  ],
+                // 📦 Results
+                ...results.map(
+                  (r) => DecisionCard(
+                    activity: r,
+                    index: results.indexOf(r),
+                  ),
                 ),
 
                 const SizedBox(height: 40),
