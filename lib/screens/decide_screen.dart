@@ -120,17 +120,29 @@ class _DecideScreenState extends State<DecideScreen> {
     _waitAndScroll();
   }
 
+  // 🎨 Updated premium chip styling (softer purple)
   Widget buildChips(
       List<String> options, String? selected, Function(String) onTap) {
     return Wrap(
       spacing: 10,
       children: options.map((option) {
         final isSelected = selected == option;
+
         return ChoiceChip(
-          label: Text(option),
+          label: Text(
+            option,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           selected: isSelected,
           onSelected: (_) => setState(() => onTap(option)),
-          selectedColor: Colors.deepPurple,
+          selectedColor: const Color(0xFF7B6CF6), // softer purple
+          backgroundColor: Colors.grey.shade200,
+          elevation: isSelected ? 4 : 0,
+          pressElevation: 2,
+          shadowColor: Colors.black26,
         );
       }).toList(),
     );
@@ -145,7 +157,13 @@ class _DecideScreenState extends State<DecideScreen> {
         final isSelected = selectedRadiusLabel == label;
 
         return ChoiceChip(
-          label: Text(label),
+          label: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           selected: isSelected,
           onSelected: (_) {
             setState(() {
@@ -154,10 +172,13 @@ class _DecideScreenState extends State<DecideScreen> {
               if (label == "10 mi") selectedRadius = 10;
               if (label == "25 mi") selectedRadius = 25;
               if (label == "50 mi") selectedRadius = 50;
-              if (label == "Explore") selectedRadius = 100; // wide search
+              if (label == "Explore") selectedRadius = 100;
             });
           },
-          selectedColor: Colors.deepPurple,
+          selectedColor: const Color(0xFF7B6CF6),
+          backgroundColor: Colors.grey.shade200,
+          elevation: isSelected ? 4 : 0,
+          shadowColor: Colors.black26,
         );
       }).toList(),
     );
