@@ -1,210 +1,226 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
+import axios from "axios";
 
-const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-// -----------------------------
-// PHOTO PROXY
-// -----------------------------
-export const getPhoto = onRequest(
-  { cors: true, secrets: [GOOGLE_API_KEY] },
-  async (req, res) => {
-    try {
-      const ref = req.query.ref;
-      const key = GOOGLE_API_KEY.value();
+/* ---------------- MEMORY ---------------- */
 
-      const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${key}`;
-      const response = await fetch(url, { redirect: "follow" });
+const recentPlaces = new Set();
 
-      const buffer = await response.arrayBuffer();
-      res.set("Content-Type", response.headers.get("content-type"));
-      res.send(Buffer.from(buffer));
-    } catch {
-      res.redirect("https://images.unsplash.com/photo-1504674900247-0877df9cc836");
+/* ---------------- HELPERS ---------------- */
+
+const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = (arr) => arr.sort(() => 0.5 - Math.random());
+
+/* ---------------- SEARCH ---------------- */
+
+const searchPlaces = async (keyword, lat, lng, radius) => {
+  const res = await axios.get(
+    "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+    {
+      params: {
+        keyword,
+        location: `${lat},${lng}`,
+        radius: radius * 1609,
+        key: GOOGLE_API_KEY,
+      },
+    }
+  );
+
+  return res.data.results || [];
+};
+
+const pickPlace = async (keywords, lat, lng, radius) => {
+  for (let k of shuffle(keywords)) {
+    const results = await searchPlaces(k, lat, lng, radius);
+
+    const filtered = results
+      .filter(
+        (p) =>
+          p.rating >= 4.2 &&
+          (p.user_ratings_total || 0) > 40 &&
+          !recentPlaces.has(p.place_id)
+      )
+      .sort((a, b) => b.rating - a.rating);
+
+    if (filtered.length) {
+      const chosen = filtered[0];
+      recentPlaces.add(chosen.place_id);
+      if (recentPlaces.size > 50) recentPlaces.clear();
+      return chosen;
     }
   }
-);
+  return null;
+};
 
-// -----------------------------
-// ELITE SCORING
-// -----------------------------
-function eliteScore(p) {
-  let score = (p.rating || 0) * 4;
-  const n = p.name.toLowerCase();
+/* ---------------- TYPE DETECTION ---------------- */
 
-  if (n.includes("steak")) score += 10;
-  if (n.includes("seafood")) score += 10;
-  if (n.includes("rooftop")) score += 12;
-  if (n.includes("wine")) score += 10;
-  if (n.includes("cocktail")) score += 10;
-  if (n.includes("lounge")) score += 10;
-  if (n.includes("view")) score += 12;
-  if (n.includes("water")) score += 10;
+function getVibe(place) {
+  const types = place.types || [];
 
-  if (n.includes("pizza")) score -= 20;
-  if (n.includes("burger")) score -= 20;
-  if (n.includes("fast")) score -= 30;
+  if (types.includes("park") || types.includes("tourist_attraction"))
+    return "outdoor";
 
-  return score;
+  if (types.includes("museum") || types.includes("art_gallery"))
+    return "culture";
+
+  if (types.includes("cafe") || types.includes("restaurant"))
+    return "food";
+
+  if (types.includes("bar"))
+    return "drinks";
+
+  return "generic";
 }
 
-// -----------------------------
-// 💎 ROMANTIC DESCRIPTION ENGINE
-// -----------------------------
-function romanticDescription(a, b, variant) {
-  const styles = [
-    `Ease into the evening at ${a.title}, where the atmosphere invites you to slow down and connect. As the night unfolds, wander into ${b.title} and let the moment linger a little longer.`,
+/* ---------------- SMART PAIRING ---------------- */
 
-    `Begin your night at ${a.title}, a place that naturally sets a warm, intimate tone. From there, drift into ${b.title} and enjoy a quiet, shared moment away from everything else.`,
+async function getDatePair(lat, lng, radius) {
+  // STEP A: scenic / experience
+  const A = await pickPlace(
+    ["scenic overlook", "waterfront", "garden", "museum", "trail"],
+    lat,
+    lng,
+    radius
+  );
 
-    `Start with an elegant experience at ${a.title}, where everything feels just a bit more refined. Then continue into ${b.title}, letting the night take on a relaxed, romantic rhythm.`,
+  if (!A) return null;
 
-    `The night begins at ${a.title}, setting the stage for something special. From there, ${b.title} becomes the perfect place to unwind together and let the evening stretch on.`,
+  const coord = A.geometry.location;
+  const vibe = getVibe(A);
 
-    `Take in the moment at ${a.title}, where the setting naturally draws you closer. Then make your way to ${b.title}, where the night feels calm, intimate, and unhurried.`,
+  let secondKeywords;
+
+  if (vibe === "outdoor") {
+    secondKeywords = ["dessert", "wine bar", "cafe", "rooftop"];
+  } else if (vibe === "culture") {
+    secondKeywords = ["wine bar", "dessert", "cafe"];
+  } else {
+    secondKeywords = ["dessert", "lounge", "bar"];
+  }
+
+  const B = await pickPlace(secondKeywords, coord.lat, coord.lng, 3);
+
+  if (!B) return null;
+
+  return { A, B };
+}
+
+/* ---------------- DESCRIPTION ENGINE ---------------- */
+
+function describe(a, b, mode) {
+  const vibeA = getVibe(a);
+  const vibeB = getVibe(b);
+
+  const openers = [
+    `Start at ${a.name}`,
+    `Begin your time at ${a.name}`,
+    `Ease into the evening at ${a.name}`,
+    `Take a moment at ${a.name}`,
   ];
 
-  return styles[variant % styles.length];
+  const transitions = [
+    `then head to ${b.name}`,
+    `before making your way to ${b.name}`,
+    `and continue on to ${b.name}`,
+    `then slip over to ${b.name}`,
+  ];
+
+  const outdoorLines = [
+    `take your time and enjoy the surroundings`,
+    `slow things down and take it all in`,
+    `let the moment breathe a bit`,
+  ];
+
+  const cozyLines = [
+    `settle in somewhere a little more relaxed`,
+    `shift into something more intimate`,
+    `wind down together`,
+  ];
+
+  let middle;
+
+  if (vibeA === "outdoor") {
+    middle = rand(outdoorLines);
+  } else {
+    middle = "ease into the experience";
+  }
+
+  let ending;
+
+  if (vibeB === "food") {
+    ending = rand([
+      `and enjoy something sweet together.`,
+      `and grab something to share.`,
+      `and relax over something light.`,
+    ]);
+  } else if (vibeB === "drinks") {
+    ending = rand([
+      `and unwind for a bit.`,
+      `and let the night settle in.`,
+      `and keep things easy and relaxed.`,
+    ]);
+  } else {
+    ending = rand(cozyLines) + ".";
+  }
+
+  const structures = [
+    `${rand(openers)}, ${middle}, ${rand(transitions)} ${ending}`,
+    `${rand(openers)}. ${middle}, ${rand(transitions)} ${ending}`,
+    `${rand(openers)} — ${middle}, ${rand(transitions)} ${ending}`,
+  ];
+
+  return rand(structures);
 }
 
-// -----------------------------
-// MAIN
-// -----------------------------
-export const getIdeas = onRequest(
-  { cors: true, secrets: [GOOGLE_API_KEY] },
-  async (req, res) => {
-    try {
-      const { lat, lng, isDateNight, radius = 25 } = req.body;
-      const key = GOOGLE_API_KEY.value();
+/* ---------------- MAIN ---------------- */
 
-      const latitude = lat || 30.3322;
-      const longitude = lng || -81.6557;
-      const radiusMeters = radius * 1609;
+export const getIdeas = onRequest(async (req, res) => {
+  try {
+    const { lat, lng, radius = 25, isDateNight, budget } = req.body;
 
-      const buildUrl = (query) =>
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radiusMeters}&key=${key}`;
+    if (!lat || !lng) return res.json([]);
 
-      // ⚡ FAST PARALLEL CALLS
-      const [foodRes, expRes] = await Promise.all([
-        fetch(buildUrl(
-          isDateNight
-            ? "fine dining steakhouse romantic upscale restaurant"
-            : "restaurant"
-        )),
-        fetch(buildUrl(
-          isDateNight
-            ? "rooftop bar scenic cocktail lounge waterfront"
-            : "things to do"
-        )),
-      ]);
+    const results = [];
+    let attempts = 0;
 
-      const foodData = await foodRes.json();
-      const expData = await expRes.json();
+    while (results.length < 2 && attempts < 10) {
+      attempts++;
 
-      let food = foodData.results || [];
-      let exp = expData.results || [];
-
-      const clean = (p) =>
-        p.name &&
-        p.rating >= (isDateNight ? 4.4 : 4.0) &&
-        p.user_ratings_total > (isDateNight ? 120 : 50) &&
-        p.photos &&
-        p.photos.length > 0;
-
-      food = food.filter(clean);
-      exp = exp.filter(clean);
+      let pair;
 
       if (isDateNight) {
-        food = food
-          .map(p => ({ ...p, score: eliteScore(p) }))
-          .filter(p => p.score > 40)
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 6);
-
-        exp = exp
-          .map(p => ({ ...p, score: eliteScore(p) }))
-          .filter(p => p.score > 40)
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 6);
+        pair = await getDatePair(lat, lng, radius);
+      } else if (budget === "Free") {
+        pair = await getDatePair(lat, lng, radius); // reuse but still filtered by keywords
+      } else {
+        pair = await getDatePair(lat, lng, radius);
       }
 
-      if (!food.length || !exp.length) {
-        return res.json([]);
-      }
+      if (!pair) continue;
 
-      // 🚫 NO DUPLICATES
-      const usedIds = new Set();
+      const { A, B } = pair;
 
-      const pickUnique = (list) => {
-        let item;
-        do {
-          item = list[Math.floor(Math.random() * list.length)];
-        } while (usedIds.has(item.place_id));
+      const coordA = A.geometry.location;
 
-        usedIds.add(item.place_id);
-        return item;
-      };
+      const photoUrl = A.photos?.[0]
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${A.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
+        : null;
 
-      const f1 = pickUnique(food);
-      const e1 = pickUnique(exp);
-      const f2 = pickUnique(food);
-      const e2 = pickUnique(exp);
-
-      const getPhotoUrl = (p) => {
-        const ref = p.photos?.[0]?.photo_reference;
-        return ref
-          ? `https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPhoto?ref=${ref}`
-          : null;
-      };
-
-      const build = (p) => ({
-        id: p.place_id,
-        title: p.name,
-        address: p.formatted_address || p.vicinity,
-        lat: p.geometry.location.lat,
-        lng: p.geometry.location.lng,
-        photoUrl: getPhotoUrl(p),
+      results.push({
+        id: `${A.place_id}_${B.place_id}`,
+        title: `${A.name} → ${B.name}`,
+        description: describe(A, B, "date"),
+        address: A.vicinity || "",
+        lat: coordA.lat,
+        lng: coordA.lng,
+        photoUrl,
       });
-
-      const a1 = build(f1);
-      const b1 = build(e1);
-      const a2 = build(f2);
-      const b2 = build(e2);
-
-      // 🔥 GUARANTEED DIFFERENT DESCRIPTIONS
-      const v1 = Math.floor(Math.random() * 5);
-      let v2;
-      do {
-        v2 = Math.floor(Math.random() * 5);
-      } while (v2 === v1);
-
-      res.json([
-        {
-          id: a1.id,
-          title: `${a1.title} → ${b1.title}`,
-          description: isDateNight
-            ? romanticDescription(a1, b1, v1)
-            : `Start with ${a1.title}, then head to ${b1.title}.`,
-          address: a1.address,
-          lat: a1.lat,
-          lng: a1.lng,
-          photoUrl: a1.photoUrl,
-        },
-        {
-          id: a2.id,
-          title: `${a2.title} → ${b2.title}`,
-          description: isDateNight
-            ? romanticDescription(a2, b2, v2)
-            : `Start with ${a2.title}, then head to ${b2.title}.`,
-          address: a2.address,
-          lat: a2.lat,
-          lng: a2.lng,
-          photoUrl: a2.photoUrl,
-        },
-      ]);
-    } catch (err) {
-      console.error(err);
-      res.status(500).send("Error");
     }
+
+    res.json(results);
+  } catch (err) {
+    console.error(err);
+    res.json([]);
   }
-);
+});
