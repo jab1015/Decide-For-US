@@ -22,7 +22,7 @@ class _DecideScreenState extends State<DecideScreen> {
   late ConfettiController confetti;
 
   final ScrollController _scrollController = ScrollController();
-  final GlobalKey _resultsKey = GlobalKey(); // 🔥 KEY FIX
+  final GlobalKey _resultsKey = GlobalKey();
 
   List<Activity> results = [];
 
@@ -89,22 +89,25 @@ class _DecideScreenState extends State<DecideScreen> {
       confetti.play();
     }
 
-    // 🔥 KEY FIX: scroll AFTER widget builds
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToResults();
-    });
+    _forceScrollToResults();
   }
 
-  void _scrollToResults() {
-    final context = _resultsKey.currentContext;
+  void _forceScrollToResults() async {
+    // Try multiple times to ensure layout is ready (iOS fix)
+    for (int i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(milliseconds: 120));
 
-    if (context != null) {
-      Scrollable.ensureVisible(
-        context,
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeOutCubic,
-        alignment: 0.1,
-      );
+      final context = _resultsKey.currentContext;
+
+      if (context != null) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOutCubic,
+          alignment: 0.1,
+        );
+        return;
+      }
     }
   }
 
@@ -166,7 +169,7 @@ class _DecideScreenState extends State<DecideScreen> {
 
                 const SizedBox(height: 30),
 
-                // 🔥 TARGET FOR SCROLL
+                // 👇 THIS is the anchor for scroll
                 Column(
                   key: _resultsKey,
                   children: [
