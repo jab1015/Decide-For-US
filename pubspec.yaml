@@ -3,7 +3,7 @@ description: A decision-making app
 
 publish_to: 'none'
 
-version: 1.0.18+12
+version: 1.0.18+14
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -30,7 +30,7 @@ dependencies:
   geocoding: ^2.1.1
 
   # UI / EFFECTS
-  confetti: ^0.7.0
+  confetti: ^0.8.0
   share_plus: ^7.2.2
   audioplayers: ^5.2.1
 

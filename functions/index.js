@@ -1,226 +1,166 @@
 import { onRequest } from "firebase-functions/v2/https";
-import axios from "axios";
+import { defineSecret } from "firebase-functions/params";
+import fetch from "node-fetch";
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+console.log("🔥 REAL EXPERIENCE ENGINE v28");
 
-/* ---------------- MEMORY ---------------- */
+const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 
-const recentPlaces = new Set();
+let usedFood = [];
+let usedExp = [];
 
-/* ---------------- HELPERS ---------------- */
+// 🔥 FILTER REAL RESTAURANTS
+function isRestaurant(p) {
+  if (!p.types.includes("restaurant")) return false;
 
-const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const shuffle = (arr) => arr.sort(() => 0.5 - Math.random());
+  const name = p.name.toLowerCase();
 
-/* ---------------- SEARCH ---------------- */
+  const banned = [
+    "bar","lounge","grill","pub",
+    "bbq","smokehouse","buffalo",
+    "fast food","pizza","burger"
+  ];
 
-const searchPlaces = async (keyword, lat, lng, radius) => {
-  const res = await axios.get(
-    "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-    {
-      params: {
-        keyword,
-        location: `${lat},${lng}`,
-        radius: radius * 1609,
-        key: GOOGLE_API_KEY,
-      },
+  return !banned.some(b => name.includes(b));
+}
+
+// 🔥 FETCH RESTAURANTS
+async function fetchRestaurants(apiKey, lat, lng) {
+  const queries = [
+    "fine dining restaurant",
+    "romantic restaurant",
+    "steakhouse",
+    "seafood restaurant"
+  ];
+
+  let all = [];
+
+  for (const q of queries) {
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=50000&key=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.results) all = all.concat(data.results);
+  }
+
+  return all;
+}
+
+// 🔥 FETCH REAL EXPERIENCES
+async function fetchExperiences(apiKey, lat, lng, isDateNight) {
+
+  const queries = isDateNight
+    ? ["romantic park", "waterfront", "scenic view", "beach"]
+    : ["park", "tourist attraction", "bowling alley", "mini golf"];
+
+  let all = [];
+
+  for (const q of queries) {
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=50000&key=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.results) all = all.concat(data.results);
+  }
+
+  return all;
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export const getIdeas = onRequest(
+  {
+    region: "us-central1",
+    secrets: [GOOGLE_API_KEY],
+  },
+  async (req, res) => {
+
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+
+    if (req.method === "OPTIONS") {
+      return res.status(204).send("");
     }
-  );
 
-  return res.data.results || [];
-};
+    try {
+      const data = req.method === "GET" ? req.query : req.body;
 
-const pickPlace = async (keywords, lat, lng, radius) => {
-  for (let k of shuffle(keywords)) {
-    const results = await searchPlaces(k, lat, lng, radius);
+      const lat = parseFloat(data?.lat) || 30.8;
+      const lng = parseFloat(data?.lng) || -81.7;
+      const isDateNight = data?.isDateNight === "true" || data?.isDateNight === true;
 
-    const filtered = results
-      .filter(
-        (p) =>
-          p.rating >= 4.2 &&
-          (p.user_ratings_total || 0) > 40 &&
-          !recentPlaces.has(p.place_id)
-      )
-      .sort((a, b) => b.rating - a.rating);
+      const apiKey = GOOGLE_API_KEY.value();
 
-    if (filtered.length) {
-      const chosen = filtered[0];
-      recentPlaces.add(chosen.place_id);
-      if (recentPlaces.size > 50) recentPlaces.clear();
-      return chosen;
-    }
-  }
-  return null;
-};
+      // 🔥 RESTAURANTS
+      const restaurants = await fetchRestaurants(apiKey, lat, lng);
 
-/* ---------------- TYPE DETECTION ---------------- */
+      let foodOptions = restaurants.filter(p =>
+        (p.rating || 0) >= (isDateNight ? 4.5 : 4.2) &&
+        (p.user_ratings_total || 0) >= 100 &&
+        isRestaurant(p)
+      );
 
-function getVibe(place) {
-  const types = place.types || [];
+      const uniqueFood = Array.from(
+        new Map(foodOptions.map(p => [p.place_id, p])).values()
+      );
 
-  if (types.includes("park") || types.includes("tourist_attraction"))
-    return "outdoor";
-
-  if (types.includes("museum") || types.includes("art_gallery"))
-    return "culture";
-
-  if (types.includes("cafe") || types.includes("restaurant"))
-    return "food";
-
-  if (types.includes("bar"))
-    return "drinks";
-
-  return "generic";
-}
-
-/* ---------------- SMART PAIRING ---------------- */
-
-async function getDatePair(lat, lng, radius) {
-  // STEP A: scenic / experience
-  const A = await pickPlace(
-    ["scenic overlook", "waterfront", "garden", "museum", "trail"],
-    lat,
-    lng,
-    radius
-  );
-
-  if (!A) return null;
-
-  const coord = A.geometry.location;
-  const vibe = getVibe(A);
-
-  let secondKeywords;
-
-  if (vibe === "outdoor") {
-    secondKeywords = ["dessert", "wine bar", "cafe", "rooftop"];
-  } else if (vibe === "culture") {
-    secondKeywords = ["wine bar", "dessert", "cafe"];
-  } else {
-    secondKeywords = ["dessert", "lounge", "bar"];
-  }
-
-  const B = await pickPlace(secondKeywords, coord.lat, coord.lng, 3);
-
-  if (!B) return null;
-
-  return { A, B };
-}
-
-/* ---------------- DESCRIPTION ENGINE ---------------- */
-
-function describe(a, b, mode) {
-  const vibeA = getVibe(a);
-  const vibeB = getVibe(b);
-
-  const openers = [
-    `Start at ${a.name}`,
-    `Begin your time at ${a.name}`,
-    `Ease into the evening at ${a.name}`,
-    `Take a moment at ${a.name}`,
-  ];
-
-  const transitions = [
-    `then head to ${b.name}`,
-    `before making your way to ${b.name}`,
-    `and continue on to ${b.name}`,
-    `then slip over to ${b.name}`,
-  ];
-
-  const outdoorLines = [
-    `take your time and enjoy the surroundings`,
-    `slow things down and take it all in`,
-    `let the moment breathe a bit`,
-  ];
-
-  const cozyLines = [
-    `settle in somewhere a little more relaxed`,
-    `shift into something more intimate`,
-    `wind down together`,
-  ];
-
-  let middle;
-
-  if (vibeA === "outdoor") {
-    middle = rand(outdoorLines);
-  } else {
-    middle = "ease into the experience";
-  }
-
-  let ending;
-
-  if (vibeB === "food") {
-    ending = rand([
-      `and enjoy something sweet together.`,
-      `and grab something to share.`,
-      `and relax over something light.`,
-    ]);
-  } else if (vibeB === "drinks") {
-    ending = rand([
-      `and unwind for a bit.`,
-      `and let the night settle in.`,
-      `and keep things easy and relaxed.`,
-    ]);
-  } else {
-    ending = rand(cozyLines) + ".";
-  }
-
-  const structures = [
-    `${rand(openers)}, ${middle}, ${rand(transitions)} ${ending}`,
-    `${rand(openers)}. ${middle}, ${rand(transitions)} ${ending}`,
-    `${rand(openers)} — ${middle}, ${rand(transitions)} ${ending}`,
-  ];
-
-  return rand(structures);
-}
-
-/* ---------------- MAIN ---------------- */
-
-export const getIdeas = onRequest(async (req, res) => {
-  try {
-    const { lat, lng, radius = 25, isDateNight, budget } = req.body;
-
-    if (!lat || !lng) return res.json([]);
-
-    const results = [];
-    let attempts = 0;
-
-    while (results.length < 2 && attempts < 10) {
-      attempts++;
-
-      let pair;
-
-      if (isDateNight) {
-        pair = await getDatePair(lat, lng, radius);
-      } else if (budget === "Free") {
-        pair = await getDatePair(lat, lng, radius); // reuse but still filtered by keywords
-      } else {
-        pair = await getDatePair(lat, lng, radius);
+      let availableFood = uniqueFood.filter(p => !usedFood.includes(p.place_id));
+      if (availableFood.length === 0) {
+        usedFood = [];
+        availableFood = uniqueFood;
       }
 
-      if (!pair) continue;
+      const food = pick(availableFood);
+      usedFood.push(food.place_id);
 
-      const { A, B } = pair;
+      // 🔥 EXPERIENCES (REAL LOCATIONS)
+      const experiences = await fetchExperiences(apiKey, lat, lng, isDateNight);
 
-      const coordA = A.geometry.location;
+      let expOptions = experiences.filter(p =>
+        p.name !== food.name &&
+        (p.rating || 0) >= 4.2
+      );
 
-      const photoUrl = A.photos?.[0]
-        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${A.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
-        : null;
+      const uniqueExp = Array.from(
+        new Map(expOptions.map(p => [p.place_id, p])).values()
+      );
 
-      results.push({
-        id: `${A.place_id}_${B.place_id}`,
-        title: `${A.name} → ${B.name}`,
-        description: describe(A, B, "date"),
-        address: A.vicinity || "",
-        lat: coordA.lat,
-        lng: coordA.lng,
-        photoUrl,
-      });
+      let availableExp = uniqueExp.filter(p => !usedExp.includes(p.place_id));
+      if (availableExp.length === 0) {
+        usedExp = [];
+        availableExp = uniqueExp;
+      }
+
+      const exp = pick(availableExp);
+      usedExp.push(exp.place_id);
+
+      return res.json([
+        {
+          title: food.name,
+          description: isDateNight
+            ? `Enjoy a premium dinner at ${food.name}.`
+            : `Start with a meal at ${food.name}.`,
+          address: food.formatted_address,
+          lat: food.geometry.location.lat,
+          lng: food.geometry.location.lng,
+          photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5",
+        },
+        {
+          title: exp.name,
+          description: isDateNight
+            ? "A curated romantic destination."
+            : "A real activity to continue your outing.",
+          address: exp.formatted_address,
+          lat: exp.geometry.location.lat,
+          lng: exp.geometry.location.lng,
+          photoUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+        },
+      ]);
+
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Function failed" });
     }
-
-    res.json(results);
-  } catch (err) {
-    console.error(err);
-    res.json([]);
   }
-});
+);
