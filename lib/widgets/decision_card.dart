@@ -7,7 +7,7 @@ class DecisionCard extends StatefulWidget {
   final Activity activity;
   final int index;
   final bool isFavoritesView;
-  final VoidCallback? onDeleted; // 🔥 NEW
+  final VoidCallback? onDeleted;
 
   const DecisionCard({
     super.key,
@@ -83,7 +83,7 @@ class _DecisionCardState extends State<DecisionCard> {
 
     await prefs.setStringList('favorites', list);
 
-    widget.onDeleted?.call(); // 🔥 notify parent
+    widget.onDeleted?.call();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,6 +101,12 @@ class _DecisionCardState extends State<DecisionCard> {
       const LinearGradient(
         colors: [Color(0xFFFF7043), Color(0xFFFFA726)],
       ),
+      const LinearGradient(
+        colors: [Color(0xFF5C6BC0), Color(0xFF26C6DA)],
+      ),
+      const LinearGradient(
+        colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)],
+      ),
     ];
 
     final gradient = gradients[widget.index % gradients.length];
@@ -116,11 +122,13 @@ class _DecisionCardState extends State<DecisionCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 📸 IMAGE + TITLE OVERLAY
             Stack(
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: widget.activity.photoUrl != null
+                  child: widget.activity.photoUrl != null &&
+                          widget.activity.photoUrl!.isNotEmpty
                       ? Image.network(
                           widget.activity.photoUrl!,
                           fit: BoxFit.cover,
@@ -128,6 +136,8 @@ class _DecisionCardState extends State<DecisionCard> {
                         )
                       : Container(color: Colors.grey),
                 ),
+
+                // dark overlay
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
@@ -135,6 +145,8 @@ class _DecisionCardState extends State<DecisionCard> {
                     ),
                   ),
                 ),
+
+                // title
                 Positioned(
                   left: 16,
                   right: 16,
@@ -150,6 +162,8 @@ class _DecisionCardState extends State<DecisionCard> {
                     ),
                   ),
                 ),
+
+                // ❤️ / 🗑 button
                 Positioned(
                   top: 12,
                   right: 12,
@@ -175,13 +189,43 @@ class _DecisionCardState extends State<DecisionCard> {
                 ),
               ],
             ),
+
+            // 📦 DESCRIPTION + ADDRESS (30% transparent panel)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               color: Colors.white.withOpacity(0.3),
-              child: Text(
-                widget.activity.description,
-                style: const TextStyle(color: Colors.black87),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // description
+                  Text(
+                    widget.activity.description,
+                    style: const TextStyle(color: Colors.black87),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // 📍 address (NEW — clean + subtle)
+                  if (widget.activity.address != null &&
+                      widget.activity.address!.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on,
+                            size: 14, color: Colors.black54),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            widget.activity.address!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ),
           ],

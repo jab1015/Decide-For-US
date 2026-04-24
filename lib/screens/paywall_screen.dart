@@ -4,41 +4,48 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PaywallScreen extends StatelessWidget {
   const PaywallScreen({super.key});
 
-  Future<void> resetUsage(BuildContext context) async {
+  Future<void> _resetUsage(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setInt("spinCount", 0);
-    await prefs.setInt(
-        "firstUse", DateTime.now().millisecondsSinceEpoch);
+    // 🔥 SINGLE SOURCE OF TRUTH
+    await prefs.setInt('spinCount', 0);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Usage reset to 0")),
-    );
+    debugPrint("✅ spinCount RESET TO 0");
 
-    Navigator.pop(context, true); // send signal back
+    // ✅ Give slight delay to ensure persistence (important on iOS)
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    if (context.mounted) {
+      Navigator.pop(context, true); // 🔥 RETURN SIGNAL
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF6A5AE0), Color(0xFF4FC3F7)],
+            colors: [
+              Color(0xFF6A5AE0),
+              Color(0xFF4FC3F7),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        child: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-
               const Text(
                 "Unlock Premium",
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -46,41 +53,55 @@ class PaywallScreen extends StatelessWidget {
               const Text(
                 "Unlimited spins\nBetter experiences\nSmarter suggestions",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
 
               const SizedBox(height: 40),
 
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 60),
+              Container(
+                width: 260,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
                 ),
+                alignment: Alignment.center,
                 child: const Text(
                   "SUBSCRIBE",
-                  style: TextStyle(color: Colors.black),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
                 ),
-                onPressed: () {},
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
 
               TextButton(
                 onPressed: () {},
-                child: const Text("Restore Purchases",
-                    style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  "Restore Purchases",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
 
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Maybe Later",
-                    style: TextStyle(color: Colors.white)),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  "Maybe Later",
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
 
+              // 🔥 FIXED RESET
               TextButton(
-                onPressed: () => resetUsage(context),
-                child: const Text("Reset Usage",
-                    style: TextStyle(color: Colors.white)),
+                onPressed: () => _resetUsage(context),
+                child: const Text(
+                  "Reset Usage",
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
             ],
           ),

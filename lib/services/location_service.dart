@@ -1,80 +1,54 @@
-import 'dart:math';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 
 class LocationService {
-
-  // 📍 GET LAT/LNG
   static Future<Map<String, double>?> getLatLng() async {
     try {
+      // 🔥 Check if GPS is enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
+      if (!serviceEnabled) {
+        print("❌ GPS is OFF");
+        return null;
+      }
 
+      // 🔥 Check permission
       LocationPermission permission = await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return null;
       }
 
-      if (permission == LocationPermission.deniedForever) return null;
+      if (permission == LocationPermission.denied) {
+        print("❌ Permission denied");
+        return null;
+      }
 
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+      if (permission == LocationPermission.deniedForever) {
+        print("❌ Permission permanently denied");
+        return null;
+      }
+
+      // 🔥 Force fresh GPS (NOT cached)
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        timeLimit: const Duration(seconds: 10),
       );
+
+      print("📍 REAL LOCATION:");
+      print("LAT: ${position.latitude}");
+      print("LNG: ${position.longitude}");
+
+      // 🚨 Detect emulator default (San Francisco)
+      if (position.latitude == 37.7749 && position.longitude == -122.4194) {
+        print("⚠️ USING EMULATOR DEFAULT LOCATION (San Francisco)");
+      }
 
       return {
         "lat": position.latitude,
         "lng": position.longitude,
       };
     } catch (e) {
+      print("❌ Location error: $e");
       return null;
     }
-  }
-
-  // 📍 CITY, STATE
-  static Future<String?> getCityState() async {
-    try {
-      final coords = await getLatLng();
-      if (coords == null) return null;
-
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        coords["lat"]!,
-        coords["lng"]!,
-      );
-
-      final place = placemarks.first;
-
-      return "${place.locality}, ${place.administrativeArea}";
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // 📏 DISTANCE CALCULATION (MILES)
-  static double calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
-    const double R = 3958.8; // Earth radius in miles
-
-    final dLat = _deg2rad(lat2 - lat1);
-    final dLon = _deg2rad(lon2 - lon1);
-
-    final a =
-        pow(sin(dLat / 2), 2) +
-        cos(_deg2rad(lat1)) *
-            cos(_deg2rad(lat2)) *
-            pow(sin(dLon / 2), 2);
-
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return R * c;
-  }
-
-  static double _deg2rad(double deg) {
-    return deg * (pi / 180);
   }
 }
