@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import '../models/activity.dart';
 
@@ -88,6 +89,21 @@ class _DecisionCardState extends State<DecisionCard> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Removed from favorites")),
+      );
+    }
+  }
+
+  Future<void> _openAddress() async {
+    final mapUrl = Uri.https(
+      'www.google.com',
+      '/maps/search/',
+      {'api': '1', 'query': widget.activity.address},
+    );
+
+    if (!await launchUrl(mapUrl, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Google Maps')),
       );
     }
   }
@@ -207,23 +223,34 @@ class _DecisionCardState extends State<DecisionCard> {
                   const SizedBox(height: 10),
 
                   // 📍 address (NEW — clean + subtle)
-                  if (widget.activity.address != null &&
-                      widget.activity.address!.isNotEmpty)
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            size: 14, color: Colors.black54),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            widget.activity.address!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black54,
-                            ),
+                  if (widget.activity.address.isNotEmpty)
+                    Semantics(
+                      button: true,
+                      label: 'Open ${widget.activity.address} in Google Maps',
+                      child: InkWell(
+                        onTap: _openAddress,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on,
+                                  size: 14, color: Colors.black54),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  widget.activity.address,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                 ],
               ),
