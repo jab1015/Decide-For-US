@@ -66,10 +66,6 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Your location helps us recommend better nearby options.</string>
 
-	<!-- Tracking (optional but safe) -->
-	<key>NSUserTrackingUsageDescription</key>
-	<string>This helps us improve your experience with better suggestions.</string>
-
 	<!-- Background Modes (safe default) -->
 	<key>UIBackgroundModes</key>
 	<array>
