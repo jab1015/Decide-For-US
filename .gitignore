@@ -30,3 +30,12 @@ functions/.env*
 
 # Misc
 coverage/
+
+# Google service account credentials
+*-firebase-adminsdk-*.json
+*-service-account*.json
+decide-for-us-*.json
+
+# Local environment files
+.env
+.env.*
