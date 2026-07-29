@@ -1,132 +1,122 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color background = Color(0xFFF6F7FB);
-
-  // Primary gradient
-  static const Color primaryStart = Color(0xFF6A5AE0);
-  static const Color primaryEnd = Color(0xFF4FC3F7);
-
-  // Card colors (vibrant but soft)
-  static const Color cardPurple = Color(0xFFEDEBFF);
-  static const Color cardBlue = Color(0xFFE3F2FD);
-  static const Color cardPink = Color(0xFFFFEBEE);
-  static const Color cardGreen = Color(0xFFE8F5E9);
-
-  // Text
-  static const Color textPrimary = Color(0xFF1C1C1E);
-  static const Color textSecondary = Color(0xFF6E6E73);
-  static const Color textMuted = Color(0xFF9E9E9E);
-
-  // UI
-  static const Color border = Color(0xFFE0E0E0);
-  static const Color shadow = Colors.black12;
+  static const background = Color(0xFFFFFBF7);
+  static const surface = Color(0xFFFFFFFF);
+  static const ink = Color(0xFF252238);
+  static const muted = Color(0xFF716D7C);
+  static const primary = Color(0xFF6255D9);
+  static const primaryDark = Color(0xFF473BAF);
+  static const primaryStart = primary;
+  static const primaryEnd = Color(0xFF8878EE);
+  static const coral = Color(0xFFFF8066);
+  static const lavender = Color(0xFFF0EDFF);
+  static const peach = Color(0xFFFFEEE8);
+  static const mint = Color(0xFFE9F7EF);
+  static const sky = Color(0xFFEAF4FF);
+  static const border = Color(0xFFEAE5E0);
 }
 
 class AppGradients {
-  static const LinearGradient primary = LinearGradient(
-    colors: [AppColors.primaryStart, AppColors.primaryEnd],
+  static const primary = LinearGradient(
+    colors: [AppColors.primary, Color(0xFF8878EE)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const dateNight = LinearGradient(
+    colors: [Color(0xFFFFF0ED), Color(0xFFF4EEFF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 }
 
-class AppTextStyles {
-  static const TextStyle title = TextStyle(
-    fontSize: 34,
-    fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
-  );
-
-  static const TextStyle sectionTitle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textSecondary,
-  );
-
-  static const TextStyle cardTitle = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-  );
-
-  static const TextStyle body = TextStyle(
-    fontSize: 14,
-    color: AppColors.textSecondary,
-  );
-
-  static const TextStyle small = TextStyle(
-    fontSize: 12,
-    color: AppColors.textMuted,
-  );
-}
-
 class AppSpacing {
-  static const double xs = 6;
-  static const double sm = 10;
-  static const double md = 16;
-  static const double lg = 24;
-  static const double xl = 32;
+  static const xs = 6.0;
+  static const sm = 10.0;
+  static const md = 16.0;
+  static const lg = 24.0;
+  static const xl = 32.0;
 }
 
 class AppRadius {
-  static const double sm = 12;
-  static const double md = 18;
-  static const double lg = 24;
+  static const sm = 12.0;
+  static const md = 18.0;
+  static const lg = 26.0;
 }
 
 class AppShadows {
-  static List<BoxShadow> soft = [
+  static final soft = [
     BoxShadow(
-      color: AppColors.shadow.withValues(alpha: 0.08),
-      blurRadius: 12,
-      offset: const Offset(0, 6),
+      color: AppColors.ink.withValues(alpha: 0.07),
+      blurRadius: 24,
+      offset: const Offset(0, 10),
     ),
   ];
 }
 
 class AppTheme {
   static ThemeData light() {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      brightness: Brightness.light,
+      surface: AppColors.surface,
+    );
+
     return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
       fontFamily: 'SF Pro Display',
-
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
-
       textTheme: const TextTheme(
-        headlineLarge: AppTextStyles.title,
-        bodyMedium: AppTextStyles.body,
+        displaySmall: TextStyle(
+          color: AppColors.ink,
+          fontSize: 36,
+          height: 1.05,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1.2,
+        ),
+        headlineSmall: TextStyle(
+          color: AppColors.ink,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.4,
+        ),
+        titleMedium: TextStyle(
+          color: AppColors.ink,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+        bodyLarge: TextStyle(
+          color: AppColors.muted,
+          fontSize: 16,
+          height: 1.45,
+        ),
+        bodyMedium: TextStyle(
+          color: AppColors.muted,
+          fontSize: 14,
+          height: 1.4,
+        ),
       ),
-
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.ink,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: AppColors.ink,
+        behavior: SnackBarBehavior.floating,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          elevation: 0,
-          backgroundColor: AppColors.primaryStart,
-        ),
-      ),
-
-      chipTheme: ChipThemeData(
-        backgroundColor: Colors.white,
-        selectedColor: AppColors.primaryStart,
-        labelStyle: const TextStyle(color: AppColors.textPrimary),
-        secondaryLabelStyle: const TextStyle(color: Colors.white),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-      ),
-
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.all(AppColors.primaryStart),
-        trackColor: WidgetStateProperty.all(
-          AppColors.primaryStart.withValues(alpha: 0.4),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
     );
