@@ -71,10 +71,10 @@ class AppTheme {
       textTheme: const TextTheme(
         displaySmall: TextStyle(
           color: AppColors.ink,
-          fontSize: 36,
-          height: 1.05,
+          fontSize: 30,
+          height: 1.08,
           fontWeight: FontWeight.w800,
-          letterSpacing: -1.2,
+          letterSpacing: -0.8,
         ),
         headlineSmall: TextStyle(
           color: AppColors.ink,
@@ -122,3 +122,4 @@ class AppTheme {
     );
   }
 }
+
