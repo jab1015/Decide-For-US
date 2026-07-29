@@ -1,15 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
+
 import '../models/activity.dart';
+import '../theme/app_theme.dart';
 
 class DecisionCard extends StatefulWidget {
-  final Activity activity;
-  final int index;
-  final bool isFavoritesView;
-  final VoidCallback? onDeleted;
-
   const DecisionCard({
     super.key,
     required this.activity,
@@ -17,6 +15,11 @@ class DecisionCard extends StatefulWidget {
     this.isFavoritesView = false,
     this.onDeleted,
   });
+
+  final Activity activity;
+  final int index;
+  final bool isFavoritesView;
+  final VoidCallback? onDeleted;
 
   @override
   State<DecisionCard> createState() => _DecisionCardState();
@@ -35,6 +38,7 @@ class _DecisionCardState extends State<DecisionCard> {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList('favorites') ?? [];
 
+    if (!mounted) return;
     setState(() {
       isFavorite = list.any((item) {
         final decoded = jsonDecode(item);
@@ -53,21 +57,12 @@ class _DecisionCardState extends State<DecisionCard> {
         return decoded['id'] == widget.activity.id;
       });
     } else {
-      final newItem = jsonEncode({
-        'id': widget.activity.id,
-        'title': widget.activity.title,
-        'description': widget.activity.description,
-        'address': widget.activity.address,
-        'lat': widget.activity.lat,
-        'lng': widget.activity.lng,
-        'photoUrl': widget.activity.photoUrl,
-      });
-
-      list.add(newItem);
+      list.add(jsonEncode(widget.activity.toJson()));
     }
 
     await prefs.setStringList('favorites', list);
 
+    if (!mounted) return;
     setState(() {
       isFavorite = !isFavorite;
     });
@@ -83,13 +78,12 @@ class _DecisionCardState extends State<DecisionCard> {
     });
 
     await prefs.setStringList('favorites', list);
-
     widget.onDeleted?.call();
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Removed from favorites")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from favorites')),
+      );
     }
   }
 
@@ -109,31 +103,28 @@ class _DecisionCardState extends State<DecisionCard> {
 
   @override
   Widget build(BuildContext context) {
-    final gradients = [
-      const LinearGradient(colors: [Color(0xFF00C9A7), Color(0xFF7ED957)]),
-      const LinearGradient(colors: [Color(0xFFFF7043), Color(0xFFFFA726)]),
-      const LinearGradient(colors: [Color(0xFF5C6BC0), Color(0xFF26C6DA)]),
-      const LinearGradient(colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)]),
-    ];
-
-    final gradient = gradients[widget.index % gradients.length];
+    final stopLabel = widget.index == 0 ? 'START HERE' : 'THEN';
+    final category = widget.activity.category.trim().isEmpty
+        ? 'ACTIVITY'
+        : widget.activity.category.trim().toUpperCase();
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(24),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.soft,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📸 IMAGE + TITLE OVERLAY
             Stack(
               children: [
                 AspectRatio(
-                  aspectRatio: 16 / 9,
+                  aspectRatio: 1.65,
                   child:
                       widget.activity.photoUrl != null &&
                           widget.activity.photoUrl!.isNotEmpty
@@ -141,54 +132,86 @@ class _DecisionCardState extends State<DecisionCard> {
                           widget.activity.photoUrl!,
                           fit: BoxFit.cover,
                           width: double.infinity,
+                          errorBuilder: (_, __, ___) =>
+                              const _ImagePlaceholder(),
                         )
-                      : Container(color: Colors.grey),
+                      : const _ImagePlaceholder(),
                 ),
-
-                // dark overlay
                 Positioned.fill(
                   child: IgnorePointer(
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.35),
-                    ),
-                  ),
-                ),
-
-                // title
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 16,
-                  child: IgnorePointer(
-                    child: Text(
-                      widget.activity.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            AppColors.ink.withValues(alpha: 0.8),
+                          ],
+                          stops: const [0.35, 1],
+                        ),
                       ),
                     ),
                   ),
                 ),
-
-                // ❤️ / 🗑 button
                 Positioned(
-                  top: 12,
-                  right: 12,
+                  left: AppSpacing.md,
+                  top: AppSpacing.md,
+                  child: _StopBadge(label: stopLabel),
+                ),
+                Positioned(
+                  left: AppSpacing.md,
+                  right: 68,
+                  bottom: AppSpacing.md,
+                  child: IgnorePointer(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category,
+                          style: const TextStyle(
+                            color: Color(0xFFFFC5B8),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          widget.activity.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            height: 1.08,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: AppSpacing.md,
+                  right: AppSpacing.md,
                   child: Material(
-                    color: Colors.white,
+                    color: Colors.white.withValues(alpha: 0.94),
                     shape: const CircleBorder(),
-                    elevation: 4,
                     child: IconButton(
+                      tooltip: widget.isFavoritesView
+                          ? 'Remove from favorites'
+                          : (isFavorite
+                                ? 'Remove from favorites'
+                                : 'Save to favorites'),
                       icon: Icon(
                         widget.isFavoritesView
-                            ? Icons.delete
+                            ? Icons.delete_outline_rounded
                             : (isFavorite
                                   ? Icons.favorite
                                   : Icons.favorite_border),
                         color: widget.isFavoritesView
-                            ? Colors.black
-                            : Colors.red,
+                            ? AppColors.ink
+                            : AppColors.coral,
                       ),
                       onPressed: widget.isFavoritesView
                           ? _deleteFavorite
@@ -198,56 +221,67 @@ class _DecisionCardState extends State<DecisionCard> {
                 ),
               ],
             ),
-
-            // 📦 DESCRIPTION + ADDRESS (30% transparent panel)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Colors.white.withValues(alpha: 0.3),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // description
                   Text(
                     widget.activity.description,
-                    style: const TextStyle(color: Colors.black87),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.ink,
+                      fontSize: 15,
+                    ),
                   ),
-
-                  const SizedBox(height: 10),
-
-                  // 📍 address (NEW — clean + subtle)
-                  if (widget.activity.address.isNotEmpty)
+                  if (widget.activity.address.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
                     Semantics(
                       button: true,
                       label: 'Open ${widget.activity.address} in Google Maps',
                       child: InkWell(
                         onTap: _openAddress,
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 11,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.lavender,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
                           child: Row(
                             children: [
                               const Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: Colors.black54,
+                                Icons.location_on_outlined,
+                                size: 18,
+                                color: AppColors.primary,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   widget.activity.address,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
+                                    color: AppColors.ink,
                                     fontSize: 12,
-                                    color: Colors.black54,
-                                    decoration: TextDecoration.underline,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.arrow_outward_rounded,
+                                size: 17,
+                                color: AppColors.primary,
                               ),
                             ],
                           ),
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -257,3 +291,49 @@ class _DecisionCardState extends State<DecisionCard> {
     );
   }
 }
+
+class _StopBadge extends StatelessWidget {
+  const _StopBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.ink.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(gradient: AppGradients.dateNight),
+      child: Center(
+        child: Icon(
+          Icons.auto_awesome_rounded,
+          color: AppColors.primary,
+          size: 40,
+        ),
+      ),
+    );
+  }
+}
+
