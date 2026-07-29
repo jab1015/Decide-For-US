@@ -9,6 +9,7 @@ import '../models/planning_request.dart';
 import '../services/ai_service.dart';
 import '../services/location_service.dart';
 import '../services/subscription_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/decision_card.dart';
 import 'favorites_screen.dart';
 import 'paywall_screen.dart';
@@ -229,7 +230,10 @@ class _DecideScreenState extends State<DecideScreen>
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.deepPurple : Colors.grey.shade200,
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -237,7 +241,7 @@ class _DecideScreenState extends State<DecideScreen>
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.black87,
+            color: isSelected ? Colors.white : AppColors.ink,
           ),
         ),
       ),
@@ -275,9 +279,16 @@ class _DecideScreenState extends State<DecideScreen>
         width: 200,
         height: 200,
         alignment: Alignment.center,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.deepPurple,
+          gradient: AppGradients.primary,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.28),
+              blurRadius: 32,
+              offset: const Offset(0, 14),
+            ),
+          ],
         ),
         child: const Text(
           "SPIN",
@@ -295,10 +306,20 @@ class _DecideScreenState extends State<DecideScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Decide For Us"),
+        title: const Text(
+          "DECIDE FOR US",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.6,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.favorite, color: Colors.red),
+            icon: const Icon(
+              Icons.favorite_border_rounded,
+              color: AppColors.coral,
+            ),
             onPressed: () {
               Navigator.push(
                 context,
@@ -310,10 +331,22 @@ class _DecideScreenState extends State<DecideScreen>
       ),
       body: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Text(
+              'Your next good story\nstarts here.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.displaySmall,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Tell us the mood. We’ll choose the adventure.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 22),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
