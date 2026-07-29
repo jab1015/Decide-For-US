@@ -344,9 +344,9 @@ class _DecideScreenState extends State<DecideScreen>
             Text(
               'Tell us the mood. We’ll choose the adventure.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -395,3 +395,4 @@ class _DecideScreenState extends State<DecideScreen>
     );
   }
 }
+
