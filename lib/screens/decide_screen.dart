@@ -365,7 +365,7 @@ class _DecideScreenState extends State<DecideScreen>
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
-              '✦  TONIGHT IS YOURS  ✦',
+              '✦  YOUR NEXT ADVENTURE AWAITS  ✦',
               style: TextStyle(
                 color: AppColors.coral,
                 fontSize: 11,
