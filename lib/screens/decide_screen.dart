@@ -275,28 +275,57 @@ class _DecideScreenState extends State<DecideScreen>
       builder: (_, child) {
         return Transform.rotate(angle: _spinAnimation.value, child: child);
       },
-      child: Container(
-        width: 200,
-        height: 200,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: AppGradients.primary,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.28),
-              blurRadius: 32,
-              offset: const Offset(0, 14),
+      child: SizedBox(
+        width: 184,
+        height: 184,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 184,
+              height: 184,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.lavender.withValues(alpha: 0.65),
+              ),
+            ),
+            Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppGradients.primary,
+                border: Border.all(color: Colors.white, width: 5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.34),
+                    blurRadius: 36,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isLoading ? 'FINDING' : 'DECIDE',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-        ),
-        child: const Text(
-          "SPIN",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
         ),
       ),
     );
@@ -335,6 +364,16 @@ class _DecideScreenState extends State<DecideScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            const Text(
+              '✦  TONIGHT IS YOURS  ✦',
+              style: TextStyle(
+                color: AppColors.coral,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.6,
+              ),
+            ),
+            const SizedBox(height: 10),
             Text(
               'Your next good story\nstarts here.',
               textAlign: TextAlign.center,
@@ -347,13 +386,51 @@ class _DecideScreenState extends State<DecideScreen>
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("💖 Date Night"),
-                const SizedBox(width: 8),
-                Switch(value: isDateNight, onChanged: _setDateNight),
-              ],
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: AppGradients.dateNight,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: const Color(0xFFE6DDF6)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '♥',
+                      style: TextStyle(color: AppColors.coral, fontSize: 22),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Date Night+',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Romance, without the planning.',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(value: isDateNight, onChanged: _setDateNight),
+                ],
+              ),
             ),
             const SizedBox(height: 25),
             sectionLabel("Distance"),
@@ -386,6 +463,24 @@ class _DecideScreenState extends State<DecideScreen>
             const SizedBox(height: 30),
             GestureDetector(onTap: spin, child: spinner()),
             const SizedBox(height: 30),
+            if (results.isNotEmpty) ...[
+              const Text(
+                '✦  YOUR ADVENTURE',
+                style: TextStyle(
+                  color: AppColors.coral,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'A little plan with\nbig story potential.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 20),
+            ],
             ...results.asMap().entries.map(
               (e) => DecisionCard(activity: e.value, index: e.key),
             ),
