@@ -5,6 +5,7 @@ import 'package:decide_for_us/app.dart';
 void main() {
   testWidgets('App loads', (WidgetTester tester) async {
     await tester.pumpWidget(const DecideApp());
-    expect(find.text('Decide For Us'), findsOneWidget);
+    expect(find.text('DECIDE FOR US'), findsOneWidget);
+    expect(find.text('Your next good story\nstarts here.'), findsOneWidget);
   });
 }
