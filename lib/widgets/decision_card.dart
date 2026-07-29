@@ -87,18 +87,17 @@ class _DecisionCardState extends State<DecisionCard> {
     widget.onDeleted?.call();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Removed from favorites")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Removed from favorites")));
     }
   }
 
   Future<void> _openAddress() async {
-    final mapUrl = Uri.https(
-      'www.google.com',
-      '/maps/search/',
-      {'api': '1', 'query': widget.activity.address},
-    );
+    final mapUrl = Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': widget.activity.address,
+    });
 
     if (!await launchUrl(mapUrl, mode: LaunchMode.externalApplication) &&
         mounted) {
@@ -111,18 +110,10 @@ class _DecisionCardState extends State<DecisionCard> {
   @override
   Widget build(BuildContext context) {
     final gradients = [
-      const LinearGradient(
-        colors: [Color(0xFF00C9A7), Color(0xFF7ED957)],
-      ),
-      const LinearGradient(
-        colors: [Color(0xFFFF7043), Color(0xFFFFA726)],
-      ),
-      const LinearGradient(
-        colors: [Color(0xFF5C6BC0), Color(0xFF26C6DA)],
-      ),
-      const LinearGradient(
-        colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)],
-      ),
+      const LinearGradient(colors: [Color(0xFF00C9A7), Color(0xFF7ED957)]),
+      const LinearGradient(colors: [Color(0xFFFF7043), Color(0xFFFFA726)]),
+      const LinearGradient(colors: [Color(0xFF5C6BC0), Color(0xFF26C6DA)]),
+      const LinearGradient(colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)]),
     ];
 
     final gradient = gradients[widget.index % gradients.length];
@@ -143,7 +134,8 @@ class _DecisionCardState extends State<DecisionCard> {
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: widget.activity.photoUrl != null &&
+                  child:
+                      widget.activity.photoUrl != null &&
                           widget.activity.photoUrl!.isNotEmpty
                       ? Image.network(
                           widget.activity.photoUrl!,
@@ -157,7 +149,7 @@ class _DecisionCardState extends State<DecisionCard> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      color: Colors.black.withOpacity(0.35),
+                      color: Colors.black.withValues(alpha: 0.35),
                     ),
                   ),
                 ),
@@ -192,10 +184,11 @@ class _DecisionCardState extends State<DecisionCard> {
                         widget.isFavoritesView
                             ? Icons.delete
                             : (isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border),
-                        color:
-                            widget.isFavoritesView ? Colors.black : Colors.red,
+                                  ? Icons.favorite
+                                  : Icons.favorite_border),
+                        color: widget.isFavoritesView
+                            ? Colors.black
+                            : Colors.red,
                       ),
                       onPressed: widget.isFavoritesView
                           ? _deleteFavorite
@@ -210,7 +203,7 @@ class _DecisionCardState extends State<DecisionCard> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -234,8 +227,11 @@ class _DecisionCardState extends State<DecisionCard> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             children: [
-                              const Icon(Icons.location_on,
-                                  size: 14, color: Colors.black54),
+                              const Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.black54,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(

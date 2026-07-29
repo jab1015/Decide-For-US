@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-import 'dart:math';
 
 class CenterConfetti extends StatefulWidget {
   final bool trigger;
 
-  const CenterConfetti({
-    super.key,
-    required this.trigger,
-  });
+  const CenterConfetti({super.key, required this.trigger});
 
   @override
   State<CenterConfetti> createState() => _CenterConfettiState();
@@ -20,8 +16,9 @@ class _CenterConfettiState extends State<CenterConfetti> {
   @override
   void initState() {
     super.initState();
-    _controller =
-        ConfettiController(duration: const Duration(milliseconds: 1200));
+    _controller = ConfettiController(
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   @override

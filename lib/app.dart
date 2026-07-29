@@ -10,7 +10,7 @@ class DecideApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Decide For Us',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.light(),
       home: const DecideScreen(),
     );
   }

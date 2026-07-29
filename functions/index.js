@@ -1,166 +1,222 @@
-import { onRequest } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
+import {initializeApp} from "firebase-admin/app";
+import {getAuth} from "firebase-admin/auth";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {defineSecret} from "firebase-functions/params";
+import {onRequest} from "firebase-functions/v2/https";
 import fetch from "node-fetch";
 
-console.log("🔥 REAL EXPERIENCE ENGINE v28");
+initializeApp();
 
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
+const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
+const FREE_WEEKLY_LIMIT = 3;
 
-let usedFood = [];
-let usedExp = [];
+const foodQueries = {
+  Free: ["affordable restaurant", "casual restaurant"],
+  "$": ["casual restaurant", "local restaurant"],
+  "$$": ["upscale restaurant", "fine dining restaurant"],
+};
 
-// 🔥 FILTER REAL RESTAURANTS
-function isRestaurant(p) {
-  if (!p.types.includes("restaurant")) return false;
+const activityQueries = {
+  Low: ["museum", "art gallery", "scenic view", "bookstore"],
+  Medium: ["bowling alley", "mini golf", "live music", "tourist attraction"],
+  High: ["hiking trail", "kayaking", "rock climbing", "adventure park"],
+};
 
-  const name = p.name.toLowerCase();
-
-  const banned = [
-    "bar","lounge","grill","pub",
-    "bbq","smokehouse","buffalo",
-    "fast food","pizza","burger"
-  ];
-
-  return !banned.some(b => name.includes(b));
+function milesToMeters(miles) {
+  return Math.min(Math.max(Number(miles) || 25, 1) * 1609, 50000);
 }
 
-// 🔥 FETCH RESTAURANTS
-async function fetchRestaurants(apiKey, lat, lng) {
-  const queries = [
-    "fine dining restaurant",
-    "romantic restaurant",
-    "steakhouse",
-    "seafood restaurant"
-  ];
-
-  let all = [];
-
-  for (const q of queries) {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=50000&key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.results) all = all.concat(data.results);
-  }
-
-  return all;
+function priceAllowed(place, budget) {
+  if (budget === "Free") return place.price_level == null || place.price_level === 0;
+  if (budget === "$") return place.price_level == null || place.price_level <= 2;
+  if (budget === "$$") return place.price_level == null || place.price_level <= 3;
+  return true;
 }
 
-// 🔥 FETCH REAL EXPERIENCES
-async function fetchExperiences(apiKey, lat, lng, isDateNight) {
-
-  const queries = isDateNight
-    ? ["romantic park", "waterfront", "scenic view", "beach"]
-    : ["park", "tourist attraction", "bowling alley", "mini golf"];
-
-  let all = [];
-
-  for (const q of queries) {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=50000&key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.results) all = all.concat(data.results);
-  }
-
-  return all;
+function rank(place) {
+  return (place.rating || 0) * Math.log10((place.user_ratings_total || 0) + 10);
 }
 
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+function uniqueRanked(places) {
+  return [...new Map(places.map((place) => [place.place_id, place])).values()]
+    .filter((place) => place.place_id && place.geometry?.location)
+    .filter((place) => (place.rating || 0) >= 4)
+    .sort((a, b) => rank(b) - rank(a));
+}
+
+async function searchPlaces(apiKey, queries, lat, lng, radius) {
+  const results = await Promise.all(queries.map(async (query) => {
+    const params = new URLSearchParams({
+      query,
+      location: `${lat},${lng}`,
+      radius: String(radius),
+      key: apiKey,
+    });
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`,
+    );
+    const payload = await response.json();
+    if (!response.ok || !["OK", "ZERO_RESULTS"].includes(payload.status)) {
+      throw new Error(`Google Places error: ${payload.status || response.status}`);
+    }
+    return payload.results || [];
+  }));
+  return uniqueRanked(results.flat());
+}
+
+function activityCategory(place) {
+  const types = new Set(place.types || []);
+  if (types.has("museum") || types.has("art_gallery")) return "culture";
+  if (types.has("park") || types.has("natural_feature")) return "outdoors";
+  if (types.has("movie_theater") || types.has("night_club")) return "entertainment";
+  return "experience";
+}
+
+function serialize(place, category, description) {
+  return {
+    id: place.place_id,
+    category,
+    title: place.name,
+    description,
+    address: place.formatted_address || "",
+    lat: place.geometry.location.lat,
+    lng: place.geometry.location.lng,
+    photoUrl: null,
+  };
+}
+
+async function authenticatedUser(req) {
+  const authorization = req.get("Authorization") || "";
+  if (!authorization.startsWith("Bearer ")) return null;
+  return getAuth().verifyIdToken(authorization.slice(7));
+}
+
+async function hasPremium(uid, apiKey) {
+  if (!apiKey) return false;
+  const response = await fetch(
+    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(uid)}`,
+    {headers: {Authorization: `Bearer ${apiKey}`}},
+  );
+  if (!response.ok) return false;
+  const payload = await response.json();
+  const entitlement = payload.subscriber?.entitlements?.premium;
+  if (!entitlement) return false;
+  return !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
+}
+
+function weekKey(date = new Date()) {
+  const first = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const day = Math.floor((date - first) / 86400000);
+  return `${date.getUTCFullYear()}-${Math.ceil((day + first.getUTCDay() + 1) / 7)}`;
+}
+
+async function consumeFreeRequest(uid) {
+  const reference = getFirestore().collection("recommendation_usage")
+    .doc(`${uid}_${weekKey()}`);
+  await getFirestore().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(reference);
+    const count = snapshot.data()?.count || 0;
+    if (count >= FREE_WEEKLY_LIMIT) {
+      const error = new Error("Free weekly limit reached.");
+      error.status = 403;
+      throw error;
+    }
+    transaction.set(reference, {
+      uid,
+      count: FieldValue.increment(1),
+      week: weekKey(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, {merge: true});
+  });
 }
 
 export const getIdeas = onRequest(
   {
     region: "us-central1",
-    secrets: [GOOGLE_API_KEY],
+    secrets: [GOOGLE_API_KEY, REVENUECAT_SECRET_API_KEY],
   },
   async (req, res) => {
-
     res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type");
-
-    if (req.method === "OPTIONS") {
-      return res.status(204).send("");
-    }
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") return res.status(405).json({error: "POST required."});
 
     try {
-      const data = req.method === "GET" ? req.query : req.body;
+      const user = await authenticatedUser(req);
+      if (!user) return res.status(401).json({error: "Authentication required."});
 
-      const lat = parseFloat(data?.lat) || 30.8;
-      const lng = parseFloat(data?.lng) || -81.7;
-      const isDateNight = data?.isDateNight === "true" || data?.isDateNight === true;
-
-      const apiKey = GOOGLE_API_KEY.value();
-
-      // 🔥 RESTAURANTS
-      const restaurants = await fetchRestaurants(apiKey, lat, lng);
-
-      let foodOptions = restaurants.filter(p =>
-        (p.rating || 0) >= (isDateNight ? 4.5 : 4.2) &&
-        (p.user_ratings_total || 0) >= 100 &&
-        isRestaurant(p)
-      );
-
-      const uniqueFood = Array.from(
-        new Map(foodOptions.map(p => [p.place_id, p])).values()
-      );
-
-      let availableFood = uniqueFood.filter(p => !usedFood.includes(p.place_id));
-      if (availableFood.length === 0) {
-        usedFood = [];
-        availableFood = uniqueFood;
+      const premium = await hasPremium(user.uid, REVENUECAT_SECRET_API_KEY.value());
+      const isDateNight = req.body?.isDateNight === true;
+      if (isDateNight && !premium) {
+        return res.status(403).json({error: "Date Night+ requires Premium."});
+      }
+      const lat = Number(req.body?.lat);
+      const lng = Number(req.body?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return res.status(400).json({error: "A valid location is required."});
       }
 
-      const food = pick(availableFood);
-      usedFood.push(food.place_id);
+      const budget = req.body?.budget || "$";
+      const energy = req.body?.energy || "Medium";
+      const group = req.body?.group || "Couple";
+      const radius = milesToMeters(req.body?.radius);
+      const googleKey = GOOGLE_API_KEY.value();
 
-      // 🔥 EXPERIENCES (REAL LOCATIONS)
-      const experiences = await fetchExperiences(apiKey, lat, lng, isDateNight);
+      const foodTerms = isDateNight
+        ? ["romantic restaurant", "fine dining restaurant"]
+        : (foodQueries[budget] || foodQueries["$"]);
+      const experienceTerms = isDateNight
+        ? ["romantic activity", "live music", "scenic view", "art gallery"]
+        : (activityQueries[energy] || activityQueries.Medium)
+            .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      let expOptions = experiences.filter(p =>
-        p.name !== food.name &&
-        (p.rating || 0) >= 4.2
-      );
-
-      const uniqueExp = Array.from(
-        new Map(expOptions.map(p => [p.place_id, p])).values()
-      );
-
-      let availableExp = uniqueExp.filter(p => !usedExp.includes(p.place_id));
-      if (availableExp.length === 0) {
-        usedExp = [];
-        availableExp = uniqueExp;
-      }
-
-      const exp = pick(availableExp);
-      usedExp.push(exp.place_id);
-
-      return res.json([
-        {
-          title: food.name,
-          description: isDateNight
-            ? `Enjoy a premium dinner at ${food.name}.`
-            : `Start with a meal at ${food.name}.`,
-          address: food.formatted_address,
-          lat: food.geometry.location.lat,
-          lng: food.geometry.location.lng,
-          photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5",
-        },
-        {
-          title: exp.name,
-          description: isDateNight
-            ? "A curated romantic destination."
-            : "A real activity to continue your outing.",
-          address: exp.formatted_address,
-          lat: exp.geometry.location.lat,
-          lng: exp.geometry.location.lng,
-          photoUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-        },
+      const [food, experiences] = await Promise.all([
+        searchPlaces(googleKey, foodTerms, lat, lng, radius),
+        searchPlaces(googleKey, experienceTerms, lat, lng, radius),
       ]);
 
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Function failed" });
+      const foodChoice = budget === "Free" ?
+        null :
+        food.find((place) => priceAllowed(place, budget));
+      const firstExperience = experiences[0];
+      const secondExperience = experiences.find(
+        (place) => activityCategory(place) !== activityCategory(firstExperience || {}),
+      );
+
+      let pair;
+      if (isDateNight || !secondExperience) {
+        pair = [foodChoice, firstExperience].filter(Boolean);
+      } else {
+        pair = Math.random() < 0.5 && foodChoice
+          ? [foodChoice, firstExperience]
+          : [firstExperience, secondExperience];
+      }
+
+      if (pair.length < 2) {
+        return res.status(404).json({
+          error: "We could not find two strong, different options nearby.",
+        });
+      }
+
+      if (!premium) await consumeFreeRequest(user.uid);
+
+      return res.json(pair.map((place) => {
+        const isFood = place === foodChoice;
+        return serialize(
+          place,
+          isFood ? "food" : activityCategory(place),
+          isFood
+            ? `Enjoy ${isDateNight ? "a romantic meal" : "a meal"} at ${place.name}.`
+            : `A highly rated ${activityCategory(place)} experience for your outing.`,
+        );
+      }));
+    } catch (error) {
+      console.error(error);
+      return res.status(error.status || 500).json({
+        error: error.status ? error.message : "Recommendation service failed.",
+      });
     }
-  }
+  },
 );
