@@ -276,22 +276,22 @@ class _DecideScreenState extends State<DecideScreen>
         return Transform.rotate(angle: _spinAnimation.value, child: child);
       },
       child: SizedBox(
-        width: 184,
-        height: 184,
+        width: 166,
+        height: 166,
         child: Stack(
           alignment: Alignment.center,
           children: [
             Container(
-              width: 184,
-              height: 184,
+              width: 166,
+              height: 166,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.lavender.withValues(alpha: 0.65),
               ),
             ),
             Container(
-              width: 150,
-              height: 150,
+              width: 138,
+              height: 138,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: AppGradients.primary,
@@ -460,7 +460,7 @@ class _DecideScreenState extends State<DecideScreen>
               selectedEnergy,
               (v) => selectedEnergy = v,
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 22),
             GestureDetector(onTap: spin, child: spinner()),
             const SizedBox(height: 30),
             if (results.isNotEmpty) ...[
