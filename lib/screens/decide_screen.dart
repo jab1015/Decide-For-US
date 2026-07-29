@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
@@ -136,8 +135,8 @@ class _DecideScreenState extends State<DecideScreen>
           budget: selectedBudget,
           energy: selectedEnergy,
           isDateNight: isDateNight,
-          lat: userCoords!['lat'],
-          lng: userCoords!['lng'],
+          lat: userCoords!['lat']!,
+          lng: userCoords!['lng']!,
           radiusMiles: selectedRadius,
         ),
       );
