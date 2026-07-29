@@ -69,7 +69,7 @@ class _SpinButtonState extends State<SpinButton>
                 boxShadow: [
                   ...AppShadows.soft,
                   BoxShadow(
-                    color: AppColors.primaryStart.withOpacity(0.35),
+                    color: AppColors.primaryStart.withValues(alpha: 0.35),
                     blurRadius: 25,
                     spreadRadius: 2,
                   ),
@@ -85,7 +85,7 @@ class _SpinButtonState extends State<SpinButton>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.primaryStart.withOpacity(0.2),
+                        color: AppColors.primaryStart.withValues(alpha: 0.2),
                         width: 3,
                       ),
                     ),
