@@ -4,11 +4,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity.dart';
+import '../models/planning_request.dart';
 import '../services/ai_service.dart';
 import '../services/location_service.dart';
+import '../services/subscription_service.dart';
 import '../widgets/decision_card.dart';
 import 'favorites_screen.dart';
 import 'paywall_screen.dart';
@@ -21,7 +22,7 @@ class DecideScreen extends StatefulWidget {
 }
 
 class _DecideScreenState extends State<DecideScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with SingleTickerProviderStateMixin {
   final player = AudioPlayer();
   late ConfettiController confetti;
   final ScrollController _scrollController = ScrollController();
@@ -33,8 +34,6 @@ class _DecideScreenState extends State<DecideScreen>
 
   bool isLoading = false;
   bool isDateNight = false;
-
-  int spinCount = 0;
 
   String? selectedGroup;
   String? selectedBudget;
@@ -48,8 +47,6 @@ class _DecideScreenState extends State<DecideScreen>
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addObserver(this);
 
     _spinController = AnimationController(
       vsync: this,
@@ -65,32 +62,15 @@ class _DecideScreenState extends State<DecideScreen>
 
   Future<void> _init() async {
     await loadLocation();
-    await loadSpinCount();
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _spinController.dispose();
+    _scrollController.dispose();
+    confetti.dispose();
+    player.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      loadSpinCount();
-    }
-  }
-
-  Future<void> loadSpinCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    spinCount = prefs.getInt('spinCount') ?? 0;
-    setState(() {});
-  }
-
-  Future<void> saveSpinCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('spinCount', spinCount);
   }
 
   Future<void> loadLocation() async {
@@ -132,31 +112,10 @@ class _DecideScreenState extends State<DecideScreen>
   Future<void> spin() async {
     if (isLoading) return;
 
-    await loadSpinCount();
-
-    if (spinCount >= 3) {
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PaywallScreen()),
-      );
-
-      if (result == true) {
-        await loadSpinCount();
-        setState(() {
-          results.clear();
-          resetFilters();
-        });
-      }
-      return;
-    }
-
     if (userCoords == null) {
       await loadLocation();
       if (userCoords == null) return;
     }
-
-    spinCount++;
-    await saveSpinCount();
 
     setState(() {
       isLoading = true;
@@ -172,16 +131,28 @@ class _DecideScreenState extends State<DecideScreen>
 
     try {
       data = await AIService.getIdeas(
-        group: selectedGroup,
-        budget: selectedBudget,
-        energy: selectedEnergy,
-        isDateNight: isDateNight,
-        lat: userCoords!['lat'],
-        lng: userCoords!['lng'],
-        radius: selectedRadius,
+        PlanningRequest(
+          group: selectedGroup,
+          budget: selectedBudget,
+          energy: selectedEnergy,
+          isDateNight: isDateNight,
+          lat: userCoords!['lat'],
+          lng: userCoords!['lng'],
+          radiusMiles: selectedRadius,
+        ),
       );
-    } catch (e) {
-      print("ERROR: $e");
+    } on AIServiceException catch (e) {
+      if (e.statusCode == 403 && mounted) {
+        await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => const PaywallScreen()),
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
 
     final elapsed = DateTime.now().difference(start).inMilliseconds;
@@ -190,10 +161,12 @@ class _DecideScreenState extends State<DecideScreen>
       await Future.delayed(Duration(milliseconds: 8000 - elapsed));
     }
 
-    if (data.length > 2) data = data.take(2).toList();
-    if (data.length == 1) data.add(data.first);
+    if (!mounted) return;
 
-    await player.play(AssetSource('sounds/win.mp3'));
+    if (data.length > 2) data = data.take(2).toList();
+    if (data.isNotEmpty) {
+      await player.play(AssetSource('sounds/win.mp3'));
+    }
 
     setState(() {
       results = data;
@@ -214,6 +187,28 @@ class _DecideScreenState extends State<DecideScreen>
         }
       });
     }
+  }
+
+  Future<void> _setDateNight(bool value) async {
+    if (!value) {
+      setState(() => isDateNight = false);
+      return;
+    }
+    if (!SubscriptionService.isSubscribed) {
+      final unlocked = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      if (unlocked != true) return;
+      await SubscriptionService.refresh();
+    }
+    if (mounted) setState(() => isDateNight = true);
+  }
+
+  void _setRadius(String label) {
+    const values = {'10 mi': 10, '25 mi': 25, '50 mi': 50, 'Explore': 100};
+    selectedRadiusLabel = label;
+    selectedRadius = values[label] ?? 25;
   }
 
   Widget sectionLabel(String text) {
@@ -275,10 +270,7 @@ class _DecideScreenState extends State<DecideScreen>
     return AnimatedBuilder(
       animation: _spinController,
       builder: (_, child) {
-        return Transform.rotate(
-          angle: _spinAnimation.value,
-          child: child,
-        );
+        return Transform.rotate(angle: _spinAnimation.value, child: child);
       },
       child: Container(
         width: 200,
@@ -311,9 +303,7 @@ class _DecideScreenState extends State<DecideScreen>
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const FavoritesScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const FavoritesScreen()),
               );
             },
           ),
@@ -330,34 +320,43 @@ class _DecideScreenState extends State<DecideScreen>
               children: [
                 const Text("💖 Date Night"),
                 const SizedBox(width: 8),
-                Switch(
-                  value: isDateNight,
-                  onChanged: (v) => setState(() => isDateNight = v),
-                ),
+                Switch(value: isDateNight, onChanged: _setDateNight),
               ],
             ),
             const SizedBox(height: 25),
             sectionLabel("Distance"),
-            row(["10 mi", "25 mi", "50 mi", "Explore"], selectedRadiusLabel,
-                (v) => selectedRadiusLabel = v),
+            row(
+              ["10 mi", "25 mi", "50 mi", "Explore"],
+              selectedRadiusLabel,
+              _setRadius,
+            ),
             const SizedBox(height: 20),
             sectionLabel("Who’s involved?"),
-            row(["Couple", "Friends", "Family", "Solo"], selectedGroup,
-                (v) => selectedGroup = v),
+            row(
+              ["Couple", "Friends", "Family", "Solo"],
+              selectedGroup,
+              (v) => selectedGroup = v,
+            ),
             const SizedBox(height: 20),
             sectionLabel("Budget"),
-            row(["Free", "\$", "\$\$"], selectedBudget,
-                (v) => selectedBudget = v),
+            row(
+              ["Free", "\$", "\$\$"],
+              selectedBudget,
+              (v) => selectedBudget = v,
+            ),
             const SizedBox(height: 20),
             sectionLabel("Energy"),
-            row(["Low", "Medium", "High"], selectedEnergy,
-                (v) => selectedEnergy = v),
+            row(
+              ["Low", "Medium", "High"],
+              selectedEnergy,
+              (v) => selectedEnergy = v,
+            ),
             const SizedBox(height: 30),
             GestureDetector(onTap: spin, child: spinner()),
             const SizedBox(height: 30),
             ...results.asMap().entries.map(
-                  (e) => DecisionCard(activity: e.value, index: e.key),
-                ),
+              (e) => DecisionCard(activity: e.value, index: e.key),
+            ),
           ],
         ),
       ),
