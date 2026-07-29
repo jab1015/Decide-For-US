@@ -78,7 +78,7 @@ class AppRadius {
 class AppShadows {
   static List<BoxShadow> soft = [
     BoxShadow(
-      color: AppColors.shadow.withOpacity(0.08),
+      color: AppColors.shadow.withValues(alpha: 0.08),
       blurRadius: 12,
       offset: const Offset(0, 6),
     ),
@@ -105,10 +105,7 @@ class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
@@ -122,19 +119,14 @@ class AppTheme {
         selectedColor: AppColors.primaryStart,
         labelStyle: const TextStyle(color: AppColors.textPrimary),
         secondaryLabelStyle: const TextStyle(color: Colors.white),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 8,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
 
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.all(AppColors.primaryStart),
-        trackColor: MaterialStateProperty.all(
-          AppColors.primaryStart.withOpacity(0.4),
+        thumbColor: WidgetStateProperty.all(AppColors.primaryStart),
+        trackColor: WidgetStateProperty.all(
+          AppColors.primaryStart.withValues(alpha: 0.4),
         ),
       ),
     );
