@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../services/subscription_service.dart';
+import '../theme/app_theme.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -95,7 +96,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF6A5AE0), Color(0xFF4FC3F7)],
+            colors: [AppColors.primaryDark, AppColors.primary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -107,21 +108,22 @@ class _PaywallScreenState extends State<PaywallScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  'Unlock Premium',
+                  'Make more\nmemories.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 30,
+                    fontSize: 38,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  'Date Night+\nLocal Events+\nTrip planning\nUnlimited adventures',
+                  'Date Night+  •  Local Events+\nTrip planning  •  Unlimited adventures',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 17,
-                    height: 1.6,
+                    height: 1.7,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -139,8 +141,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     _loading
                         ? 'Loading…'
                         : price == null
-                        ? 'Subscribe'
-                        : 'Subscribe — $price',
+                        ? 'Start Premium'
+                        : 'Start Premium — $price',
                   ),
                 ),
                 TextButton(
