@@ -211,6 +211,17 @@ class _DecideScreenState extends State<DecideScreen>
     selectedRadius = values[label] ?? 25;
   }
 
+  String get _heroEyebrow {
+    if (isDateNight) return '✦  DATE NIGHT, BEAUTIFULLY DECIDED  ✦';
+
+    final hour = DateTime.now().hour;
+    if (hour < 5) return '✦  NIGHT OWL MODE  ✦';
+    if (hour < 12) return '✦  GOOD MORNING, ADVENTURE AWAITS  ✦';
+    if (hour < 17) return '✦  MAKE THIS AFTERNOON YOURS  ✦';
+    if (hour < 22) return '✦  YOUR EVENING STARTS HERE  ✦';
+    return '✦  THE NIGHT IS STILL YOUNG  ✦';
+  }
+
   Widget sectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -364,9 +375,9 @@ class _DecideScreenState extends State<DecideScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
-              '✦  YOUR NEXT ADVENTURE AWAITS  ✦',
-              style: TextStyle(
+            Text(
+              _heroEyebrow,
+              style: const TextStyle(
                 color: AppColors.coral,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
