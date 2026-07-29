@@ -28,6 +28,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       final data = jsonDecode(item);
       return Activity(
         id: data['id'],
+        category: data['category'] ?? 'activity',
         title: data['title'],
         description: data['description'],
         address: data['address'],
