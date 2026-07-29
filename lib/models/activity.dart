@@ -1,14 +1,7 @@
 class Activity {
-  final String id; // 🔥 UNIQUE ID (Google place_id)
-  final String title;
-  final String description;
-  final String address;
-  final double lat;
-  final double lng;
-  final String? photoUrl;
-
-  Activity({
+  const Activity({
     required this.id,
+    required this.category,
     required this.title,
     required this.description,
     required this.address,
@@ -17,9 +10,19 @@ class Activity {
     this.photoUrl,
   });
 
+  final String id;
+  final String category;
+  final String title;
+  final String description;
+  final String address;
+  final double lat;
+  final double lng;
+  final String? photoUrl;
+
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
-      id: json['id'] ?? json['place_id'] ?? json['title'], // fallback safe
+      id: json['id'] ?? json['place_id'] ?? '',
+      category: json['category'] ?? 'activity',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       address: json['address'] ?? '',
@@ -29,15 +32,14 @@ class Activity {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'address': address,
-      'lat': lat,
-      'lng': lng,
-      'photoUrl': photoUrl,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'category': category,
+    'title': title,
+    'description': description,
+    'address': address,
+    'lat': lat,
+    'lng': lng,
+    'photoUrl': photoUrl,
+  };
 }
