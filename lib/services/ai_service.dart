@@ -55,6 +55,8 @@ class AIService {
     required double lat,
     required double lng,
     int radiusMiles = 25,
+    required DateTime startDate,
+    required DateTime endDate,
   }) async {
     try {
       final token = await FirebaseAuth.instance.currentUser?.getIdToken();
@@ -64,7 +66,13 @@ class AIService {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'lat': lat, 'lng': lng, 'radius': radiusMiles}),
+        body: jsonEncode({
+          'lat': lat,
+          'lng': lng,
+          'radius': radiusMiles,
+          'startDate': _dateOnly(startDate),
+          'endDate': _dateOnly(endDate),
+        }),
       );
 
       if (response.statusCode != 200) {
@@ -91,6 +99,12 @@ class AIService {
         'We could not find local events right now. Please try again.',
       );
     }
+  }
+
+  static String _dateOnly(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 }
 
