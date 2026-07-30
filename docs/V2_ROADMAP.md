@@ -58,10 +58,12 @@ Local Events+ is subscription-only.
 - Never pair food with food.
 - Keep the second option meaningfully different.
 
-## Phase 4: Date Night+
+## Phase 4: Date Night+ — in progress
 
-- First date, regular date, anniversary, surprise, budget, and splurge intents.
-- Romantic, conversation-friendly, scenic, and memorable scoring.
+- First date, regular date, anniversary, and surprise intents are implemented.
+- Cozy, playful, romantic, and adventurous styles are implemented.
+- Romantic, conversation-friendly, scenic, and memorable scoring is in
+  progress.
 - Date-specific event prioritization.
 - Reservation and ticket links when verified.
 - Weather and time-of-day awareness.
@@ -119,4 +121,5 @@ Core inputs:
 - Confirm provider terms, attribution, caching, and image requirements.
 - Add monitoring, alerting, budgets, rate limiting, and abuse protection.
 - Validate subscriptions in sandbox and production for iOS and Android.
+
 
