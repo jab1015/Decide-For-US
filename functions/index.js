@@ -122,8 +122,18 @@ function distanceMiles(first, second) {
   return 3959 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function companionQueries(event, index) {
+function companionQueries(event, index, group, budget) {
   const type = String(event.eventType || "");
+  if (budget === "Free") {
+    return group === "Family" ?
+      ["family friendly park", "public library"] :
+      ["park", "scenic view"];
+  }
+  if (group === "Family") {
+    return index % 2 === 0 ?
+      ["family friendly restaurant", "ice cream shop"] :
+      ["park", "mini golf"];
+  }
   if (type.includes("sports")) {
     return index % 2 === 0 ?
       ["local restaurant", "dessert shop"] :
@@ -144,13 +154,13 @@ function companionQueries(event, index) {
     ["scenic view", "art gallery"];
 }
 
-async function addEventCompanions(events, apiKey) {
+async function addEventCompanions(events, apiKey, group, budget) {
   const usedPlaceIds = new Set();
   return Promise.all(events.slice(0, 12).map(async (event, index) => {
     try {
       const candidates = await searchPlaces(
         apiKey,
-        companionQueries(event, index),
+        companionQueries(event, index, group, budget),
         event.lat,
         event.lng,
         milesToMeters(5),
@@ -189,6 +199,32 @@ async function addEventCompanions(events, apiKey) {
       return event;
     }
   }));
+}
+
+function eventSuitability(event, group, budget) {
+  const text = `${event.title} ${event.eventType} ${event.eventGenre}`.toLowerCase();
+  let score = 0;
+  const groupSignals = {
+    Family: ["family", "kids", "children", "sports"],
+    Couple: ["arts", "theatre", "music", "comedy"],
+    Friends: ["sports", "music", "comedy", "festival"],
+    Solo: ["arts", "theatre", "museum", "music"],
+  };
+  for (const signal of groupSignals[group] || []) {
+    if (text.includes(signal)) score += 2;
+  }
+
+  const minPrice = event.minPrice == null ? Number.NaN : Number(event.minPrice);
+  if (budget === "Free") {
+    score += Number.isFinite(minPrice) && minPrice === 0 ? 8 : -3;
+  } else if (budget === "Under $30") {
+    score += Number.isFinite(minPrice) && minPrice <= 30 ? 5 : 0;
+  } else if (budget === "$30–$75") {
+    score += Number.isFinite(minPrice) && minPrice <= 75 ? 4 : 0;
+  } else if (budget === "$75+") {
+    score += Number.isFinite(minPrice) && minPrice >= 50 ? 3 : 0;
+  }
+  return score;
 }
 
 function eventDateWindow(body = {}) {
@@ -549,6 +585,8 @@ export const getLocalEvents = onRequest(
       }
 
       const window = eventDateWindow(req.body);
+      const group = String(req.body?.group || "Friends");
+      const budget = String(req.body?.budget || "$30–$75");
       const events = await searchEventsWithAdaptiveRadius({
         apiKey: TICKETMASTER_API_KEY.value(),
         lat,
@@ -557,9 +595,16 @@ export const getLocalEvents = onRequest(
         startDateTime: window.start,
         endDateTime: window.end,
       });
+      events.sort(
+        (a, b) =>
+          eventSuitability(b, group, budget) -
+          eventSuitability(a, group, budget),
+      );
       const plannedEvents = await addEventCompanions(
         events,
         GOOGLE_API_KEY.value(),
+        group,
+        budget,
       );
       return res.json(plannedEvents);
     } catch (error) {
