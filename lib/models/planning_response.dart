@@ -25,7 +25,9 @@ class PlanningResponse {
   }) {
     final options = <PlanningOption>[];
     for (var index = 0; index < activities.length; index += 2) {
-      final end = (index + 2).clamp(0, activities.length);
+      final end = index + 2 < activities.length
+          ? index + 2
+          : activities.length;
       final optionActivities = activities.sublist(index, end);
       final optionNumber = options.length + 1;
       options.add(
