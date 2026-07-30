@@ -70,17 +70,19 @@ export async function searchTicketmasterEvents({
   lat,
   lng,
   radiusMiles,
-  daysAhead = 14,
+  startDateTime = new Date(),
+  endDateTime,
 }) {
-  const end = new Date();
-  end.setUTCDate(end.getUTCDate() + daysAhead);
+  const end = endDateTime || new Date(
+    startDateTime.getTime() + 14 * 24 * 60 * 60 * 1000,
+  );
 
   const params = new URLSearchParams({
     apikey: apiKey,
     latlong: `${lat},${lng}`,
     radius: String(Math.min(Math.max(Number(radiusMiles) || 25, 1), 500)),
     unit: "miles",
-    startDateTime: isoWithoutMilliseconds(new Date()),
+    startDateTime: isoWithoutMilliseconds(startDateTime),
     endDateTime: isoWithoutMilliseconds(end),
     includeTBA: "no",
     size: "40",
