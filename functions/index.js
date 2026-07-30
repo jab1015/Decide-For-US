@@ -298,3 +298,31 @@ export const getPlacePhoto = onRequest(
   },
 );
 
+// TEMPORARY: Remove this endpoint and the matching paywall action before launch.
+export const resetTesterUsage = onRequest(
+  {region: "us-central1"},
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      await getFirestore().collection("recommendation_usage")
+        .doc(`${user.uid}_${weekKey()}`)
+        .delete();
+      return res.json({reset: true});
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({error: "Tester reset failed."});
+    }
+  },
+);
+
