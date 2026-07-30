@@ -14,6 +14,9 @@ void main() {
       'lng': -80.0,
       'companionDistanceMiles': 1.4,
       'searchRadiusMiles': 50,
+      'minPrice': 25,
+      'maxPrice': 60,
+      'priceCurrency': 'USD',
       'companion': {
         'id': 'place-1',
         'category': 'food',
@@ -29,6 +32,8 @@ void main() {
     expect(event.companion?.category, 'food');
     expect(event.companionDistanceMiles, 1.4);
     expect(event.searchRadiusMiles, 50);
+    expect(event.minPrice, 25);
+    expect(event.maxPrice, 60);
     expect(event.toJson()['companion'], isA<Map<String, dynamic>>());
   });
 }
