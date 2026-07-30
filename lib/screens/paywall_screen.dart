@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
+import '../services/ai_service.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
+
+enum PaywallResult { subscribed, testerReset }
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -12,7 +15,7 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  Package? _package;
+  List<Package> _packages = const [];
   bool _loading = true;
   String? _error;
 
@@ -29,7 +32,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           offerings.current?.availablePackages ?? const <Package>[];
       if (!mounted) return;
       setState(() {
-        _package = packages.isEmpty ? null : packages.first;
+        _packages = packages;
         _error = packages.isEmpty
             ? 'No subscription is currently available.'
             : null;
@@ -44,9 +47,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  Future<void> _subscribe() async {
-    final package = _package;
-    if (package == null) return;
+  Future<void> _subscribe(Package package) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -55,7 +56,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final subscribed = await SubscriptionService.purchase(package);
       if (!mounted) return;
       if (subscribed) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, PaywallResult.subscribed);
       } else {
         setState(() => _error = 'The purchase did not unlock Premium.');
       }
@@ -77,7 +78,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final restored = await SubscriptionService.restore();
       if (!mounted) return;
       if (restored) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, PaywallResult.subscribed);
       } else {
         setState(() => _error = 'No active Premium purchase was found.');
       }
@@ -88,9 +89,32 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
+  String _packageLabel(Package package) {
+    return switch (package.packageType) {
+      PackageType.monthly => 'Monthly',
+      PackageType.annual => 'Yearly',
+      _ => package.storeProduct.title,
+    };
+  }
+
+  Future<void> _resetTesterUsage() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await AIService.resetTesterUsage();
+      if (!mounted) return;
+      Navigator.pop(context, PaywallResult.testerReset);
+    } on AIServiceException catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final price = _package?.storeProduct.priceString;
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -135,16 +159,33 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                FilledButton(
-                  onPressed: _loading || _package == null ? null : _subscribe,
-                  child: Text(
-                    _loading
-                        ? 'Loading…'
-                        : price == null
-                        ? 'Start Premium'
-                        : 'Start Premium — $price',
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                else
+                  ..._packages.map(
+                    (package) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FilledButton(
+                        onPressed: () => _subscribe(package),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_packageLabel(package)),
+                            const SizedBox(width: 8),
+                            Text(
+                              '— ${package.storeProduct.priceString}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
                 TextButton(
                   onPressed: _loading ? null : _restore,
                   child: const Text(
@@ -152,8 +193,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
+                TextButton.icon(
+                  onPressed: _loading ? null : _resetTesterUsage,
+                  icon: const Icon(
+                    Icons.science_outlined,
+                    color: Colors.white70,
+                  ),
+                  label: const Text(
+                    'Reset tester usage',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.pop(context),
                   child: const Text(
                     'Maybe Later',
                     style: TextStyle(color: Colors.white70),
@@ -167,3 +219,4 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 }
+

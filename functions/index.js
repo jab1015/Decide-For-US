@@ -10,6 +10,8 @@ initializeApp();
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
 const FREE_WEEKLY_LIMIT = 3;
+const PHOTO_PROXY_URL =
+  "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPlacePhoto";
 
 const foodQueries = {
   Free: ["affordable restaurant", "casual restaurant"],
@@ -60,7 +62,10 @@ async function searchPlaces(apiKey, queries, lat, lng, radius) {
     if (!response.ok || !["OK", "ZERO_RESULTS"].includes(payload.status)) {
       throw new Error(`Google Places error: ${payload.status || response.status}`);
     }
-    return payload.results || [];
+    return (payload.results || []).map((place) => ({
+      ...place,
+      matchedQuery: query,
+    }));
   }));
   return uniqueRanked(results.flat());
 }
@@ -74,6 +79,7 @@ function activityCategory(place) {
 }
 
 function serialize(place, category, description) {
+  const photoReference = place.photos?.[0]?.photo_reference;
   return {
     id: place.place_id,
     category,
@@ -82,8 +88,73 @@ function serialize(place, category, description) {
     address: place.formatted_address || "",
     lat: place.geometry.location.lat,
     lng: place.geometry.location.lng,
-    photoUrl: null,
+    photoUrl: photoReference ?
+      `${PHOTO_PROXY_URL}?ref=${encodeURIComponent(photoReference)}` :
+      null,
   };
+}
+
+function readableType(place, isFood) {
+  const matched = String(place.matchedQuery || "")
+    .replace(/^family friendly /, "")
+    .replace(/^romantic /, "")
+    .trim();
+  if (matched) return matched;
+
+  const labels = {
+    art_gallery: "art gallery",
+    bowling_alley: "bowling experience",
+    book_store: "bookstore",
+    campground: "outdoor escape",
+    museum: "museum",
+    movie_theater: "movie experience",
+    night_club: "nightlife spot",
+    park: "park",
+    restaurant: "restaurant",
+    tourist_attraction: "local attraction",
+  };
+  const type = (place.types || []).find((value) => labels[value]);
+  return type ? labels[type] : (isFood ? "restaurant" : "local experience");
+}
+
+function placeDescription(place, isFood, isDateNight, index) {
+  const type = readableType(place, isFood);
+  const rating = Number(place.rating);
+  const reviews = Number(place.user_ratings_total);
+  const proof = Number.isFinite(rating) ?
+    `${rating.toFixed(1)} stars${reviews > 0 ? ` from ${reviews.toLocaleString("en-US")} reviews` : ""}` :
+    "a strong local reputation";
+
+  if (isFood) {
+    return isDateNight ?
+      `${place.name} brings a ${type} stop to the date, backed by ${proof}.` :
+      `Make ${place.name} the food stop—a ${type} backed by ${proof}.`;
+  }
+
+  const templates = [
+    `Start with ${place.name}, a ${type} chosen for its ${proof}.`,
+    `${place.name} adds a ${type} to the plan and carries ${proof}.`,
+    `For a different kind of outing, explore ${place.name}—a ${type} with ${proof}.`,
+    `Round out this option at ${place.name}, a ${type} earning ${proof}.`,
+  ];
+  return templates[index % templates.length];
+}
+
+async function recentRecommendationIds(uid) {
+  const snapshot = await getFirestore().collection("recommendation_history")
+    .doc(uid).get();
+  return new Set(snapshot.data()?.recentIds || []);
+}
+
+async function rememberRecommendations(uid, ids) {
+  const reference = getFirestore().collection("recommendation_history").doc(uid);
+  const snapshot = await reference.get();
+  const previous = snapshot.data()?.recentIds || [];
+  const recentIds = [...new Set([...ids, ...previous])].slice(0, 40);
+  await reference.set({
+    recentIds,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, {merge: true});
 }
 
 async function authenticatedUser(req) {
@@ -172,44 +243,61 @@ export const getIdeas = onRequest(
         : (activityQueries[energy] || activityQueries.Medium)
             .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      const [food, experiences] = await Promise.all([
+      const [foodResults, experienceResults, recentIds] = await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
         searchPlaces(googleKey, experienceTerms, lat, lng, radius),
+        recentRecommendationIds(user.uid),
       ]);
 
-      const foodChoice = budget === "Free" ?
-        null :
-        food.find((place) => priceAllowed(place, budget));
-      const firstExperience = experiences[0];
-      const secondExperience = experiences.find(
-        (place) => activityCategory(place) !== activityCategory(firstExperience || {}),
-      );
+      const unseenFood = foodResults
+        .filter((place) => !recentIds.has(place.place_id))
+        .filter((place) => priceAllowed(place, budget));
+      const unseenExperiences = experienceResults
+        .filter((place) => !recentIds.has(place.place_id));
+      const food = unseenFood.length ? unseenFood : foodResults;
+      const experiences = unseenExperiences.length ?
+        unseenExperiences :
+        experienceResults;
 
-      let pair;
-      if (isDateNight || !secondExperience) {
-        pair = [foodChoice, firstExperience].filter(Boolean);
-      } else {
-        pair = Math.random() < 0.5 && foodChoice
-          ? [foodChoice, firstExperience]
-          : [firstExperience, secondExperience];
+      const selectedExperiences = [];
+      for (const place of experiences) {
+        if (selectedExperiences.length === 3) break;
+        const duplicateCategory = selectedExperiences.some(
+          (selected) =>
+            activityCategory(selected) === activityCategory(place),
+        );
+        if (!duplicateCategory || selectedExperiences.length >= 2) {
+          selectedExperiences.push(place);
+        }
+      }
+      for (const place of experiences) {
+        if (selectedExperiences.length === 3) break;
+        if (!selectedExperiences.includes(place)) selectedExperiences.push(place);
       }
 
-      if (pair.length < 2) {
+      const foodChoice = budget === "Free" ? null : food[0];
+      const selected = foodChoice ?
+        [foodChoice, ...selectedExperiences.slice(0, 3)] :
+        experiences.slice(0, 4);
+
+      if (selected.length < 4) {
         return res.status(404).json({
-          error: "We could not find two strong, different options nearby.",
+          error: "We could not find four strong, different options nearby.",
         });
       }
 
       if (!premium) await consumeFreeRequest(user.uid);
+      await rememberRecommendations(
+        user.uid,
+        selected.map((place) => place.place_id),
+      );
 
-      return res.json(pair.map((place) => {
+      return res.json(selected.map((place, index) => {
         const isFood = place === foodChoice;
         return serialize(
           place,
           isFood ? "food" : activityCategory(place),
-          isFood
-            ? `Enjoy ${isDateNight ? "a romantic meal" : "a meal"} at ${place.name}.`
-            : `A highly rated ${activityCategory(place)} experience for your outing.`,
+          placeDescription(place, isFood, isDateNight, index),
         );
       }));
     } catch (error) {
@@ -220,3 +308,68 @@ export const getIdeas = onRequest(
     }
   },
 );
+
+export const getPlacePhoto = onRequest(
+  {
+    region: "us-central1",
+    secrets: [GOOGLE_API_KEY],
+  },
+  async (req, res) => {
+    const reference = String(req.query.ref || "");
+    if (!reference || reference.length > 2000) {
+      return res.status(400).send("A valid photo reference is required.");
+    }
+
+    try {
+      const params = new URLSearchParams({
+        maxwidth: "1200",
+        photo_reference: reference,
+        key: GOOGLE_API_KEY.value(),
+      });
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/photo?${params}`,
+      );
+      if (!response.ok) {
+        return res.status(response.status).send("Photo unavailable.");
+      }
+
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const image = await response.buffer();
+      res.set("Content-Type", contentType);
+      res.set("Cache-Control", "public, max-age=86400");
+      return res.status(200).send(image);
+    } catch (error) {
+      console.error(error);
+      return res.status(502).send("Photo unavailable.");
+    }
+  },
+);
+
+// TEMPORARY: Remove this endpoint and the matching paywall action before launch.
+export const resetTesterUsage = onRequest(
+  {region: "us-central1"},
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      await getFirestore().collection("recommendation_usage")
+        .doc(`${user.uid}_${weekKey()}`)
+        .delete();
+      return res.json({reset: true});
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({error: "Tester reset failed."});
+    }
+  },
+);
+

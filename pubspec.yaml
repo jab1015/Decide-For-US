@@ -3,7 +3,7 @@ description: A decision-making app
 
 publish_to: 'none'
 
-version: 1.0.24+31
+version: 1.0.24+36
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -52,3 +52,4 @@ flutter:
   assets:
     - assets/sounds/spin.mp3
     - assets/sounds/win.mp3
+

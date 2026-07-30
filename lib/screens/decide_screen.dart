@@ -10,7 +10,7 @@ import '../services/ai_service.dart';
 import '../services/location_service.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/decision_card.dart';
+import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
 import 'paywall_screen.dart';
 
@@ -26,6 +26,7 @@ class _DecideScreenState extends State<DecideScreen>
   final player = AudioPlayer();
   late ConfettiController confetti;
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _firstResultKey = GlobalKey();
 
   late AnimationController _spinController;
   late Animation<double> _spinAnimation;
@@ -43,6 +44,12 @@ class _DecideScreenState extends State<DecideScreen>
   String selectedRadiusLabel = "25 mi";
 
   Map<String, double>? userCoords;
+
+  bool get _canDecide =>
+      !isLoading &&
+      selectedGroup != null &&
+      selectedBudget != null &&
+      selectedEnergy != null;
 
   @override
   void initState() {
@@ -114,7 +121,19 @@ class _DecideScreenState extends State<DecideScreen>
 
     if (userCoords == null) {
       await loadLocation();
-      if (userCoords == null) return;
+      if (userCoords == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'We need your location to find nearby experiences.',
+              ),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        return;
+      }
     }
 
     setState(() {
@@ -128,6 +147,7 @@ class _DecideScreenState extends State<DecideScreen>
     final start = DateTime.now();
 
     List<Activity> data = [];
+    String? errorMessage;
 
     try {
       data = await AIService.getIdeas(
@@ -143,15 +163,15 @@ class _DecideScreenState extends State<DecideScreen>
       );
     } on AIServiceException catch (e) {
       if (e.statusCode == 403 && mounted) {
-        await Navigator.push<bool>(
+        final paywallResult = await Navigator.push<PaywallResult>(
           context,
           MaterialPageRoute(builder: (_) => const PaywallScreen()),
         );
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        if (paywallResult != PaywallResult.testerReset) {
+          errorMessage = e.toString();
+        }
+      } else {
+        errorMessage = e.toString();
       }
     }
 
@@ -163,7 +183,7 @@ class _DecideScreenState extends State<DecideScreen>
 
     if (!mounted) return;
 
-    if (data.length > 2) data = data.take(2).toList();
+    if (data.length > 4) data = data.take(4).toList();
     if (data.isNotEmpty) {
       await player.play(AssetSource('sounds/win.mp3'));
     }
@@ -174,15 +194,26 @@ class _DecideScreenState extends State<DecideScreen>
       resetFilters();
     });
 
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 7),
+        ),
+      );
+    }
+
     if (results.isNotEmpty) {
       confetti.play();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
+        final resultContext = _firstResultKey.currentContext;
+        if (resultContext != null) {
+          Scrollable.ensureVisible(
+            resultContext,
             duration: const Duration(milliseconds: 800),
             curve: Curves.easeOut,
+            alignment: 0.04,
           );
         }
       });
@@ -195,11 +226,11 @@ class _DecideScreenState extends State<DecideScreen>
       return;
     }
     if (!SubscriptionService.isSubscribed) {
-      final unlocked = await Navigator.push<bool>(
+      final paywallResult = await Navigator.push<PaywallResult>(
         context,
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
       );
-      if (unlocked != true) return;
+      if (paywallResult != PaywallResult.subscribed) return;
       await SubscriptionService.refresh();
     }
     if (mounted) setState(() => isDateNight = true);
@@ -281,6 +312,7 @@ class _DecideScreenState extends State<DecideScreen>
   }
 
   Widget spinner() {
+    final enabled = _canDecide;
     return AnimatedBuilder(
       animation: _spinController,
       builder: (_, child) {
@@ -305,7 +337,11 @@ class _DecideScreenState extends State<DecideScreen>
               height: 138,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppGradients.primary,
+                gradient: enabled
+                    ? AppGradients.primary
+                    : const LinearGradient(
+                        colors: [Color(0xFFB7B2C3), Color(0xFF9E98AA)],
+                      ),
                 border: Border.all(color: Colors.white, width: 5),
                 boxShadow: [
                   BoxShadow(
@@ -325,7 +361,11 @@ class _DecideScreenState extends State<DecideScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    isLoading ? 'FINDING' : 'DECIDE',
+                    isLoading
+                        ? 'FINDING'
+                        : enabled
+                        ? 'DECIDE'
+                        : 'CHOOSE',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -472,7 +512,17 @@ class _DecideScreenState extends State<DecideScreen>
               (v) => selectedEnergy = v,
             ),
             const SizedBox(height: 22),
-            GestureDetector(onTap: spin, child: spinner()),
+            Semantics(
+              button: true,
+              enabled: _canDecide,
+              label: _canDecide
+                  ? 'Decide'
+                  : 'Choose a group, budget, and energy level first',
+              child: GestureDetector(
+                onTap: _canDecide ? spin : null,
+                child: spinner(),
+              ),
+            ),
             const SizedBox(height: 30),
             if (results.isNotEmpty) ...[
               const Text(
@@ -492,9 +542,19 @@ class _DecideScreenState extends State<DecideScreen>
               ),
               const SizedBox(height: 20),
             ],
-            ...results.asMap().entries.map(
-              (e) => DecisionCard(activity: e.value, index: e.key),
-            ),
+            if (results.length >= 4) ...[
+              ExperienceCard(
+                key: _firstResultKey,
+                first: results[0],
+                second: results[1],
+                optionIndex: 0,
+              ),
+              ExperienceCard(
+                first: results[2],
+                second: results[3],
+                optionIndex: 1,
+              ),
+            ],
           ],
         ),
       ),
