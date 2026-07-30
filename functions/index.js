@@ -4,25 +4,34 @@ import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {onRequest} from "firebase-functions/v2/https";
 import fetch from "node-fetch";
+import {searchTicketmasterEvents} from "./providers/ticketmaster.js";
 
 initializeApp();
 
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
+const TICKETMASTER_API_KEY = defineSecret("TICKETMASTER_API_KEY");
 const FREE_WEEKLY_LIMIT = 3;
 const PHOTO_PROXY_URL =
   "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPlacePhoto";
 
 const foodQueries = {
   Free: ["affordable restaurant", "casual restaurant"],
-  "$": ["casual restaurant", "local restaurant"],
-  "$$": ["upscale restaurant", "fine dining restaurant"],
+  "Under $30": ["affordable restaurant", "casual restaurant"],
+  "$30–$75": ["casual restaurant", "local restaurant"],
+  "$75+": ["upscale restaurant", "fine dining restaurant"],
 };
 
 const activityQueries = {
-  Low: ["museum", "art gallery", "scenic view", "bookstore"],
-  Medium: ["bowling alley", "mini golf", "live music", "tourist attraction"],
-  High: ["hiking trail", "kayaking", "rock climbing", "adventure park"],
+  Low: ["art gallery", "museum", "bookstore", "casual restaurant"],
+  Medium: ["beach", "park", "botanical garden", "walking trail"],
+  High: ["basketball court", "fitness activity", "rock climbing", "adventure park"],
+};
+
+const dateNightActivityQueries = {
+  Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
+  Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
+  High: ["dance class", "kayaking", "rock climbing", "hiking trail"],
 };
 
 function milesToMeters(miles) {
@@ -31,8 +40,15 @@ function milesToMeters(miles) {
 
 function priceAllowed(place, budget) {
   if (budget === "Free") return place.price_level == null || place.price_level === 0;
-  if (budget === "$") return place.price_level == null || place.price_level <= 2;
-  if (budget === "$$") return place.price_level == null || place.price_level <= 3;
+  if (budget === "Under $30" || budget === "$") {
+    return place.price_level == null || place.price_level <= 1;
+  }
+  if (budget === "$30–$75" || budget === "$$") {
+    return place.price_level == null || place.price_level <= 2;
+  }
+  if (budget === "$75+") {
+    return place.price_level == null || place.price_level <= 4;
+  }
   return true;
 }
 
@@ -72,6 +88,8 @@ async function searchPlaces(apiKey, queries, lat, lng, radius) {
 
 function activityCategory(place) {
   const types = new Set(place.types || []);
+  if (types.has("restaurant") || types.has("cafe") ||
+      types.has("bakery") || types.has("meal_takeaway")) return "food";
   if (types.has("museum") || types.has("art_gallery")) return "culture";
   if (types.has("park") || types.has("natural_feature")) return "outdoors";
   if (types.has("movie_theater") || types.has("night_club")) return "entertainment";
@@ -92,6 +110,167 @@ function serialize(place, category, description) {
       `${PHOTO_PROXY_URL}?ref=${encodeURIComponent(photoReference)}` :
       null,
   };
+}
+
+function distanceMiles(first, second) {
+  const radians = (degrees) => degrees * Math.PI / 180;
+  const latDelta = radians(second.lat - first.lat);
+  const lngDelta = radians(second.lng - first.lng);
+  const a = Math.sin(latDelta / 2) ** 2 +
+    Math.cos(radians(first.lat)) * Math.cos(radians(second.lat)) *
+    Math.sin(lngDelta / 2) ** 2;
+  return 3959 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function companionQueries(event, index, group, budget) {
+  const type = String(event.eventType || "");
+  if (budget === "Free") {
+    return group === "Family" ?
+      ["family friendly park", "public library"] :
+      ["park", "scenic view"];
+  }
+  if (group === "Family") {
+    return index % 2 === 0 ?
+      ["family friendly restaurant", "ice cream shop"] :
+      ["park", "mini golf"];
+  }
+  if (type.includes("sports")) {
+    return index % 2 === 0 ?
+      ["local restaurant", "dessert shop"] :
+      ["bowling alley", "arcade"];
+  }
+  if (type.includes("arts") || type.includes("theatre")) {
+    return index % 2 === 0 ?
+      ["coffee shop", "dessert shop"] :
+      ["art gallery", "bookstore"];
+  }
+  if (type.includes("family")) {
+    return index % 2 === 0 ?
+      ["ice cream shop", "casual restaurant"] :
+      ["park", "mini golf"];
+  }
+  return index % 2 === 0 ?
+    ["local restaurant", "dessert shop"] :
+    ["scenic view", "art gallery"];
+}
+
+async function addEventCompanions(events, apiKey, group, budget) {
+  const usedPlaceIds = new Set();
+  return Promise.all(events.slice(0, 12).map(async (event, index) => {
+    try {
+      const candidates = await searchPlaces(
+        apiKey,
+        companionQueries(event, index, group, budget),
+        event.lat,
+        event.lng,
+        milesToMeters(5),
+      );
+      const available = candidates.filter(
+        (place) => !usedPlaceIds.has(place.place_id),
+      );
+      const place = available
+        .map((candidate) => ({
+          ...candidate,
+          distance: distanceMiles(
+            {lat: event.lat, lng: event.lng},
+            {
+              lat: candidate.geometry.location.lat,
+              lng: candidate.geometry.location.lng,
+            },
+          ),
+        }))
+        .filter((candidate) => candidate.distance <= 5)
+        .sort((a, b) => a.distance - b.distance || rank(b) - rank(a))[0];
+      if (!place) return event;
+
+      usedPlaceIds.add(place.place_id);
+      return {
+        ...event,
+        companion: serialize(
+          place,
+          activityCategory(place),
+          `${place.name} is a nearby add-on, about ` +
+            `${place.distance.toFixed(1)} miles from the event.`,
+        ),
+        companionDistanceMiles: Number(place.distance.toFixed(1)),
+      };
+    } catch (error) {
+      console.warn(`Could not pair event ${event.id}:`, error.message);
+      return event;
+    }
+  }));
+}
+
+function eventSuitability(event, group, budget) {
+  const text = `${event.title} ${event.eventType} ${event.eventGenre}`.toLowerCase();
+  let score = 0;
+  const groupSignals = {
+    Family: ["family", "kids", "children", "sports"],
+    Couple: ["arts", "theatre", "music", "comedy"],
+    Friends: ["sports", "music", "comedy", "festival"],
+    Solo: ["arts", "theatre", "museum", "music"],
+  };
+  for (const signal of groupSignals[group] || []) {
+    if (text.includes(signal)) score += 2;
+  }
+
+  const minPrice = event.minPrice == null ? Number.NaN : Number(event.minPrice);
+  if (budget === "Free") {
+    score += Number.isFinite(minPrice) && minPrice === 0 ? 8 : -3;
+  } else if (budget === "Under $30") {
+    score += Number.isFinite(minPrice) && minPrice <= 30 ? 5 : 0;
+  } else if (budget === "$30–$75") {
+    score += Number.isFinite(minPrice) && minPrice <= 75 ? 4 : 0;
+  } else if (budget === "$75+") {
+    score += Number.isFinite(minPrice) && minPrice >= 50 ? 3 : 0;
+  }
+  return score;
+}
+
+function eventDateWindow(body = {}) {
+  const pattern = /^\d{4}-\d{2}-\d{2}$/;
+  const startText = String(body.startDate || "");
+  const endText = String(body.endDate || "");
+  const start = pattern.test(startText) ?
+    new Date(`${startText}T00:00:00Z`) :
+    new Date();
+  const requestedEnd = pattern.test(endText) ?
+    new Date(`${endText}T00:00:00Z`) :
+    new Date(start.getTime() + 13 * 86400000);
+  const latestEnd = new Date(start.getTime() + 13 * 86400000);
+  const end = requestedEnd > latestEnd ? latestEnd : requestedEnd;
+  end.setUTCDate(end.getUTCDate() + 1);
+  return {start, end};
+}
+
+async function searchEventsWithAdaptiveRadius({
+  apiKey,
+  lat,
+  lng,
+  requestedRadius,
+  startDateTime,
+  endDateTime,
+}) {
+  const radius = Math.min(Math.max(Number(requestedRadius) || 25, 10), 50);
+  const radii = radius <= 10 ? [10, 25, 50] : (radius <= 25 ? [25, 50] : [50]);
+  let events = [];
+  let searchRadius = radius;
+  for (const candidateRadius of radii) {
+    searchRadius = candidateRadius;
+    events = await searchTicketmasterEvents({
+      apiKey,
+      lat,
+      lng,
+      radiusMiles: candidateRadius,
+      startDateTime,
+      endDateTime,
+    });
+    if (events.length >= 3) break;
+  }
+  return events.map((event) => ({
+    ...event,
+    searchRadiusMiles: searchRadius,
+  }));
 }
 
 function readableType(place, isFood) {
@@ -176,6 +355,20 @@ async function hasPremium(uid, apiKey) {
   return !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
 }
 
+async function hasTesterAccess(uid) {
+  const snapshot = await getFirestore().collection("premium_testers")
+    .doc(uid).get();
+  return snapshot.data()?.enabled === true;
+}
+
+async function hasPremiumAccess(uid, apiKey) {
+  const [premium, tester] = await Promise.all([
+    hasPremium(uid, apiKey),
+    hasTesterAccess(uid),
+  ]);
+  return premium || tester;
+}
+
 function weekKey(date = new Date()) {
   const first = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   const day = Math.floor((date - first) / 86400000);
@@ -218,7 +411,10 @@ export const getIdeas = onRequest(
       const user = await authenticatedUser(req);
       if (!user) return res.status(401).json({error: "Authentication required."});
 
-      const premium = await hasPremium(user.uid, REVENUECAT_SECRET_API_KEY.value());
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
       const isDateNight = req.body?.isDateNight === true;
       if (isDateNight && !premium) {
         return res.status(403).json({error: "Date Night+ requires Premium."});
@@ -229,7 +425,7 @@ export const getIdeas = onRequest(
         return res.status(400).json({error: "A valid location is required."});
       }
 
-      const budget = req.body?.budget || "$";
+      const budget = req.body?.budget || "$30–$75";
       const energy = req.body?.energy || "Medium";
       const group = req.body?.group || "Couple";
       const radius = milesToMeters(req.body?.radius);
@@ -238,10 +434,10 @@ export const getIdeas = onRequest(
       const foodTerms = isDateNight
         ? ["romantic restaurant", "fine dining restaurant"]
         : (foodQueries[budget] || foodQueries["$"]);
-      const experienceTerms = isDateNight
-        ? ["romantic activity", "live music", "scenic view", "art gallery"]
-        : (activityQueries[energy] || activityQueries.Medium)
-            .map((term) => group === "Family" ? `family friendly ${term}` : term);
+      const experienceTerms = isDateNight ?
+        (dateNightActivityQueries[energy] || dateNightActivityQueries.Medium) :
+        (activityQueries[energy] || activityQueries.Medium)
+          .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
       const [foodResults, experienceResults, recentIds] = await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
@@ -315,6 +511,9 @@ export const getPlacePhoto = onRequest(
     secrets: [GOOGLE_API_KEY],
   },
   async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    if (req.method === "OPTIONS") return res.status(204).send("");
     const reference = String(req.query.ref || "");
     if (!reference || reference.length > 2000) {
       return res.status(400).send("A valid photo reference is required.");
@@ -345,9 +544,15 @@ export const getPlacePhoto = onRequest(
   },
 );
 
-// TEMPORARY: Remove this endpoint and the matching paywall action before launch.
-export const resetTesterUsage = onRequest(
-  {region: "us-central1"},
+export const getLocalEvents = onRequest(
+  {
+    region: "us-central1",
+    secrets: [
+      TICKETMASTER_API_KEY,
+      REVENUECAT_SECRET_API_KEY,
+      GOOGLE_API_KEY,
+    ],
+  },
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -362,13 +567,116 @@ export const resetTesterUsage = onRequest(
       if (!user) {
         return res.status(401).json({error: "Authentication required."});
       }
-      await getFirestore().collection("recommendation_usage")
-        .doc(`${user.uid}_${weekKey()}`)
-        .delete();
-      return res.json({reset: true});
+
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      if (!premium) {
+        return res.status(403).json({
+          error: "Local Events+ requires Premium.",
+        });
+      }
+
+      const lat = Number(req.body?.lat);
+      const lng = Number(req.body?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return res.status(400).json({error: "A valid location is required."});
+      }
+
+      const window = eventDateWindow(req.body);
+      const group = String(req.body?.group || "Friends");
+      const budget = String(req.body?.budget || "$30–$75");
+      const events = await searchEventsWithAdaptiveRadius({
+        apiKey: TICKETMASTER_API_KEY.value(),
+        lat,
+        lng,
+        requestedRadius: req.body?.radius,
+        startDateTime: window.start,
+        endDateTime: window.end,
+      });
+      events.sort(
+        (a, b) =>
+          eventSuitability(b, group, budget) -
+          eventSuitability(a, group, budget),
+      );
+      const plannedEvents = await addEventCompanions(
+        events,
+        GOOGLE_API_KEY.value(),
+        group,
+        budget,
+      );
+      return res.json(plannedEvents);
     } catch (error) {
       console.error(error);
-      return res.status(500).json({error: "Tester reset failed."});
+      return res.status(502).json({error: "Local event search failed."});
+    }
+  },
+);
+
+export const getEventImage = onRequest(
+  {region: "us-central1"},
+  async (req, res) => {
+    try {
+      const source = new URL(String(req.query.url || ""));
+      const host = source.hostname.toLowerCase();
+      const allowed = host === "ticketm.net" ||
+        host.endsWith(".ticketm.net") ||
+        host === "tmol.io" ||
+        host.endsWith(".tmol.io");
+      if (source.protocol !== "https:" || !allowed) {
+        return res.status(400).send("A valid event image URL is required.");
+      }
+
+      const response = await fetch(source);
+      if (!response.ok) {
+        return res.status(response.status).send("Event image unavailable.");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) {
+        return res.status(415).send("Event image unavailable.");
+      }
+
+      const image = await response.buffer();
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Content-Type", contentType);
+      res.set("Cache-Control", "public, max-age=86400");
+      return res.status(200).send(image);
+    } catch (error) {
+      console.error(error);
+      return res.status(502).send("Event image unavailable.");
+    }
+  },
+);
+
+export const getPremiumAccess = onRequest(
+  {
+    region: "us-central1",
+    secrets: [REVENUECAT_SECRET_API_KEY],
+  },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      const allowed = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      return res.json({allowed});
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({error: "Access check failed."});
     }
   },
 );

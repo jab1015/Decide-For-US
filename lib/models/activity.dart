@@ -8,6 +8,18 @@ class Activity {
     required this.lat,
     required this.lng,
     this.photoUrl,
+    this.eventUrl,
+    this.eventStart,
+    this.eventLocalDate,
+    this.eventLocalTime,
+    this.venueName,
+    this.source,
+    this.companion,
+    this.companionDistanceMiles,
+    this.searchRadiusMiles,
+    this.minPrice,
+    this.maxPrice,
+    this.priceCurrency,
   });
 
   final String id;
@@ -18,6 +30,18 @@ class Activity {
   final double lat;
   final double lng;
   final String? photoUrl;
+  final String? eventUrl;
+  final DateTime? eventStart;
+  final String? eventLocalDate;
+  final String? eventLocalTime;
+  final String? venueName;
+  final String? source;
+  final Activity? companion;
+  final double? companionDistanceMiles;
+  final int? searchRadiusMiles;
+  final double? minPrice;
+  final double? maxPrice;
+  final String? priceCurrency;
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
@@ -29,6 +53,21 @@ class Activity {
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
       photoUrl: json['photoUrl'],
+      eventUrl: json['eventUrl'],
+      eventStart: DateTime.tryParse(json['eventStart']?.toString() ?? ''),
+      eventLocalDate: json['eventLocalDate'],
+      eventLocalTime: json['eventLocalTime'],
+      venueName: json['venueName'],
+      source: json['source'],
+      companion: json['companion'] is Map<String, dynamic>
+          ? Activity.fromJson(json['companion'] as Map<String, dynamic>)
+          : null,
+      companionDistanceMiles: (json['companionDistanceMiles'] as num?)
+          ?.toDouble(),
+      searchRadiusMiles: (json['searchRadiusMiles'] as num?)?.toInt(),
+      minPrice: (json['minPrice'] as num?)?.toDouble(),
+      maxPrice: (json['maxPrice'] as num?)?.toDouble(),
+      priceCurrency: json['priceCurrency'],
     );
   }
 
@@ -41,5 +80,18 @@ class Activity {
     'lat': lat,
     'lng': lng,
     'photoUrl': photoUrl,
+    'eventUrl': eventUrl,
+    'eventStart': eventStart?.toIso8601String(),
+    'eventLocalDate': eventLocalDate,
+    'eventLocalTime': eventLocalTime,
+    'venueName': venueName,
+    'source': source,
+    'companion': companion?.toJson(),
+    'companionDistanceMiles': companionDistanceMiles,
+    'searchRadiusMiles': searchRadiusMiles,
+    'minPrice': minPrice,
+    'maxPrice': maxPrice,
+    'priceCurrency': priceCurrency,
   };
 }
+

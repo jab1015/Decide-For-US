@@ -8,27 +8,41 @@ Free answers: **What should we do?**
 
 Premium answers: **Plan the experience for us.**
 
-## Phase 2: finish paired results
+## Phase 2: paired results — completed
 
-- Validate and merge PR #31.
+- PR #31 merged.
 - Confirm both cards contain two unique, complementary stops.
 - Confirm Google photo coverage and fallbacks.
 - Refine descriptions with verified provider data only.
 - Preserve the 10-decision no-repeat window.
 - Complete TestFlight and Google Play Internal Testing.
 
-## Phase 3: Local Events+
+## Phase 3: Local Events+ — in progress
 
 Local Events+ is subscription-only.
 
-### Initial provider
+### Completed foundation
 
-Use Ticketmaster Discovery as the first verified events source. Store its API
-key in Firebase Secret Manager, never in Flutter.
+- Ticketmaster Discovery is the first verified events source.
+- `TICKETMASTER_API_KEY` is stored in Firebase Secret Manager.
+- Premium access is enforced by RevenueCat or the explicit Firestore tester
+  allowlist.
+- Event imagery is delivered through a secure Firebase proxy.
+- Chrome testing is verified with live results at 50 miles.
+- Strong events can include unique Google Places companion stops.
+- Today, This Weekend, and Next 14 Days filters are implemented.
+- Sparse searches expand automatically to 25 or 50 miles.
+- Group and total-budget suitability influence event order and companion stops.
+- Verified provider prices appear when available.
+
+### Next implementation slice
+
+- Keep two meaningfully different outing options.
+- Add community-event providers after provider terms and quotas are reviewed.
 
 ### Provider architecture
 
-- Add an `EventProvider` interface in Firebase Functions.
+- Formalize the current Ticketmaster module behind an `EventProvider` interface.
 - Normalize events and permanent places into a shared candidate model.
 - Record provider, source URL, start/end time, venue, coordinates, image, price,
   and event status.
@@ -98,7 +112,7 @@ Core inputs:
 
 ## Launch gates
 
-- Remove all tester-only controls and endpoints.
+- Audit and disable Firestore tester documents before production.
 - Upgrade the Functions runtime from Node.js 20.
 - Complete privacy policy, terms, subscription disclosure, and account/data
   deletion flows.

@@ -20,7 +20,7 @@ void main() {
   test('PlanningRequest serializes every recommendation filter', () {
     const request = PlanningRequest(
       group: 'Friends',
-      budget: r'$$',
+      budget: r'$30–$75',
       energy: 'High',
       isDateNight: false,
       lat: 30.8,
@@ -30,7 +30,7 @@ void main() {
 
     expect(request.toJson(), {
       'group': 'Friends',
-      'budget': r'$$',
+      'budget': r'$30–$75',
       'energy': 'High',
       'isDateNight': false,
       'lat': 30.8,
@@ -39,3 +39,4 @@ void main() {
     });
   });
 }
+

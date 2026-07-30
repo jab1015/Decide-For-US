@@ -17,6 +17,10 @@ weekends, and trips.
 - Date Night+ and unlimited usage require the RevenueCat `premium` entitlement.
 - Google Places photos are delivered through a Firebase proxy so the Google API
   key is not exposed in Flutter.
+- Local Events+ discovers upcoming Ticketmaster events within 10, 25, or 50
+  miles and includes verified dates, venues, maps, images, and event links.
+- Explicit Firestore tester UIDs can receive Premium access during Chrome
+  development without changing production entitlement rules.
 
 See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 [architecture](docs/ARCHITECTURE.md), and the
@@ -42,6 +46,7 @@ See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
    ```sh
    firebase functions:secrets:set GOOGLE_API_KEY
    firebase functions:secrets:set REVENUECAT_SECRET_API_KEY
+   firebase functions:secrets:set TICKETMASTER_API_KEY
    ```
 
    `REVENUECAT_SECRET_API_KEY` must be a RevenueCat V1 secret key because the
@@ -63,8 +68,29 @@ See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 - `getIdeas`: authenticates the user, enforces limits and Premium access,
   searches Google Places, avoids recent results, and creates four candidates.
 - `getPlacePhoto`: securely proxies a Google Places photo.
-- `resetTesterUsage`: temporary authenticated test-only endpoint that resets
-  the caller's weekly usage. Remove it before production launch.
+- `getLocalEvents`: returns Premium-only upcoming events from Ticketmaster.
+- `getEventImage`: securely proxies allowlisted Ticketmaster images.
+- `getPremiumAccess`: resolves RevenueCat or Firestore tester access.
+
+## Premium testers
+
+Chrome cannot use RevenueCat mobile purchasing. Add an authenticated anonymous
+Firebase UID to Firestore for controlled development access:
+
+```text
+premium_testers/{uid}
+  enabled: true
+```
+
+Use a fixed Flutter web port so the browser origin and anonymous UID remain
+stable:
+
+```sh
+flutter run -d chrome --web-port 7357
+```
+
+TestFlight uses Apple sandbox purchases. Android internal testers must also be
+included in Google Play license testing to receive test payment methods.
 
 ## Release builds
 
@@ -107,4 +133,3 @@ node --check functions/index.js
 
 Do not run `npm audit fix --force` without reviewing the proposed breaking
 dependency changes.
-

@@ -12,6 +12,7 @@ import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
+import 'local_events_screen.dart';
 import 'paywall_screen.dart';
 
 class DecideScreen extends StatefulWidget {
@@ -39,6 +40,7 @@ class _DecideScreenState extends State<DecideScreen>
   String? selectedGroup;
   String? selectedBudget;
   String? selectedEnergy;
+  String? _groupBeforeDateNight;
 
   int selectedRadius = 25;
   String selectedRadiusLabel = "25 mi";
@@ -91,6 +93,7 @@ class _DecideScreenState extends State<DecideScreen>
     selectedRadius = 25;
     selectedRadiusLabel = "25 mi";
     isDateNight = false;
+    _groupBeforeDateNight = null;
   }
 
   void startSpinAnimation() {
@@ -188,6 +191,7 @@ class _DecideScreenState extends State<DecideScreen>
       await player.play(AssetSource('sounds/win.mp3'));
     }
 
+    if (!mounted) return;
     setState(() {
       results = data;
       isLoading = false;
@@ -222,7 +226,11 @@ class _DecideScreenState extends State<DecideScreen>
 
   Future<void> _setDateNight(bool value) async {
     if (!value) {
-      setState(() => isDateNight = false);
+      setState(() {
+        isDateNight = false;
+        selectedGroup = _groupBeforeDateNight;
+        _groupBeforeDateNight = null;
+      });
       return;
     }
     if (!SubscriptionService.isSubscribed) {
@@ -233,7 +241,29 @@ class _DecideScreenState extends State<DecideScreen>
       if (paywallResult != PaywallResult.subscribed) return;
       await SubscriptionService.refresh();
     }
-    if (mounted) setState(() => isDateNight = true);
+    if (mounted) {
+      setState(() {
+        _groupBeforeDateNight = selectedGroup;
+        selectedGroup = 'Couple';
+        isDateNight = true;
+      });
+    }
+  }
+
+  Future<void> _openLocalEvents() async {
+    if (!SubscriptionService.isSubscribed) {
+      final paywallResult = await Navigator.push<PaywallResult>(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      if (paywallResult != PaywallResult.subscribed) return;
+      await SubscriptionService.refresh();
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LocalEventsScreen()),
+    );
   }
 
   void _setRadius(String label) {
@@ -263,35 +293,47 @@ class _DecideScreenState extends State<DecideScreen>
     );
   }
 
-  Widget chip(String label, String? selected, Function(String) onTap) {
+  Widget chip(
+    String label,
+    String? selected,
+    Function(String) onTap, {
+    bool enabled = true,
+  }) {
     final isSelected = selected == label;
 
     return GestureDetector(
-      onTap: () => setState(() => onTap(label)),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.surface,
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+      onTap: enabled ? () => setState(() => onTap(label)) : null,
+      child: Opacity(
+        opacity: enabled || isSelected ? 1 : 0.45,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : AppColors.surface,
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.border,
+            ),
+            borderRadius: BorderRadius.circular(20),
           ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : AppColors.ink,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: isSelected ? Colors.white : AppColors.ink,
+            ),
           ),
         ),
       ),
     );
   }
 
-  // 🔥 FIXED CENTERED ROW
-  Widget row(List<String> items, String? selected, Function(String) onTap) {
+  Widget row(
+    List<String> items,
+    String? selected,
+    Function(String) onTap, {
+    bool enabled = true,
+  }) {
     return SizedBox(
       height: 40,
       child: LayoutBuilder(
@@ -302,7 +344,9 @@ class _DecideScreenState extends State<DecideScreen>
               constraints: BoxConstraints(minWidth: constraints.maxWidth),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: items.map((e) => chip(e, selected, onTap)).toList(),
+                children: items
+                    .map((e) => chip(e, selected, onTap, enabled: enabled))
+                    .toList(),
               ),
             ),
           );
@@ -483,6 +527,62 @@ class _DecideScreenState extends State<DecideScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _openLocalEvents,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppShadows.soft,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.lavender,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.local_activity_outlined,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Local Events+',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'See what’s happening near you.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      SubscriptionService.isSubscribed
+                          ? Icons.arrow_forward_rounded
+                          : Icons.lock_outline_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 25),
             sectionLabel("Distance"),
             row(
@@ -496,11 +596,22 @@ class _DecideScreenState extends State<DecideScreen>
               ["Couple", "Friends", "Family", "Solo"],
               selectedGroup,
               (v) => selectedGroup = v,
+              enabled: !isDateNight,
             ),
+            if (isDateNight)
+              const Text(
+                'Date Night+ is planned for two.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             const SizedBox(height: 20),
-            sectionLabel("Budget"),
+            sectionLabel("Total outing budget"),
             row(
-              ["Free", "\$", "\$\$"],
+              ["Free", "Under \$30", "\$30–\$75", "\$75+"],
               selectedBudget,
               (v) => selectedBudget = v,
             ),

@@ -1,18 +1,29 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionService {
   static const String entitlementId = 'premium';
+  static const String premiumAccessUrl =
+      'https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPremiumAccess';
+  static bool _isInitialized = false;
   static bool _isConfigured = false;
   static bool _isSubscribed = false;
 
   static bool get isSubscribed => _isSubscribed;
 
   static Future<void> init() async {
-    if (kIsWeb || _isConfigured) return;
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    if (kIsWeb) {
+      _isSubscribed = await _serverPremiumAccess();
+      return;
+    }
 
     final apiKey = Platform.isIOS
         ? 'appl_PUSUzSUTwTnqCKYmRlKutkZUeLv'
@@ -31,8 +42,12 @@ class SubscriptionService {
   }
 
   static Future<void> refresh() async {
-    if (!_isConfigured) return;
-    updateStatus(await Purchases.getCustomerInfo());
+    if (_isConfigured) {
+      updateStatus(await Purchases.getCustomerInfo());
+    }
+    if (!_isSubscribed) {
+      _isSubscribed = await _serverPremiumAccess();
+    }
   }
 
   static Future<Offerings> getOfferings() async {
@@ -55,5 +70,24 @@ class SubscriptionService {
 
   static void updateStatus(CustomerInfo info) {
     _isSubscribed = info.entitlements.active.containsKey(entitlementId);
+  }
+
+  static Future<bool> _serverPremiumAccess() async {
+    try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null) return false;
+      final response = await http.post(
+        Uri.parse(premiumAccessUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode != 200) return false;
+      final decoded = jsonDecode(response.body);
+      return decoded is Map && decoded['allowed'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 }
