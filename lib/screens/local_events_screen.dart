@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/activity.dart';
@@ -72,6 +73,32 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _shareEvent(Activity event) async {
+    final details = <String>[
+      event.title,
+      _eventTime(event),
+      if (_eventPrice(event) case final price?) price,
+      if (event.address.isNotEmpty) event.address,
+      if (event.description.isNotEmpty) event.description,
+      if (event.companion case final companion?) ...[
+        '',
+        'Make it an outing: ${companion.title}',
+        if (companion.address.isNotEmpty) companion.address,
+      ],
+      if (event.eventUrl?.isNotEmpty == true) ...[
+        '',
+        event.eventUrl!,
+      ],
+      '',
+      'Shared from Decide For Us',
+    ];
+
+    await Share.share(
+      details.join('\n'),
+      subject: 'Let’s go to ${event.title}',
+    );
   }
 
   Future<void> _openUrl(String? value) async {
@@ -287,6 +314,7 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
                   timeLabel: _eventTime(event),
                   priceLabel: _eventPrice(event),
                   onTickets: () => _openUrl(event.eventUrl),
+                  onShare: () => _shareEvent(event),
                   onMap: () => _openMap(event),
                   onCompanionMap: event.companion == null
                       ? null
@@ -307,6 +335,7 @@ class _EventCard extends StatelessWidget {
     required this.timeLabel,
     required this.priceLabel,
     required this.onTickets,
+    required this.onShare,
     required this.onMap,
     this.onCompanionMap,
   });
@@ -315,6 +344,7 @@ class _EventCard extends StatelessWidget {
   final String timeLabel;
   final String? priceLabel;
   final VoidCallback onTickets;
+  final VoidCallback onShare;
   final VoidCallback onMap;
   final VoidCallback? onCompanionMap;
 
@@ -455,8 +485,17 @@ class _EventCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onShare,
+                    icon: const Icon(Icons.ios_share_rounded),
+                    label: const Text('SHARE THIS PLAN'),
+                  ),
+                ),
                 if (event.eventUrl?.isNotEmpty == true) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
