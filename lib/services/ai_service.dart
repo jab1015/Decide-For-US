@@ -57,6 +57,8 @@ class AIService {
     int radiusMiles = 25,
     required DateTime startDate,
     required DateTime endDate,
+    required String group,
+    required String budget,
   }) async {
     try {
       final token = await FirebaseAuth.instance.currentUser?.getIdToken();
@@ -72,6 +74,8 @@ class AIService {
           'radius': radiusMiles,
           'startDate': _dateOnly(startDate),
           'endDate': _dateOnly(endDate),
+          'group': group,
+          'budget': budget,
         }),
       );
 
