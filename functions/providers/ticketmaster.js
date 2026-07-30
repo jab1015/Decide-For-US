@@ -1,15 +1,20 @@
 import fetch from "node-fetch";
 
 const API_URL = "https://app.ticketmaster.com/discovery/v2/events.json";
+const IMAGE_PROXY_URL =
+  "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getEventImage";
 
 function isoWithoutMilliseconds(date) {
   return date.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 function eventImage(images = []) {
-  return [...images]
+  const source = [...images]
     .filter((image) => image?.url)
-    .sort((a, b) => (b.width || 0) - (a.width || 0))[0]?.url || null;
+    .sort((a, b) => (b.width || 0) - (a.width || 0))[0]?.url;
+  return source ?
+    `${IMAGE_PROXY_URL}?url=${encodeURIComponent(source)}` :
+    null;
 }
 
 function eventAddress(venue = {}) {
