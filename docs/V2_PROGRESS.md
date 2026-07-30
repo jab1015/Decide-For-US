@@ -10,7 +10,8 @@ Last updated: July 30, 2026
 | Phase 1: V2 design system and home experience | Merged | PR #30 |
 | Phase 2: paired results experience | Merged | PR #31 |
 | Phase 3: Local Events+ | Merged | PR #32 |
-| Date Night+ specialization | In review | Draft PR #33; working in Chrome |
+| Date Night+ specialization | In review | Draft PR #33; build 37 in store testing |
+| Subscription QA and event sharing | In progress | Build 38 pending validation |
 | Trip Planner+ | Planned | Premium-only |
 
 ## Completed
@@ -78,6 +79,8 @@ Last updated: July 30, 2026
 - Local Events+ group and total-budget controls influence event ranking and
   companion searches.
 - Verified Ticketmaster price ranges appear when the provider supplies them.
+- Event plans can be shared with their time, price, venue, companion stop, and
+  verified organizer link.
 
 ## Operational work completed
 
@@ -89,6 +92,11 @@ Last updated: July 30, 2026
 - `TICKETMASTER_API_KEY` created in Firebase Secret Manager.
 - `getLocalEvents`, `getEventImage`, and `getPremiumAccess` deployed.
 - Google Play license-testing list configured for subscription testing.
+- Codemagic signs and publishes the same workflow to TestFlight and Google Play
+  Internal Testing.
+- Build 37 published successfully to both store testing channels.
+- An Apple TestFlight sandbox subscription successfully activated the RevenueCat
+  `premium` entitlement and unlocked Date Night+ and Local Events+.
 
 ### Date Night+ in PR #33
 
@@ -108,14 +116,19 @@ Last updated: July 30, 2026
 - Ordinary Couple mode remains a casual, non-romantic recommendation path.
 - Chrome functional validation completed for the Date Night+ controls,
   recommendation flow, and results presentation.
+- Premium access refreshes before gated navigation so newly purchased, restored,
+  or manually granted access is recognized without an unnecessary paywall.
+- The temporary paywall tester tool can copy the installation Firebase UID for
+  support during TestFlight and Google Play testing.
 
 ## Must verify before merging PR #33
 
 - `flutter analyze`
 - `flutter test`
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
-- TestFlight and Google Play Internal Testing builds.
-- Apple and Google sandbox subscription access.
+- Build 38 `flutter analyze` and `flutter test`.
+- Validate Local Events sharing on iOS and Android.
+- Google Play sandbox subscription access (Apple TestFlight verified).
 - Date Night+ event links and place fallbacks on real devices.
 
 ## Must verify before merging PR #32
@@ -140,5 +153,6 @@ Last updated: July 30, 2026
 - Ticketmaster does not provide pricing for every event; unknown prices remain
   unlabeled rather than estimated.
 - The app still needs a formal trip-planning data model and timeline UI.
+- Remove the temporary Copy Tester ID control before production.
 
 
