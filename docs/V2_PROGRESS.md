@@ -101,6 +101,10 @@ Last updated: July 30, 2026
   romance signals as appropriate.
 - The strongest activity leads into the dining stop for a more natural date
   flow.
+- Tonight, This Weekend, and Plan Ahead timing choices.
+- Strong Ticketmaster events can lead a date plan when they match the selected
+  occasion and style; weak event matches fall back to permanent places.
+- Date-plan event cards include verified organizer links.
 - Ordinary Couple mode remains a casual, non-romantic recommendation path.
 
 ## Must verify before merging PR #32
