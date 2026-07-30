@@ -64,7 +64,8 @@ Local Events+ is subscription-only.
 - Cozy, playful, romantic, and adventurous styles are implemented.
 - Romantic, conversation-friendly, scenic, and memorable scoring is in
   progress.
-- Date-specific event prioritization.
+- Date-specific event prioritization is implemented with timing and relevance
+  thresholds.
 - Reservation and ticket links when verified.
 - Weather and time-of-day awareness.
 - No fast food unless explicitly requested.
