@@ -19,6 +19,8 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
   String? _error;
   int _radius = 25;
   String _dateRange = '14days';
+  String _group = 'Friends';
+  String _budget = r'$30–$75';
 
   ({DateTime start, DateTime end}) get _selectedDates {
     final today = DateUtils.dateOnly(DateTime.now());
@@ -60,6 +62,8 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
         radiusMiles: _radius,
         startDate: _selectedDates.start,
         endDate: _selectedDates.end,
+        group: _group,
+        budget: _budget,
       );
       if (!mounted) return;
       setState(() => _events = events);
@@ -114,6 +118,42 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
     return '$date • $displayHour:$minute $suffix';
   }
 
+  String? _eventPrice(Activity event) {
+    if (event.minPrice == null) return null;
+    final currency = event.priceCurrency == 'USD' ? '\$' : '';
+    final minimum = event.minPrice!.round();
+    final maximum = event.maxPrice?.round();
+    if (minimum == 0 && (maximum == null || maximum == 0)) return 'Free';
+    if (maximum != null && maximum != minimum) {
+      return '$currency$minimum–$currency$maximum';
+    }
+    return 'From $currency$minimum';
+  }
+
+  Widget _choiceRow(
+    List<String> choices,
+    String selected,
+    ValueChanged<String> onSelected,
+  ) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: choices
+          .map(
+            (choice) => ChoiceChip(
+              label: Text(choice),
+              selected: choice == selected,
+              onSelected: (_) {
+                setState(() => onSelected(choice));
+                _loadEvents();
+              },
+            ),
+          )
+          .toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,6 +184,30 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
               'Live events over the next two weeks, picked for your area.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Who’s going?',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _choiceRow(
+              const ['Couple', 'Friends', 'Family', 'Solo'],
+              _group,
+              (value) => _group = value,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Total outing budget',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _choiceRow(
+              const ['Free', 'Under \$30', '\$30–\$75', '\$75+'],
+              _budget,
+              (value) => _budget = value,
             ),
             const SizedBox(height: 18),
             SegmentedButton<int>(
@@ -221,6 +285,7 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
                 (event) => _EventCard(
                   event: event,
                   timeLabel: _eventTime(event),
+                  priceLabel: _eventPrice(event),
                   onTickets: () => _openUrl(event.eventUrl),
                   onMap: () => _openMap(event),
                   onCompanionMap: event.companion == null
@@ -240,6 +305,7 @@ class _EventCard extends StatelessWidget {
   const _EventCard({
     required this.event,
     required this.timeLabel,
+    required this.priceLabel,
     required this.onTickets,
     required this.onMap,
     this.onCompanionMap,
@@ -247,6 +313,7 @@ class _EventCard extends StatelessWidget {
 
   final Activity event;
   final String timeLabel;
+  final String? priceLabel;
   final VoidCallback onTickets;
   final VoidCallback onMap;
   final VoidCallback? onCompanionMap;
@@ -288,6 +355,17 @@ class _EventCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (priceLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    priceLabel!,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Text(
                   event.title,
