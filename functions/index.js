@@ -62,7 +62,10 @@ async function searchPlaces(apiKey, queries, lat, lng, radius) {
     if (!response.ok || !["OK", "ZERO_RESULTS"].includes(payload.status)) {
       throw new Error(`Google Places error: ${payload.status || response.status}`);
     }
-    return payload.results || [];
+    return (payload.results || []).map((place) => ({
+      ...place,
+      matchedQuery: query,
+    }));
   }));
   return uniqueRanked(results.flat());
 }
@@ -89,6 +92,52 @@ function serialize(place, category, description) {
       `${PHOTO_PROXY_URL}?ref=${encodeURIComponent(photoReference)}` :
       null,
   };
+}
+
+function readableType(place, isFood) {
+  const matched = String(place.matchedQuery || "")
+    .replace(/^family friendly /, "")
+    .replace(/^romantic /, "")
+    .trim();
+  if (matched) return matched;
+
+  const labels = {
+    art_gallery: "art gallery",
+    bowling_alley: "bowling experience",
+    book_store: "bookstore",
+    campground: "outdoor escape",
+    museum: "museum",
+    movie_theater: "movie experience",
+    night_club: "nightlife spot",
+    park: "park",
+    restaurant: "restaurant",
+    tourist_attraction: "local attraction",
+  };
+  const type = (place.types || []).find((value) => labels[value]);
+  return type ? labels[type] : (isFood ? "restaurant" : "local experience");
+}
+
+function placeDescription(place, isFood, isDateNight, index) {
+  const type = readableType(place, isFood);
+  const rating = Number(place.rating);
+  const reviews = Number(place.user_ratings_total);
+  const proof = Number.isFinite(rating) ?
+    `${rating.toFixed(1)} stars${reviews > 0 ? ` from ${reviews.toLocaleString("en-US")} reviews` : ""}` :
+    "a strong local reputation";
+
+  if (isFood) {
+    return isDateNight ?
+      `${place.name} brings a ${type} stop to the date, backed by ${proof}.` :
+      `Make ${place.name} the food stop—a ${type} backed by ${proof}.`;
+  }
+
+  const templates = [
+    `Start with ${place.name}, a ${type} chosen for its ${proof}.`,
+    `${place.name} adds a ${type} to the plan and carries ${proof}.`,
+    `For a different kind of outing, explore ${place.name}—a ${type} with ${proof}.`,
+    `Round out this option at ${place.name}, a ${type} earning ${proof}.`,
+  ];
+  return templates[index % templates.length];
 }
 
 async function recentRecommendationIds(uid) {
@@ -243,14 +292,12 @@ export const getIdeas = onRequest(
         selected.map((place) => place.place_id),
       );
 
-      return res.json(selected.map((place) => {
+      return res.json(selected.map((place, index) => {
         const isFood = place === foodChoice;
         return serialize(
           place,
           isFood ? "food" : activityCategory(place),
-          isFood
-            ? `Enjoy ${isDateNight ? "a romantic meal" : "a meal"} at ${place.name}.`
-            : `A highly rated ${activityCategory(place)} experience for your outing.`,
+          placeDescription(place, isFood, isDateNight, index),
         );
       }));
     } catch (error) {
