@@ -28,6 +28,7 @@ void main() {
       radiusMiles: 50,
       dateOccasion: 'Anniversary',
       dateStyle: 'Romantic',
+      dateTiming: 'This weekend',
     );
 
     expect(request.toJson(), {
@@ -40,6 +41,7 @@ void main() {
       'radius': 50,
       'dateOccasion': 'Anniversary',
       'dateStyle': 'Romantic',
+      'dateTiming': 'This weekend',
     });
   });
 }
