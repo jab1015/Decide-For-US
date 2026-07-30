@@ -74,6 +74,18 @@ class _ExperienceCardState extends State<ExperienceCard> {
     }
   }
 
+  Future<void> _openEvent(Activity activity) async {
+    final eventUrl = Uri.tryParse(activity.eventUrl ?? '');
+    if (eventUrl == null ||
+        !await launchUrl(eventUrl, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this event')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final optionName = widget.optionIndex == 0 ? 'OPTION ONE' : 'OPTION TWO';
@@ -129,6 +141,7 @@ class _ExperienceCardState extends State<ExperienceCard> {
               isFavorite: favoriteIds.contains(widget.first.id),
               onFavorite: () => _toggleFavorite(widget.first),
               onAddress: () => _openAddress(widget.first),
+              onEvent: () => _openEvent(widget.first),
             ),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -159,6 +172,7 @@ class _ExperienceCardState extends State<ExperienceCard> {
               isFavorite: favoriteIds.contains(widget.second.id),
               onFavorite: () => _toggleFavorite(widget.second),
               onAddress: () => _openAddress(widget.second),
+              onEvent: () => _openEvent(widget.second),
             ),
           ],
         ),
@@ -174,6 +188,7 @@ class _Stop extends StatelessWidget {
     required this.isFavorite,
     required this.onFavorite,
     required this.onAddress,
+    required this.onEvent,
   });
 
   final Activity activity;
@@ -181,6 +196,7 @@ class _Stop extends StatelessWidget {
   final bool isFavorite;
   final VoidCallback onFavorite;
   final VoidCallback onAddress;
+  final VoidCallback onEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -281,9 +297,9 @@ class _Stop extends StatelessWidget {
             children: [
               Text(
                 activity.description,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.ink,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.ink),
               ),
               if (activity.address.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -326,6 +342,17 @@ class _Stop extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ],
+              if (activity.eventUrl?.isNotEmpty == true) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onEvent,
+                    icon: const Icon(Icons.local_activity_outlined),
+                    label: const Text('VIEW EVENT'),
                   ),
                 ),
               ],
