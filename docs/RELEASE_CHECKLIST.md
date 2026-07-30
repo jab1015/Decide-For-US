@@ -15,8 +15,10 @@ Last updated: July 30, 2026
 - [ ] Verify two option cards and four distinct stops.
 - [ ] Verify photos, directions, favorites, and scrolling.
 - [ ] Verify the fourth free decision opens the paywall.
-- [ ] Verify tester reset returns directly to Decide.
 - [ ] Verify both Monthly and Yearly packages appear.
+- [ ] Verify Local Events+ loading, empty, and error states.
+- [ ] Verify event images, dates, maps, and event links.
+- [ ] Confirm non-Premium users cannot call Local Events+.
 
 ## Firebase deployment
 
@@ -30,6 +32,7 @@ After deployment:
 - [ ] Confirm the intended revision is Active.
 - [ ] Make one real recommendation request.
 - [ ] Review `firebase functions:log --only getIdeas`.
+- [ ] Review `firebase functions:log --only getLocalEvents`.
 - [ ] Confirm Firestore usage and history writes succeed.
 
 ## iOS / TestFlight
@@ -40,6 +43,8 @@ After deployment:
 - [ ] Confirm signing profile and Apple Distribution certificate.
 - [ ] Confirm TestFlight processing completes.
 - [ ] Test location permission, purchases, restore, and external map links.
+- [ ] Confirm TestFlight subscription transactions run in Apple sandbox.
+- [ ] Test Local Events+ at 10, 25, and 50 miles.
 
 ## Android / Google Play
 
@@ -49,20 +54,22 @@ After deployment:
 - [ ] Upload to Internal Testing.
 - [ ] Add release notes and roll out to internal testers.
 - [ ] Confirm RevenueCat Android monthly and annual products.
+- [ ] Confirm the internal tester list is also selected for license testing.
+- [ ] Use a Google Play test payment method and verify Premium activation.
 
 ## Production-only gates
 
-- [ ] Remove the Reset tester usage button.
-- [ ] Delete `resetTesterUsage` from Firebase Functions.
+- [x] Remove the Reset tester usage button.
+- [x] Delete `resetTesterUsage` from Firebase Functions.
 - [ ] Upgrade the Functions runtime from Node.js 20.
 - [ ] Review and upgrade vulnerable/outdated dependencies without forcing
       breaking changes.
-- [ ] Disable or restrict test accounts and test-only configuration.
+- [ ] Disable every `premium_testers` document before production.
 - [ ] Confirm free-limit copy and weekly reset behavior.
 - [ ] Confirm subscription terms, pricing, restore, and manage-subscription links.
 - [ ] Complete privacy policy, terms, support, and account/data deletion.
 - [ ] Review Google Places attribution and caching requirements.
 - [ ] Add event-provider attribution and terms before Local Events+ launches.
+- [ ] Review Ticketmaster image, linking, attribution, caching, and quota terms.
 - [ ] Configure monitoring, error alerts, quotas, and budget alerts.
 - [ ] Back up signing keys and store credentials securely.
-
