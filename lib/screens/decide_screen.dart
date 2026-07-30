@@ -42,6 +42,7 @@ class _DecideScreenState extends State<DecideScreen>
   String? selectedEnergy;
   String? selectedDateOccasion;
   String? selectedDateStyle;
+  String? selectedDateTiming;
   String? _groupBeforeDateNight;
 
   int selectedRadius = 25;
@@ -98,6 +99,7 @@ class _DecideScreenState extends State<DecideScreen>
     _groupBeforeDateNight = null;
     selectedDateOccasion = null;
     selectedDateStyle = null;
+    selectedDateTiming = null;
   }
 
   void startSpinAnimation() {
@@ -168,6 +170,7 @@ class _DecideScreenState extends State<DecideScreen>
           radiusMiles: selectedRadius,
           dateOccasion: selectedDateOccasion,
           dateStyle: selectedDateStyle,
+          dateTiming: selectedDateTiming,
         ),
       );
     } on AIServiceException catch (e) {
@@ -238,6 +241,7 @@ class _DecideScreenState extends State<DecideScreen>
         _groupBeforeDateNight = null;
         selectedDateOccasion = null;
         selectedDateStyle = null;
+        selectedDateTiming = null;
       });
       return;
     }
@@ -255,6 +259,7 @@ class _DecideScreenState extends State<DecideScreen>
         selectedGroup = 'Couple';
         selectedDateOccasion = 'Regular date';
         selectedDateStyle = 'Romantic';
+        selectedDateTiming = 'Tonight';
         isDateNight = true;
       });
     }
@@ -632,6 +637,13 @@ class _DecideScreenState extends State<DecideScreen>
                 ["Cozy", "Playful", "Romantic", "Adventurous"],
                 selectedDateStyle,
                 (v) => selectedDateStyle = v,
+              ),
+              const SizedBox(height: 16),
+              sectionLabel("When?"),
+              row(
+                ["Tonight", "This weekend", "Plan ahead"],
+                selectedDateTiming,
+                (v) => selectedDateTiming = v,
               ),
             ],
             const SizedBox(height: 20),
