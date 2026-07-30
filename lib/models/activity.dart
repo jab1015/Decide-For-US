@@ -17,6 +17,9 @@ class Activity {
     this.companion,
     this.companionDistanceMiles,
     this.searchRadiusMiles,
+    this.minPrice,
+    this.maxPrice,
+    this.priceCurrency,
   });
 
   final String id;
@@ -36,6 +39,9 @@ class Activity {
   final Activity? companion;
   final double? companionDistanceMiles;
   final int? searchRadiusMiles;
+  final double? minPrice;
+  final double? maxPrice;
+  final String? priceCurrency;
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
@@ -59,6 +65,9 @@ class Activity {
       companionDistanceMiles: (json['companionDistanceMiles'] as num?)
           ?.toDouble(),
       searchRadiusMiles: (json['searchRadiusMiles'] as num?)?.toInt(),
+      minPrice: (json['minPrice'] as num?)?.toDouble(),
+      maxPrice: (json['maxPrice'] as num?)?.toDouble(),
+      priceCurrency: json['priceCurrency'],
     );
   }
 
@@ -80,6 +89,9 @@ class Activity {
     'companion': companion?.toJson(),
     'companionDistanceMiles': companionDistanceMiles,
     'searchRadiusMiles': searchRadiusMiles,
+    'minPrice': minPrice,
+    'maxPrice': maxPrice,
+    'priceCurrency': priceCurrency,
   };
 }
 
