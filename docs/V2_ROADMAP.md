@@ -66,6 +66,8 @@ Local Events+ is subscription-only.
   progress.
 - Date-specific event prioritization is implemented with timing and relevance
   thresholds.
+- Chrome functional validation is complete; TestFlight and Google Play
+  Internal Testing are next.
 - Reservation and ticket links when verified.
 - Weather and time-of-day awareness.
 - No fast food unless explicitly requested.
