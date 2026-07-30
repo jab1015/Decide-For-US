@@ -13,7 +13,7 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  Package? _package;
+  List<Package> _packages = const [];
   bool _loading = true;
   String? _error;
 
@@ -30,7 +30,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           offerings.current?.availablePackages ?? const <Package>[];
       if (!mounted) return;
       setState(() {
-        _package = packages.isEmpty ? null : packages.first;
+        _packages = packages;
         _error = packages.isEmpty
             ? 'No subscription is currently available.'
             : null;
@@ -45,9 +45,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  Future<void> _subscribe() async {
-    final package = _package;
-    if (package == null) return;
+  Future<void> _subscribe(Package package) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -89,6 +87,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
+  String _packageLabel(Package package) {
+    return switch (package.packageType) {
+      PackageType.monthly => 'Monthly',
+      PackageType.annual => 'Yearly',
+      _ => package.storeProduct.title,
+    };
+  }
+
   Future<void> _resetTesterUsage() async {
     setState(() {
       _loading = true;
@@ -109,7 +115,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final price = _package?.storeProduct.priceString;
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -154,16 +159,33 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                FilledButton(
-                  onPressed: _loading || _package == null ? null : _subscribe,
-                  child: Text(
-                    _loading
-                        ? 'Loading…'
-                        : price == null
-                        ? 'Start Premium'
-                        : 'Start Premium — $price',
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                else
+                  ..._packages.map(
+                    (package) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FilledButton(
+                        onPressed: () => _subscribe(package),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_packageLabel(package)),
+                            const SizedBox(width: 8),
+                            Text(
+                              '— ${package.storeProduct.priceString}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
                 TextButton(
                   onPressed: _loading ? null : _restore,
                   child: const Text(
