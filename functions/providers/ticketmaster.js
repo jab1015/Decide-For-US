@@ -37,6 +37,8 @@ function eventDescription(event, venue) {
 
 function normalizeEvent(event) {
   const venue = event._embedded?.venues?.[0] || {};
+  const classification = event.classifications?.[0] || {};
+  const priceRange = event.priceRanges?.[0] || {};
   const lat = Number(venue.location?.latitude);
   const lng = Number(venue.location?.longitude);
 
@@ -49,7 +51,8 @@ function normalizeEvent(event) {
     id: `ticketmaster:${event.id}`,
     category: "event",
     eventType:
-      event.classifications?.[0]?.segment?.name?.toLowerCase() || "event",
+      classification.segment?.name?.toLowerCase() || "event",
+    eventGenre: classification.genre?.name?.toLowerCase() || null,
     title: event.name,
     description: eventDescription(event, venue),
     address: eventAddress(venue),
@@ -62,6 +65,13 @@ function normalizeEvent(event) {
     eventLocalTime: event.dates?.start?.localTime || null,
     venueName: venue.name || null,
     source: "ticketmaster",
+    minPrice: Number.isFinite(Number(priceRange.min)) ?
+      Number(priceRange.min) :
+      null,
+    maxPrice: Number.isFinite(Number(priceRange.max)) ?
+      Number(priceRange.max) :
+      null,
+    priceCurrency: priceRange.currency || null,
   };
 }
 
