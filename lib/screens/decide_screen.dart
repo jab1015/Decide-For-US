@@ -12,6 +12,7 @@ import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
+import 'local_events_screen.dart';
 import 'paywall_screen.dart';
 
 class DecideScreen extends StatefulWidget {
@@ -236,6 +237,22 @@ class _DecideScreenState extends State<DecideScreen>
     if (mounted) setState(() => isDateNight = true);
   }
 
+  Future<void> _openLocalEvents() async {
+    if (!SubscriptionService.isSubscribed) {
+      final paywallResult = await Navigator.push<PaywallResult>(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      if (paywallResult != PaywallResult.subscribed) return;
+      await SubscriptionService.refresh();
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LocalEventsScreen()),
+    );
+  }
+
   void _setRadius(String label) {
     const values = {'10 mi': 10, '25 mi': 25, '50 mi': 50, 'Explore': 100};
     selectedRadiusLabel = label;
@@ -290,7 +307,6 @@ class _DecideScreenState extends State<DecideScreen>
     );
   }
 
-  // 🔥 FIXED CENTERED ROW
   Widget row(List<String> items, String? selected, Function(String) onTap) {
     return SizedBox(
       height: 40,
@@ -364,8 +380,8 @@ class _DecideScreenState extends State<DecideScreen>
                     isLoading
                         ? 'FINDING'
                         : enabled
-                        ? 'DECIDE'
-                        : 'CHOOSE',
+                            ? 'DECIDE'
+                            : 'CHOOSE',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -483,6 +499,62 @@ class _DecideScreenState extends State<DecideScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _openLocalEvents,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppShadows.soft,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.lavender,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.local_activity_outlined,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Local Events+',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'See what’s happening near you.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      SubscriptionService.isSubscribed
+                          ? Icons.arrow_forward_rounded
+                          : Icons.lock_outline_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 25),
             sectionLabel("Distance"),
             row(
@@ -561,4 +633,3 @@ class _DecideScreenState extends State<DecideScreen>
     );
   }
 }
-
