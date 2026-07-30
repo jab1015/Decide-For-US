@@ -26,6 +26,8 @@ void main() {
       lat: 30.8,
       lng: -81.7,
       radiusMiles: 50,
+      dateOccasion: 'Anniversary',
+      dateStyle: 'Romantic',
     );
 
     expect(request.toJson(), {
@@ -36,6 +38,8 @@ void main() {
       'lat': 30.8,
       'lng': -81.7,
       'radius': 50,
+      'dateOccasion': 'Anniversary',
+      'dateStyle': 'Romantic',
     });
   });
 }
