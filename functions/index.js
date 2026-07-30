@@ -191,6 +191,52 @@ async function addEventCompanions(events, apiKey) {
   }));
 }
 
+function eventDateWindow(body = {}) {
+  const pattern = /^\d{4}-\d{2}-\d{2}$/;
+  const startText = String(body.startDate || "");
+  const endText = String(body.endDate || "");
+  const start = pattern.test(startText) ?
+    new Date(`${startText}T00:00:00Z`) :
+    new Date();
+  const requestedEnd = pattern.test(endText) ?
+    new Date(`${endText}T00:00:00Z`) :
+    new Date(start.getTime() + 13 * 86400000);
+  const latestEnd = new Date(start.getTime() + 13 * 86400000);
+  const end = requestedEnd > latestEnd ? latestEnd : requestedEnd;
+  end.setUTCDate(end.getUTCDate() + 1);
+  return {start, end};
+}
+
+async function searchEventsWithAdaptiveRadius({
+  apiKey,
+  lat,
+  lng,
+  requestedRadius,
+  startDateTime,
+  endDateTime,
+}) {
+  const radius = Math.min(Math.max(Number(requestedRadius) || 25, 10), 50);
+  const radii = radius <= 10 ? [10, 25, 50] : (radius <= 25 ? [25, 50] : [50]);
+  let events = [];
+  let searchRadius = radius;
+  for (const candidateRadius of radii) {
+    searchRadius = candidateRadius;
+    events = await searchTicketmasterEvents({
+      apiKey,
+      lat,
+      lng,
+      radiusMiles: candidateRadius,
+      startDateTime,
+      endDateTime,
+    });
+    if (events.length >= 3) break;
+  }
+  return events.map((event) => ({
+    ...event,
+    searchRadiusMiles: searchRadius,
+  }));
+}
+
 function readableType(place, isFood) {
   const matched = String(place.matchedQuery || "")
     .replace(/^family friendly /, "")
@@ -502,11 +548,14 @@ export const getLocalEvents = onRequest(
         return res.status(400).json({error: "A valid location is required."});
       }
 
-      const events = await searchTicketmasterEvents({
+      const window = eventDateWindow(req.body);
+      const events = await searchEventsWithAdaptiveRadius({
         apiKey: TICKETMASTER_API_KEY.value(),
         lat,
         lng,
-        radiusMiles: req.body?.radius,
+        requestedRadius: req.body?.radius,
+        startDateTime: window.start,
+        endDateTime: window.end,
       });
       const plannedEvents = await addEventCompanions(
         events,
