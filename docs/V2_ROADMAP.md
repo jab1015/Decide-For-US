@@ -32,11 +32,12 @@ Local Events+ is subscription-only.
 - Strong events can include unique Google Places companion stops.
 - Today, This Weekend, and Next 14 Days filters are implemented.
 - Sparse searches expand automatically to 25 or 50 miles.
+- Group and total-budget suitability influence event order and companion stops.
+- Verified provider prices appear when available.
 
 ### Next implementation slice
 
 - Keep two meaningfully different outing options.
-- Add group and budget suitability scoring.
 - Add community-event providers after provider terms and quotas are reviewed.
 
 ### Provider architecture
