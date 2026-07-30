@@ -41,6 +41,7 @@ initializes RevenueCat, and then starts `DecideApp`.
 - budget
 - energy
 - Date Night flag
+- Date Night occasion, style, and timing
 - latitude and longitude
 - radius in miles
 
@@ -69,12 +70,16 @@ layer before Date Night+, events, and trips substantially expand.
 4. Validate location and constraints.
 5. Read the last 40 recommended place IDs.
 6. Search Google Places using activity and food query sets.
-7. Filter duplicates, low ratings, budget mismatches, and recent results.
-8. Select four unique candidates.
-9. Allow food in at most one option.
-10. Consume one free weekly request when the user is not Premium.
-11. Save the selected place IDs to recommendation history.
-12. Return four normalized `Activity` records.
+7. For Date Night+, optionally search Ticketmaster within the selected timing
+   window and retain only a relevant event.
+8. Filter duplicates, low ratings, budget mismatches, and recent results.
+9. Score Date Night+ candidates by occasion, style, and energy.
+10. Select four unique candidates and arrange the strongest date activity
+    before its dining stop.
+11. Allow food in at most one option.
+12. Consume one free weekly request when the user is not Premium.
+13. Save the selected provider IDs to recommendation history.
+14. Return four normalized `Activity` records.
 
 ### `getPlacePhoto`
 
@@ -150,4 +155,7 @@ Codemagic build output.
 - Favorites are device-local and store individual stops, not full itineraries.
 - Event/place pairing, weather, routing, and travel-time logic are not yet
   implemented.
+- Date Night+ timing is a preference window, not a reservation or guaranteed
+  availability check.
 - Free usage is weekly, but there is no user-facing countdown/reset date yet.
+
