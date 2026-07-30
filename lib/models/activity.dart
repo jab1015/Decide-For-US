@@ -14,6 +14,8 @@ class Activity {
     this.eventLocalTime,
     this.venueName,
     this.source,
+    this.companion,
+    this.companionDistanceMiles,
   });
 
   final String id;
@@ -30,6 +32,8 @@ class Activity {
   final String? eventLocalTime;
   final String? venueName;
   final String? source;
+  final Activity? companion;
+  final double? companionDistanceMiles;
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
@@ -47,6 +51,11 @@ class Activity {
       eventLocalTime: json['eventLocalTime'],
       venueName: json['venueName'],
       source: json['source'],
+      companion: json['companion'] is Map<String, dynamic>
+          ? Activity.fromJson(json['companion'] as Map<String, dynamic>)
+          : null,
+      companionDistanceMiles: (json['companionDistanceMiles'] as num?)
+          ?.toDouble(),
     );
   }
 
@@ -65,5 +74,8 @@ class Activity {
     'eventLocalTime': eventLocalTime,
     'venueName': venueName,
     'source': source,
+    'companion': companion?.toJson(),
+    'companionDistanceMiles': companionDistanceMiles,
   };
 }
+
