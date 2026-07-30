@@ -15,6 +15,11 @@ weekends, and trips.
   to reduce repetition.
 - Free users receive three decisions per week.
 - Date Night+ and unlimited usage require the RevenueCat `premium` entitlement.
+- Date Night+ supports First Date, Regular Date, Anniversary, and Surprise
+  occasions; Cozy, Playful, Romantic, and Adventurous styles; and Tonight,
+  This Weekend, or Plan Ahead timing.
+- Strong matching local events may lead a Date Night+ plan. Weak event matches
+  fall back to curated Google Places recommendations.
 - Google Places photos are delivered through a Firebase proxy so the Google API
   key is not exposed in Flutter.
 - Local Events+ discovers upcoming Ticketmaster events within 10, 25, or 50
@@ -66,7 +71,8 @@ See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 ## Firebase Functions
 
 - `getIdeas`: authenticates the user, enforces limits and Premium access,
-  searches Google Places, avoids recent results, and creates four candidates.
+  searches Google Places and eligible Ticketmaster events, avoids recent
+  results, and creates four candidates.
 - `getPlacePhoto`: securely proxies a Google Places photo.
 - `getLocalEvents`: returns Premium-only upcoming events from Ticketmaster.
 - `getEventImage`: securely proxies allowlisted Ticketmaster images.
@@ -133,3 +139,4 @@ node --check functions/index.js
 
 Do not run `npm audit fix --force` without reviewing the proposed breaking
 dependency changes.
+
