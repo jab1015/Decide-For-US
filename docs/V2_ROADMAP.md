@@ -75,9 +75,14 @@ Local Events+ is subscription-only.
 - Weather and time-of-day awareness.
 - No fast food unless explicitly requested.
 
-## Phase 5: Planning Engine
+## Phase 5: Planning Engine — foundation in progress
 
-Replace mode-specific service sprawl with:
+The Flutter foundation now routes Quick Decision and Date Night+ through a
+shared `PlanningEngine` boundary and models responses as ordered options and
+stops. Local Events+ and Trip Planner+ will migrate onto the same contract in
+subsequent slices.
+
+Target architecture:
 
 ```text
 PlanningRequest
@@ -87,6 +92,14 @@ PlanningRequest
   -> Pairing / itinerary builder
   -> PlanningResponse
 ```
+
+Foundation delivered:
+
+- shared Premium-aware planning modes
+- reusable ordered stops with schedule, travel-time, and cost fields
+- reusable options and serializable planning responses
+- adapter around the current verified recommendation endpoint
+- existing Decide UI preserved while the service boundary changes
 
 Core inputs:
 
