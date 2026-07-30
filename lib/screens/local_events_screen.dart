@@ -71,6 +71,16 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
     await _openUrl(uri.toString());
   }
 
+  Future<void> _openCompanionMap(Activity companion) async {
+    final uri = Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': companion.address.isNotEmpty
+          ? companion.address
+          : '${companion.lat},${companion.lng}',
+    });
+    await _openUrl(uri.toString());
+  }
+
   String _eventTime(Activity event) {
     final date = event.eventLocalDate;
     final time = event.eventLocalTime;
@@ -161,6 +171,9 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
                   timeLabel: _eventTime(event),
                   onTickets: () => _openUrl(event.eventUrl),
                   onMap: () => _openMap(event),
+                  onCompanionMap: event.companion == null
+                      ? null
+                      : () => _openCompanionMap(event.companion!),
                 ),
               ),
             ],
@@ -177,12 +190,14 @@ class _EventCard extends StatelessWidget {
     required this.timeLabel,
     required this.onTickets,
     required this.onMap,
+    this.onCompanionMap,
   });
 
   final Activity event;
   final String timeLabel;
   final VoidCallback onTickets;
   final VoidCallback onMap;
+  final VoidCallback? onCompanionMap;
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +264,63 @@ class _EventCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (event.companion != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.lavender.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'MAKE IT AN OUTING',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          event.companion!.title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(event.companion!.description),
+                        if (event.companion!.address.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: onCompanionMap,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.add_location_alt_outlined,
+                                  color: AppColors.primary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    event.companion!.address,
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -327,3 +399,4 @@ class _MessageCard extends StatelessWidget {
     );
   }
 }
+
