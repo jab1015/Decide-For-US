@@ -17,7 +17,7 @@ Premium answers: **Plan the experience for us.**
 - Preserve the 10-decision no-repeat window.
 - Complete TestFlight and Google Play Internal Testing.
 
-## Phase 3: Local Events+ — in progress
+## Phase 3: Local Events+ — device testing
 
 Local Events+ is subscription-only.
 
@@ -34,6 +34,7 @@ Local Events+ is subscription-only.
 - Sparse searches expand automatically to 25 or 50 miles.
 - Group and total-budget suitability influence event order and companion stops.
 - Verified provider prices appear when available.
+- Complete event plans can be shared through the native platform share sheet.
 
 ### Next implementation slice
 
@@ -66,8 +67,10 @@ Local Events+ is subscription-only.
   progress.
 - Date-specific event prioritization is implemented with timing and relevance
   thresholds.
-- Chrome functional validation is complete; TestFlight and Google Play
-  Internal Testing are next.
+- Chrome functional validation is complete; build 37 is available through
+  TestFlight and Google Play Internal Testing.
+- Apple TestFlight sandbox subscription activation is verified; Google Play
+  sandbox purchase validation remains.
 - Reservation and ticket links when verified.
 - Weather and time-of-day awareness.
 - No fast food unless explicitly requested.
@@ -123,6 +126,7 @@ Core inputs:
   deletion flows.
 - Confirm provider terms, attribution, caching, and image requirements.
 - Add monitoring, alerting, budgets, rate limiting, and abuse protection.
-- Validate subscriptions in sandbox and production for iOS and Android.
+- Validate Google Play sandbox subscriptions and both stores in production.
+- Remove temporary tester-ID UI and audit tester access before launch.
 
 
