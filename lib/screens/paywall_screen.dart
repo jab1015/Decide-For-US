@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../services/subscription_service.dart';
@@ -14,6 +16,9 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
+  // Temporary QA aid. Remove before the production launch.
+  static const bool _showTesterTools = true;
+
   List<Package> _packages = const [];
   bool _loading = true;
   String? _error;
@@ -26,6 +31,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Future<void> _loadOffering() async {
     try {
+      await SubscriptionService.refresh();
+      if (!mounted) return;
+      if (SubscriptionService.isSubscribed) {
+        Navigator.pop(context, PaywallResult.subscribed);
+        return;
+      }
+
       final offerings = await SubscriptionService.getOfferings();
       final packages =
           offerings.current?.availablePackages ?? const <Package>[];
@@ -86,6 +98,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _copyTesterId() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      setState(() => _error = 'Tester ID is not available yet.');
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: uid));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tester ID copied.')),
+    );
   }
 
   String _packageLabel(Package package) {
@@ -176,6 +201,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
+                if (_showTesterTools)
+                  TextButton.icon(
+                    onPressed: _copyTesterId,
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Copy Tester ID',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
