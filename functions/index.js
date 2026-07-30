@@ -4,11 +4,13 @@ import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {onRequest} from "firebase-functions/v2/https";
 import fetch from "node-fetch";
+import {searchTicketmasterEvents} from "./providers/ticketmaster.js";
 
 initializeApp();
 
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
+const TICKETMASTER_API_KEY = defineSecret("TICKETMASTER_API_KEY");
 const FREE_WEEKLY_LIMIT = 3;
 const PHOTO_PROXY_URL =
   "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPlacePhoto";
@@ -345,6 +347,56 @@ export const getPlacePhoto = onRequest(
   },
 );
 
+export const getLocalEvents = onRequest(
+  {
+    region: "us-central1",
+    secrets: [TICKETMASTER_API_KEY, REVENUECAT_SECRET_API_KEY],
+  },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+
+      const premium = await hasPremium(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      if (!premium) {
+        return res.status(403).json({
+          error: "Local Events+ requires Premium.",
+        });
+      }
+
+      const lat = Number(req.body?.lat);
+      const lng = Number(req.body?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return res.status(400).json({error: "A valid location is required."});
+      }
+
+      const events = await searchTicketmasterEvents({
+        apiKey: TICKETMASTER_API_KEY.value(),
+        lat,
+        lng,
+        radiusMiles: req.body?.radius,
+      });
+      return res.json(events);
+    } catch (error) {
+      console.error(error);
+      return res.status(502).json({error: "Local event search failed."});
+    }
+  },
+);
+
 // TEMPORARY: Remove this endpoint and the matching paywall action before launch.
 export const resetTesterUsage = onRequest(
   {region: "us-central1"},
@@ -372,4 +424,3 @@ export const resetTesterUsage = onRequest(
     }
   },
 );
-
