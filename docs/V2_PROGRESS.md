@@ -75,6 +75,9 @@ Last updated: July 30, 2026
 - Today, This Weekend, and Next 14 Days date filters.
 - Sparse searches expand from 10 to 25 or 50 miles and disclose the expanded
   radius in the interface.
+- Local Events+ group and total-budget controls influence event ranking and
+  companion searches.
+- Verified Ticketmaster price ranges appear when the provider supplies them.
 
 ## Operational work completed
 
@@ -106,6 +109,7 @@ Last updated: July 30, 2026
 - Dependency vulnerabilities need a controlled upgrade; do not force-upgrade.
 - Ticketmaster coverage is strongest for ticketed events; additional community
   event providers remain planned.
-- Event suitability scoring still needs group and budget inputs.
+- Ticketmaster does not provide pricing for every event; unknown prices remain
+  unlabeled rather than estimated.
 - The app still needs a formal trip-planning data model and timeline UI.
 
