@@ -178,6 +178,20 @@ async function hasPremium(uid, apiKey) {
   return !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
 }
 
+async function hasTesterAccess(uid) {
+  const snapshot = await getFirestore().collection("premium_testers")
+    .doc(uid).get();
+  return snapshot.data()?.enabled === true;
+}
+
+async function hasPremiumAccess(uid, apiKey) {
+  const [premium, tester] = await Promise.all([
+    hasPremium(uid, apiKey),
+    hasTesterAccess(uid),
+  ]);
+  return premium || tester;
+}
+
 function weekKey(date = new Date()) {
   const first = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   const day = Math.floor((date - first) / 86400000);
@@ -220,7 +234,10 @@ export const getIdeas = onRequest(
       const user = await authenticatedUser(req);
       if (!user) return res.status(401).json({error: "Authentication required."});
 
-      const premium = await hasPremium(user.uid, REVENUECAT_SECRET_API_KEY.value());
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
       const isDateNight = req.body?.isDateNight === true;
       if (isDateNight && !premium) {
         return res.status(403).json({error: "Date Night+ requires Premium."});
@@ -367,7 +384,7 @@ export const getLocalEvents = onRequest(
         return res.status(401).json({error: "Authentication required."});
       }
 
-      const premium = await hasPremium(
+      const premium = await hasPremiumAccess(
         user.uid,
         REVENUECAT_SECRET_API_KEY.value(),
       );
@@ -433,9 +450,11 @@ export const getEventImage = onRequest(
   },
 );
 
-// TEMPORARY: Remove this endpoint and the matching paywall action before launch.
-export const resetTesterUsage = onRequest(
-  {region: "us-central1"},
+export const getPremiumAccess = onRequest(
+  {
+    region: "us-central1",
+    secrets: [REVENUECAT_SECRET_API_KEY],
+  },
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -450,13 +469,14 @@ export const resetTesterUsage = onRequest(
       if (!user) {
         return res.status(401).json({error: "Authentication required."});
       }
-      await getFirestore().collection("recommendation_usage")
-        .doc(`${user.uid}_${weekKey()}`)
-        .delete();
-      return res.json({reset: true});
+      const allowed = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      return res.json({allowed});
     } catch (error) {
       console.error(error);
-      return res.status(500).json({error: "Tester reset failed."});
+      return res.status(500).json({error: "Access check failed."});
     }
   },
 );
