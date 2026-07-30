@@ -8,6 +8,7 @@ import '../models/activity.dart';
 import '../models/planning_request.dart';
 import '../services/ai_service.dart';
 import '../services/location_service.dart';
+import '../services/planning_engine.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/experience_card.dart';
@@ -28,6 +29,7 @@ class _DecideScreenState extends State<DecideScreen>
   late ConfettiController confetti;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _firstResultKey = GlobalKey();
+  final PlanningEngine _planningEngine = const DefaultPlanningEngine();
 
   late AnimationController _spinController;
   late Animation<double> _spinAnimation;
@@ -159,7 +161,7 @@ class _DecideScreenState extends State<DecideScreen>
     String? errorMessage;
 
     try {
-      data = await AIService.getIdeas(
+      final plan = await _planningEngine.createPlan(
         PlanningRequest(
           group: selectedGroup,
           budget: selectedBudget,
@@ -173,6 +175,7 @@ class _DecideScreenState extends State<DecideScreen>
           dateTiming: selectedDateTiming,
         ),
       );
+      data = plan.activities;
     } on AIServiceException catch (e) {
       if (e.statusCode == 403 && mounted) {
         final paywallResult = await Navigator.push<PaywallResult>(
