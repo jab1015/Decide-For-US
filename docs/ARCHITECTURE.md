@@ -53,7 +53,7 @@ It also requests normalized live events from `getLocalEvents`.
 - `DecideScreen` owns the current selections and request lifecycle.
 - `ExperienceCard` renders one two-stop option.
 - `LocalEventsScreen` renders upcoming live events with distance filters,
-  verified links, and maps.
+  verified links, maps, companion stops, and native plan sharing.
 - `DecisionCard` remains the single-place presentation used by Favorites.
 - Favorites are stored locally in `SharedPreferences`.
 
@@ -100,7 +100,8 @@ keeps browser behavior consistent without creating an unrestricted proxy.
 ### `getPremiumAccess`
 
 Returns whether the authenticated user has the RevenueCat `premium` entitlement
-or an enabled Firestore tester record.
+or an enabled Firestore tester record. Flutter refreshes this status before gated
+navigation so recent purchases, restores, grants, and tester changes are honored.
 
 ## Firestore data
 
@@ -121,7 +122,9 @@ or an enabled Firestore tester record.
 - `enabled`: boolean
 
 This collection is server-read only. It provides controlled Premium access for
-anonymous Firebase users during Chrome development.
+anonymous Firebase users during development and store testing. A temporary
+paywall control copies the current Firebase UID for tester support and must be
+removed before production.
 
 The Functions runtime service account requires `roles/datastore.user`.
 Firestore mobile-client rules do not replace server IAM for Admin SDK calls.
@@ -134,6 +137,8 @@ Firestore mobile-client rules do not replace server IAM for Admin SDK calls.
 - Entitlement identifier: `premium`.
 - The current/default offering should contain monthly and annual packages.
 - Firebase UID and RevenueCat app user ID must remain identical.
+- Apple TestFlight and Google Play test purchases are expected to appear as
+  sandbox transactions and activate the same `premium` entitlement.
 
 ## Secrets
 
