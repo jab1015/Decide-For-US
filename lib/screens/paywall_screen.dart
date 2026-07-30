@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
+import '../services/ai_service.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
 
@@ -88,6 +89,24 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
+  Future<void> _resetTesterUsage() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await AIService.resetTesterUsage();
+      if (!mounted) return;
+      setState(() {
+        _error = 'Tester usage reset. Close this screen and spin again.';
+      });
+    } on AIServiceException catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final price = _package?.storeProduct.priceString;
@@ -152,6 +171,17 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
+                TextButton.icon(
+                  onPressed: _loading ? null : _resetTesterUsage,
+                  icon: const Icon(
+                    Icons.science_outlined,
+                    color: Colors.white70,
+                  ),
+                  label: const Text(
+                    'Reset tester usage',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
                   child: const Text(
@@ -167,3 +197,4 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 }
+
