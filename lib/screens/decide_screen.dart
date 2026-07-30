@@ -380,8 +380,8 @@ class _DecideScreenState extends State<DecideScreen>
                     isLoading
                         ? 'FINDING'
                         : enabled
-                            ? 'DECIDE'
-                            : 'CHOOSE',
+                        ? 'DECIDE'
+                        : 'CHOOSE',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -570,9 +570,9 @@ class _DecideScreenState extends State<DecideScreen>
               (v) => selectedGroup = v,
             ),
             const SizedBox(height: 20),
-            sectionLabel("Budget"),
+            sectionLabel("Total outing budget"),
             row(
-              ["Free", "\$", "\$\$"],
+              ["Free", "Under \$30", "\$30–\$75", "\$75+"],
               selectedBudget,
               (v) => selectedBudget = v,
             ),
@@ -633,3 +633,4 @@ class _DecideScreenState extends State<DecideScreen>
     );
   }
 }
+
