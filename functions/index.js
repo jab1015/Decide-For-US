@@ -397,6 +397,42 @@ export const getLocalEvents = onRequest(
   },
 );
 
+export const getEventImage = onRequest(
+  {region: "us-central1"},
+  async (req, res) => {
+    try {
+      const source = new URL(String(req.query.url || ""));
+      const host = source.hostname.toLowerCase();
+      const allowed = host === "ticketm.net" ||
+        host.endsWith(".ticketm.net") ||
+        host === "tmol.io" ||
+        host.endsWith(".tmol.io");
+      if (source.protocol !== "https:" || !allowed) {
+        return res.status(400).send("A valid event image URL is required.");
+      }
+
+      const response = await fetch(source);
+      if (!response.ok) {
+        return res.status(response.status).send("Event image unavailable.");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) {
+        return res.status(415).send("Event image unavailable.");
+      }
+
+      const image = await response.buffer();
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Content-Type", contentType);
+      res.set("Cache-Control", "public, max-age=86400");
+      return res.status(200).send(image);
+    } catch (error) {
+      console.error(error);
+      return res.status(502).send("Event image unavailable.");
+    }
+  },
+);
+
 // TEMPORARY: Remove this endpoint and the matching paywall action before launch.
 export const resetTesterUsage = onRequest(
   {region: "us-central1"},
