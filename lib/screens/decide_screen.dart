@@ -191,6 +191,7 @@ class _DecideScreenState extends State<DecideScreen>
       await player.play(AssetSource('sounds/win.mp3'));
     }
 
+    if (!mounted) return;
     setState(() {
       results = data;
       isLoading = false;
