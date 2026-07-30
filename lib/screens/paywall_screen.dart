@@ -5,6 +5,8 @@ import '../services/ai_service.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
 
+enum PaywallResult { subscribed, testerReset }
+
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
 
@@ -54,7 +56,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final subscribed = await SubscriptionService.purchase(package);
       if (!mounted) return;
       if (subscribed) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, PaywallResult.subscribed);
       } else {
         setState(() => _error = 'The purchase did not unlock Premium.');
       }
@@ -76,7 +78,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final restored = await SubscriptionService.restore();
       if (!mounted) return;
       if (restored) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, PaywallResult.subscribed);
       } else {
         setState(() => _error = 'No active Premium purchase was found.');
       }
@@ -103,9 +105,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     try {
       await AIService.resetTesterUsage();
       if (!mounted) return;
-      setState(() {
-        _error = 'Tester usage reset. Close this screen and spin again.';
-      });
+      Navigator.pop(context, PaywallResult.testerReset);
     } on AIServiceException catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
@@ -205,7 +205,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.pop(context),
                   child: const Text(
                     'Maybe Later',
                     style: TextStyle(color: Colors.white70),
