@@ -26,6 +26,7 @@ class _DecideScreenState extends State<DecideScreen>
   final player = AudioPlayer();
   late ConfettiController confetti;
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _firstResultKey = GlobalKey();
 
   late AnimationController _spinController;
   late Animation<double> _spinAnimation;
@@ -43,6 +44,12 @@ class _DecideScreenState extends State<DecideScreen>
   String selectedRadiusLabel = "25 mi";
 
   Map<String, double>? userCoords;
+
+  bool get _canDecide =>
+      !isLoading &&
+      selectedGroup != null &&
+      selectedBudget != null &&
+      selectedEnergy != null;
 
   @override
   void initState() {
@@ -156,12 +163,16 @@ class _DecideScreenState extends State<DecideScreen>
       );
     } on AIServiceException catch (e) {
       if (e.statusCode == 403 && mounted) {
-        await Navigator.push<bool>(
+        final paywallResult = await Navigator.push<PaywallResult>(
           context,
           MaterialPageRoute(builder: (_) => const PaywallScreen()),
         );
+        if (paywallResult != PaywallResult.testerReset) {
+          errorMessage = e.toString();
+        }
+      } else {
+        errorMessage = e.toString();
       }
-      errorMessage = e.toString();
     }
 
     final elapsed = DateTime.now().difference(start).inMilliseconds;
@@ -196,11 +207,13 @@ class _DecideScreenState extends State<DecideScreen>
       confetti.play();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
+        final resultContext = _firstResultKey.currentContext;
+        if (resultContext != null) {
+          Scrollable.ensureVisible(
+            resultContext,
             duration: const Duration(milliseconds: 800),
             curve: Curves.easeOut,
+            alignment: 0.04,
           );
         }
       });
@@ -213,11 +226,11 @@ class _DecideScreenState extends State<DecideScreen>
       return;
     }
     if (!SubscriptionService.isSubscribed) {
-      final unlocked = await Navigator.push<bool>(
+      final paywallResult = await Navigator.push<PaywallResult>(
         context,
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
       );
-      if (unlocked != true) return;
+      if (paywallResult != PaywallResult.subscribed) return;
       await SubscriptionService.refresh();
     }
     if (mounted) setState(() => isDateNight = true);
@@ -299,6 +312,7 @@ class _DecideScreenState extends State<DecideScreen>
   }
 
   Widget spinner() {
+    final enabled = _canDecide;
     return AnimatedBuilder(
       animation: _spinController,
       builder: (_, child) {
@@ -323,7 +337,11 @@ class _DecideScreenState extends State<DecideScreen>
               height: 138,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppGradients.primary,
+                gradient: enabled
+                    ? AppGradients.primary
+                    : const LinearGradient(
+                        colors: [Color(0xFFB7B2C3), Color(0xFF9E98AA)],
+                      ),
                 border: Border.all(color: Colors.white, width: 5),
                 boxShadow: [
                   BoxShadow(
@@ -343,7 +361,11 @@ class _DecideScreenState extends State<DecideScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    isLoading ? 'FINDING' : 'DECIDE',
+                    isLoading
+                        ? 'FINDING'
+                        : enabled
+                        ? 'DECIDE'
+                        : 'CHOOSE',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -490,7 +512,17 @@ class _DecideScreenState extends State<DecideScreen>
               (v) => selectedEnergy = v,
             ),
             const SizedBox(height: 22),
-            GestureDetector(onTap: spin, child: spinner()),
+            Semantics(
+              button: true,
+              enabled: _canDecide,
+              label: _canDecide
+                  ? 'Decide'
+                  : 'Choose a group, budget, and energy level first',
+              child: GestureDetector(
+                onTap: _canDecide ? spin : null,
+                child: spinner(),
+              ),
+            ),
             const SizedBox(height: 30),
             if (results.isNotEmpty) ...[
               const Text(
@@ -512,6 +544,7 @@ class _DecideScreenState extends State<DecideScreen>
             ],
             if (results.length >= 4) ...[
               ExperienceCard(
+                key: _firstResultKey,
                 first: results[0],
                 second: results[1],
                 optionIndex: 0,
