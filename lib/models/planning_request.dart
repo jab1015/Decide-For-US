@@ -9,6 +9,7 @@ class PlanningRequest {
     required this.radiusMiles,
     this.dateOccasion,
     this.dateStyle,
+    this.dateTiming,
   });
 
   final String? group;
@@ -20,6 +21,7 @@ class PlanningRequest {
   final int radiusMiles;
   final String? dateOccasion;
   final String? dateStyle;
+  final String? dateTiming;
 
   Map<String, dynamic> toJson() => {
     'group': group,
@@ -31,6 +33,7 @@ class PlanningRequest {
     'radius': radiusMiles,
     'dateOccasion': dateOccasion,
     'dateStyle': dateStyle,
+    'dateTiming': dateTiming,
   };
 }
 
