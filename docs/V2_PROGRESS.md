@@ -106,6 +106,17 @@ Last updated: July 30, 2026
   occasion and style; weak event matches fall back to permanent places.
 - Date-plan event cards include verified organizer links.
 - Ordinary Couple mode remains a casual, non-romantic recommendation path.
+- Chrome functional validation completed for the Date Night+ controls,
+  recommendation flow, and results presentation.
+
+## Must verify before merging PR #33
+
+- `flutter analyze`
+- `flutter test`
+- Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
+- TestFlight and Google Play Internal Testing builds.
+- Apple and Google sandbox subscription access.
+- Date Night+ event links and place fallbacks on real devices.
 
 ## Must verify before merging PR #32
 
