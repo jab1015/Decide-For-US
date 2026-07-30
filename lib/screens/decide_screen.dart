@@ -233,6 +233,15 @@ class _DecideScreenState extends State<DecideScreen>
     }
   }
 
+  Future<bool> _hasPremiumAccess() async {
+    try {
+      await SubscriptionService.refresh();
+    } catch (_) {
+      // The paywall can still offer purchase and restore options when refresh fails.
+    }
+    return SubscriptionService.isSubscribed;
+  }
+
   Future<void> _setDateNight(bool value) async {
     if (!value) {
       setState(() {
@@ -245,7 +254,9 @@ class _DecideScreenState extends State<DecideScreen>
       });
       return;
     }
-    if (!SubscriptionService.isSubscribed) {
+    final hasPremiumAccess = await _hasPremiumAccess();
+    if (!mounted) return;
+    if (!hasPremiumAccess) {
       final paywallResult = await Navigator.push<PaywallResult>(
         context,
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
@@ -266,7 +277,9 @@ class _DecideScreenState extends State<DecideScreen>
   }
 
   Future<void> _openLocalEvents() async {
-    if (!SubscriptionService.isSubscribed) {
+    final hasPremiumAccess = await _hasPremiumAccess();
+    if (!mounted) return;
+    if (!hasPremiumAccess) {
       final paywallResult = await Navigator.push<PaywallResult>(
         context,
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
