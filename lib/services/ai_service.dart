@@ -9,6 +9,8 @@ import '../models/planning_request.dart';
 class AIService {
   static const String baseUrl =
       'https://us-central1-decide-for-us-792bc.cloudfunctions.net/getIdeas';
+  static const String resetTesterUsageUrl =
+      'https://us-central1-decide-for-us-792bc.cloudfunctions.net/resetTesterUsage';
 
   static Future<List<Activity>> getIdeas(PlanningRequest request) async {
     try {
@@ -48,6 +50,30 @@ class AIService {
       );
     }
   }
+
+  static Future<void> resetTesterUsage() async {
+    try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final response = await http.post(
+        Uri.parse(resetTesterUsageUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode != 200) {
+        final decoded = jsonDecode(response.body);
+        throw AIServiceException(
+          decoded is Map ? decoded['error']?.toString() : null,
+          response.statusCode,
+        );
+      }
+    } on AIServiceException {
+      rethrow;
+    } catch (_) {
+      throw const AIServiceException('Tester reset failed. Please try again.');
+    }
+  }
 }
 
 class AIServiceException implements Exception {
@@ -59,3 +85,4 @@ class AIServiceException implements Exception {
   @override
   String toString() => message ?? 'Recommendation request failed.';
 }
+
