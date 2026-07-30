@@ -28,11 +28,46 @@ const activityQueries = {
   High: ["basketball court", "fitness activity", "rock climbing", "adventure park"],
 };
 
-const dateNightActivityQueries = {
+const dateEnergyQueries = {
   Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
   Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
   High: ["dance class", "kayaking", "rock climbing", "hiking trail"],
 };
+
+const dateStyleQueries = {
+  Cozy: ["jazz lounge", "bookstore cafe", "wine tasting", "intimate live music"],
+  Playful: ["mini golf", "comedy club", "arcade", "dance class"],
+  Romantic: ["botanical garden", "scenic overlook", "art gallery", "live music"],
+  Adventurous: ["kayaking", "rock climbing", "hiking trail", "adventure tour"],
+};
+
+function dateNightTerms(occasion, style, energy) {
+  const occasionTerms = {
+    "First date": "conversation friendly activity",
+    Anniversary: "romantic anniversary experience",
+    Surprise: "unique local experience",
+    "Regular date": "couples activity",
+  };
+  return [...new Set([
+    occasionTerms[occasion],
+    ...(dateStyleQueries[style] || dateStyleQueries.Romantic).slice(0, 2),
+    ...(dateEnergyQueries[energy] || dateEnergyQueries.Medium).slice(0, 2),
+  ].filter(Boolean))].slice(0, 4);
+}
+
+function dateNightFoodTerms(occasion, budget) {
+  if (budget === "Free") return ["romantic picnic spot", "scenic picnic area"];
+  if (occasion === "First date") {
+    return ["conversation friendly restaurant", "cozy cafe"];
+  }
+  if (occasion === "Anniversary") {
+    return ["romantic fine dining restaurant", "special occasion restaurant"];
+  }
+  if (occasion === "Surprise") {
+    return ["unique restaurant", "rooftop restaurant"];
+  }
+  return ["romantic restaurant", "intimate local restaurant"];
+}
 
 function milesToMeters(miles) {
   return Math.min(Math.max(Number(miles) || 25, 1) * 1609, 50000);
@@ -296,7 +331,14 @@ function readableType(place, isFood) {
   return type ? labels[type] : (isFood ? "restaurant" : "local experience");
 }
 
-function placeDescription(place, isFood, isDateNight, index) {
+function placeDescription(
+  place,
+  isFood,
+  isDateNight,
+  index,
+  dateOccasion,
+  dateStyle,
+) {
   const type = readableType(place, isFood);
   const rating = Number(place.rating);
   const reviews = Number(place.user_ratings_total);
@@ -306,8 +348,14 @@ function placeDescription(place, isFood, isDateNight, index) {
 
   if (isFood) {
     return isDateNight ?
-      `${place.name} brings a ${type} stop to the date, backed by ${proof}.` :
+      `${place.name} brings a ${dateStyle.toLowerCase()} ${type} stop to your ` +
+        `${dateOccasion.toLowerCase()}, backed by ${proof}.` :
       `Make ${place.name} the food stop—a ${type} backed by ${proof}.`;
+  }
+
+  if (isDateNight) {
+    return `${place.name} was chosen for a ${dateStyle.toLowerCase()} ` +
+      `${dateOccasion.toLowerCase()}—a ${type} backed by ${proof}.`;
   }
 
   const templates = [
@@ -428,14 +476,16 @@ export const getIdeas = onRequest(
       const budget = req.body?.budget || "$30–$75";
       const energy = req.body?.energy || "Medium";
       const group = req.body?.group || "Couple";
+      const dateOccasion = String(req.body?.dateOccasion || "Regular date");
+      const dateStyle = String(req.body?.dateStyle || "Romantic");
       const radius = milesToMeters(req.body?.radius);
       const googleKey = GOOGLE_API_KEY.value();
 
       const foodTerms = isDateNight
-        ? ["romantic restaurant", "fine dining restaurant"]
+        ? dateNightFoodTerms(dateOccasion, budget)
         : (foodQueries[budget] || foodQueries["$"]);
       const experienceTerms = isDateNight ?
-        (dateNightActivityQueries[energy] || dateNightActivityQueries.Medium) :
+        dateNightTerms(dateOccasion, dateStyle, energy) :
         (activityQueries[energy] || activityQueries.Medium)
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
@@ -493,7 +543,14 @@ export const getIdeas = onRequest(
         return serialize(
           place,
           isFood ? "food" : activityCategory(place),
-          placeDescription(place, isFood, isDateNight, index),
+          placeDescription(
+            place,
+            isFood,
+            isDateNight,
+            index,
+            dateOccasion,
+            dateStyle,
+          ),
         );
       }));
     } catch (error) {
@@ -680,4 +737,5 @@ export const getPremiumAccess = onRequest(
     }
   },
 );
+
 
