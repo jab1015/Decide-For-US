@@ -74,6 +74,8 @@ async function searchPlaces(apiKey, queries, lat, lng, radius) {
 
 function activityCategory(place) {
   const types = new Set(place.types || []);
+  if (types.has("restaurant") || types.has("cafe") ||
+      types.has("bakery") || types.has("meal_takeaway")) return "food";
   if (types.has("museum") || types.has("art_gallery")) return "culture";
   if (types.has("park") || types.has("natural_feature")) return "outdoors";
   if (types.has("movie_theater") || types.has("night_club")) return "entertainment";
@@ -94,6 +96,85 @@ function serialize(place, category, description) {
       `${PHOTO_PROXY_URL}?ref=${encodeURIComponent(photoReference)}` :
       null,
   };
+}
+
+function distanceMiles(first, second) {
+  const radians = (degrees) => degrees * Math.PI / 180;
+  const latDelta = radians(second.lat - first.lat);
+  const lngDelta = radians(second.lng - first.lng);
+  const a = Math.sin(latDelta / 2) ** 2 +
+    Math.cos(radians(first.lat)) * Math.cos(radians(second.lat)) *
+    Math.sin(lngDelta / 2) ** 2;
+  return 3959 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function companionQueries(event, index) {
+  const type = String(event.eventType || "");
+  if (type.includes("sports")) {
+    return index % 2 === 0 ?
+      ["local restaurant", "dessert shop"] :
+      ["bowling alley", "arcade"];
+  }
+  if (type.includes("arts") || type.includes("theatre")) {
+    return index % 2 === 0 ?
+      ["coffee shop", "dessert shop"] :
+      ["art gallery", "bookstore"];
+  }
+  if (type.includes("family")) {
+    return index % 2 === 0 ?
+      ["ice cream shop", "casual restaurant"] :
+      ["park", "mini golf"];
+  }
+  return index % 2 === 0 ?
+    ["local restaurant", "dessert shop"] :
+    ["scenic view", "art gallery"];
+}
+
+async function addEventCompanions(events, apiKey) {
+  const usedPlaceIds = new Set();
+  return Promise.all(events.slice(0, 12).map(async (event, index) => {
+    try {
+      const candidates = await searchPlaces(
+        apiKey,
+        companionQueries(event, index),
+        event.lat,
+        event.lng,
+        milesToMeters(5),
+      );
+      const available = candidates.filter(
+        (place) => !usedPlaceIds.has(place.place_id),
+      );
+      const place = available
+        .map((candidate) => ({
+          ...candidate,
+          distance: distanceMiles(
+            {lat: event.lat, lng: event.lng},
+            {
+              lat: candidate.geometry.location.lat,
+              lng: candidate.geometry.location.lng,
+            },
+          ),
+        }))
+        .filter((candidate) => candidate.distance <= 5)
+        .sort((a, b) => a.distance - b.distance || rank(b) - rank(a))[0];
+      if (!place) return event;
+
+      usedPlaceIds.add(place.place_id);
+      return {
+        ...event,
+        companion: serialize(
+          place,
+          activityCategory(place),
+          `${place.name} is a nearby add-on, about ` +
+            `${place.distance.toFixed(1)} miles from the event.`,
+        ),
+        companionDistanceMiles: Number(place.distance.toFixed(1)),
+      };
+    } catch (error) {
+      console.warn(`Could not pair event ${event.id}:`, error.message);
+      return event;
+    }
+  }));
 }
 
 function readableType(place, isFood) {
@@ -367,7 +448,11 @@ export const getPlacePhoto = onRequest(
 export const getLocalEvents = onRequest(
   {
     region: "us-central1",
-    secrets: [TICKETMASTER_API_KEY, REVENUECAT_SECRET_API_KEY],
+    secrets: [
+      TICKETMASTER_API_KEY,
+      REVENUECAT_SECRET_API_KEY,
+      GOOGLE_API_KEY,
+    ],
   },
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -406,7 +491,11 @@ export const getLocalEvents = onRequest(
         lng,
         radiusMiles: req.body?.radius,
       });
-      return res.json(events);
+      const plannedEvents = await addEventCompanions(
+        events,
+        GOOGLE_API_KEY.value(),
+      );
+      return res.json(plannedEvents);
     } catch (error) {
       console.error(error);
       return res.status(502).json({error: "Local event search failed."});
@@ -480,3 +569,4 @@ export const getPremiumAccess = onRequest(
     }
   },
 );
+
