@@ -76,13 +76,15 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
   }
 
   Future<void> _shareEvent(Activity event) async {
+    final price = _eventPrice(event);
+    final companion = event.companion;
     final details = <String>[
       event.title,
       _eventTime(event),
-      if (_eventPrice(event) case final price?) price,
+      if (price != null) price,
       if (event.address.isNotEmpty) event.address,
       if (event.description.isNotEmpty) event.description,
-      if (event.companion case final companion?) ...[
+      if (companion != null) ...[
         '',
         'Make it an outing: ${companion.title}',
         if (companion.address.isNotEmpty) companion.address,
