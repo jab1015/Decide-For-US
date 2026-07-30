@@ -19,6 +19,11 @@ Last updated: July 30, 2026
 - [ ] Verify Local Events+ loading, empty, and error states.
 - [ ] Verify event images, dates, maps, and event links.
 - [ ] Confirm non-Premium users cannot call Local Events+.
+- [ ] Confirm non-Premium users cannot activate Date Night+.
+- [ ] Confirm enabled Firestore testers can activate Date Night+ in Chrome.
+- [ ] Test every Date Night+ occasion, style, energy, and timing control.
+- [ ] Verify Date Night+ event links and fallback-to-places behavior.
+- [ ] Confirm ordinary Couple results remain distinct from Date Night+.
 
 ## Firebase deployment
 
@@ -45,6 +50,7 @@ After deployment:
 - [ ] Test location permission, purchases, restore, and external map links.
 - [ ] Confirm TestFlight subscription transactions run in Apple sandbox.
 - [ ] Test Local Events+ at 10, 25, and 50 miles.
+- [ ] Test Date Night+ with Apple sandbox Premium access.
 
 ## Android / Google Play
 
@@ -56,6 +62,7 @@ After deployment:
 - [ ] Confirm RevenueCat Android monthly and annual products.
 - [ ] Confirm the internal tester list is also selected for license testing.
 - [ ] Use a Google Play test payment method and verify Premium activation.
+- [ ] Test Date Night+ with Google Play license-testing Premium access.
 
 ## Production-only gates
 
@@ -73,3 +80,4 @@ After deployment:
 - [ ] Review Ticketmaster image, linking, attribution, caching, and quota terms.
 - [ ] Configure monitoring, error alerts, quotas, and budget alerts.
 - [ ] Back up signing keys and store credentials securely.
+
