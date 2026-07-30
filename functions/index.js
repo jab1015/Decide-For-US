@@ -69,6 +69,65 @@ function dateNightFoodTerms(occasion, budget) {
   return ["romantic restaurant", "intimate local restaurant"];
 }
 
+function dateNightScore(place, occasion, style) {
+  const text = [
+    place.name,
+    place.matchedQuery,
+    ...(place.types || []),
+  ].join(" ").toLowerCase();
+  const signals = {
+    "First date": [
+      "conversation",
+      "gallery",
+      "museum",
+      "mini golf",
+      "coffee",
+      "book",
+    ],
+    Anniversary: [
+      "romantic",
+      "scenic",
+      "garden",
+      "wine",
+      "fine dining",
+      "special occasion",
+    ],
+    Surprise: [
+      "unique",
+      "adventure",
+      "comedy",
+      "dance",
+      "tour",
+      "live music",
+    ],
+    "Regular date": [
+      "couples",
+      "music",
+      "cooking",
+      "mini golf",
+      "comedy",
+    ],
+  };
+  const styleSignals = {
+    Cozy: ["cozy", "jazz", "book", "wine", "intimate"],
+    Playful: ["mini golf", "comedy", "arcade", "dance"],
+    Romantic: ["romantic", "garden", "scenic", "gallery", "music"],
+    Adventurous: ["kayak", "climbing", "hiking", "adventure"],
+  };
+  let score = rank(place);
+  for (const signal of signals[occasion] || []) {
+    if (text.includes(signal)) score += 4;
+  }
+  for (const signal of styleSignals[style] || []) {
+    if (text.includes(signal)) score += 3;
+  }
+  if (occasion === "First date" &&
+      (text.includes("night_club") || text.includes("loud"))) {
+    score -= 5;
+  }
+  return score;
+}
+
 function milesToMeters(miles) {
   return Math.min(Math.max(Number(miles) || 25, 1) * 1609, 50000);
 }
@@ -501,9 +560,16 @@ export const getIdeas = onRequest(
       const unseenExperiences = experienceResults
         .filter((place) => !recentIds.has(place.place_id));
       const food = unseenFood.length ? unseenFood : foodResults;
-      const experiences = unseenExperiences.length ?
+      let experiences = unseenExperiences.length ?
         unseenExperiences :
         experienceResults;
+      if (isDateNight) {
+        experiences = [...experiences].sort(
+          (a, b) =>
+            dateNightScore(b, dateOccasion, dateStyle) -
+            dateNightScore(a, dateOccasion, dateStyle),
+        );
+      }
 
       const selectedExperiences = [];
       for (const place of experiences) {
@@ -523,7 +589,13 @@ export const getIdeas = onRequest(
 
       const foodChoice = budget === "Free" ? null : food[0];
       const selected = foodChoice ?
-        [foodChoice, ...selectedExperiences.slice(0, 3)] :
+        (isDateNight ?
+          [
+            selectedExperiences[0],
+            foodChoice,
+            ...selectedExperiences.slice(1, 3),
+          ] :
+          [foodChoice, ...selectedExperiences.slice(0, 3)]) :
         experiences.slice(0, 4);
 
       if (selected.length < 4) {
