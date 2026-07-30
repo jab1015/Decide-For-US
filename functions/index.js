@@ -128,6 +128,88 @@ function dateNightScore(place, occasion, style) {
   return score;
 }
 
+function dateEventWindow(timing) {
+  const now = new Date();
+  if (timing === "Tonight") {
+    const end = new Date(now);
+    end.setUTCHours(24, 0, 0, 0);
+    return {start: now, end};
+  }
+  if (timing === "This weekend") {
+    const day = now.getUTCDay();
+    const daysUntilSaturday = (6 - day + 7) % 7;
+    const start = day === 0 || day === 6 ?
+      now :
+      new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + daysUntilSaturday,
+      ));
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + (start.getUTCDay() === 0 ? 1 : 2));
+    end.setUTCHours(0, 0, 0, 0);
+    return {start, end};
+  }
+  return {
+    start: now,
+    end: new Date(now.getTime() + 14 * 86400000),
+  };
+}
+
+function dateEventScore(event, occasion, style) {
+  const text = `${event.title} ${event.eventType} ${event.eventGenre}`.toLowerCase();
+  const signals = {
+    "First date": ["comedy", "arts", "theatre", "music"],
+    Anniversary: ["music", "arts", "theatre", "classical"],
+    Surprise: ["comedy", "festival", "music", "sports"],
+    "Regular date": ["comedy", "music", "sports", "arts"],
+    Cozy: ["jazz", "classical", "theatre", "acoustic"],
+    Playful: ["comedy", "sports", "festival"],
+    Romantic: ["jazz", "classical", "theatre", "music"],
+    Adventurous: ["sports", "festival", "outdoor"],
+  };
+  let score = 0;
+  for (const signal of [
+    ...(signals[occasion] || []),
+    ...(signals[style] || []),
+  ]) {
+    if (text.includes(signal)) score += 2;
+  }
+  return score;
+}
+
+async function findDateNightEvent({
+  apiKey,
+  lat,
+  lng,
+  radiusMiles,
+  timing,
+  occasion,
+  style,
+}) {
+  try {
+    const window = dateEventWindow(timing);
+    const events = await searchTicketmasterEvents({
+      apiKey,
+      lat,
+      lng,
+      radiusMiles: Math.min(Number(radiusMiles) || 25, 50),
+      startDateTime: window.start,
+      endDateTime: window.end,
+    });
+    return events
+      .map((event) => ({
+        event,
+        score: dateEventScore(event, occasion, style),
+      }))
+      .filter((candidate) => candidate.score >= 2)
+      .sort((a, b) => b.score - a.score)[0]?.event || null;
+  } catch (error) {
+    console.warn("Date Night event search skipped:", error.message);
+    return null;
+  }
+}
+
 function milesToMeters(miles) {
   return Math.min(Math.max(Number(miles) || 25, 1) * 1609, 50000);
 }
@@ -505,7 +587,11 @@ async function consumeFreeRequest(uid) {
 export const getIdeas = onRequest(
   {
     region: "us-central1",
-    secrets: [GOOGLE_API_KEY, REVENUECAT_SECRET_API_KEY],
+    secrets: [
+      GOOGLE_API_KEY,
+      REVENUECAT_SECRET_API_KEY,
+      TICKETMASTER_API_KEY,
+    ],
   },
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -537,7 +623,9 @@ export const getIdeas = onRequest(
       const group = req.body?.group || "Couple";
       const dateOccasion = String(req.body?.dateOccasion || "Regular date");
       const dateStyle = String(req.body?.dateStyle || "Romantic");
-      const radius = milesToMeters(req.body?.radius);
+      const dateTiming = String(req.body?.dateTiming || "Tonight");
+      const radiusMiles = Number(req.body?.radius) || 25;
+      const radius = milesToMeters(radiusMiles);
       const googleKey = GOOGLE_API_KEY.value();
 
       const foodTerms = isDateNight
@@ -548,10 +636,22 @@ export const getIdeas = onRequest(
         (activityQueries[energy] || activityQueries.Medium)
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      const [foodResults, experienceResults, recentIds] = await Promise.all([
+      const [foodResults, experienceResults, recentIds, dateEvent] =
+        await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
         searchPlaces(googleKey, experienceTerms, lat, lng, radius),
         recentRecommendationIds(user.uid),
+        isDateNight ?
+          findDateNightEvent({
+            apiKey: TICKETMASTER_API_KEY.value(),
+            lat,
+            lng,
+            radiusMiles,
+            timing: dateTiming,
+            occasion: dateOccasion,
+            style: dateStyle,
+          }) :
+          Promise.resolve(null),
       ]);
 
       const unseenFood = foodResults
@@ -563,6 +663,9 @@ export const getIdeas = onRequest(
       let experiences = unseenExperiences.length ?
         unseenExperiences :
         experienceResults;
+      const eligibleDateEvent = dateEvent && !recentIds.has(dateEvent.id) ?
+        dateEvent :
+        null;
       if (isDateNight) {
         experiences = [...experiences].sort(
           (a, b) =>
@@ -591,12 +694,17 @@ export const getIdeas = onRequest(
       const selected = foodChoice ?
         (isDateNight ?
           [
-            selectedExperiences[0],
+            eligibleDateEvent || selectedExperiences[0],
             foodChoice,
-            ...selectedExperiences.slice(1, 3),
+            ...selectedExperiences.slice(
+              eligibleDateEvent ? 0 : 1,
+              eligibleDateEvent ? 2 : 3,
+            ),
           ] :
           [foodChoice, ...selectedExperiences.slice(0, 3)]) :
-        experiences.slice(0, 4);
+        (eligibleDateEvent ?
+          [eligibleDateEvent, ...experiences.slice(0, 3)] :
+          experiences.slice(0, 4));
 
       if (selected.length < 4) {
         return res.status(404).json({
@@ -607,10 +715,11 @@ export const getIdeas = onRequest(
       if (!premium) await consumeFreeRequest(user.uid);
       await rememberRecommendations(
         user.uid,
-        selected.map((place) => place.place_id),
+        selected.map((place) => place.place_id || place.id),
       );
 
       return res.json(selected.map((place, index) => {
+        if (place.category === "event") return place;
         const isFood = place === foodChoice;
         return serialize(
           place,
