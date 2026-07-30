@@ -48,6 +48,25 @@ initializes RevenueCat, and then starts `DecideApp`.
 `AIService` sends the request and Firebase ID token to `getIdeas`.
 It also requests normalized live events from `getLocalEvents`.
 
+### Planning Engine boundary
+
+`PlanningEngine` is the shared Flutter service contract for creating a plan.
+`DefaultPlanningEngine` currently adapts the existing `getIdeas` response so the
+current recommendation behavior stays stable while the app migrates.
+
+The normalized planning model is:
+
+```text
+PlanningMode
+  -> PlanningResponse
+       -> PlanningOption (one candidate outing or itinerary)
+            -> PlanningStop (ordered Activity plus schedule/travel/cost fields)
+```
+
+Quick Decision and Date Night+ now use this boundary. Local Events+ remains on
+its specialized endpoint until the provider-normalization slice. Trip Planner+
+will use the same response model with more stops and scheduled timestamps.
+
 ### Presentation
 
 - `DecideScreen` owns the current selections and request lifecycle.
