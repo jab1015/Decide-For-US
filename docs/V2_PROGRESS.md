@@ -12,6 +12,7 @@ Last updated: July 30, 2026
 | Phase 3: Local Events+ | Merged | PR #32 |
 | Date Night+ specialization | In review | Draft PR #33; build 37 in store testing |
 | Subscription QA and event sharing | In progress | Build 38 passes local validation |
+| Planning Engine foundation | In progress | Shared modes, options, and stops |
 | Trip Planner+ | Planned | Premium-only |
 
 ## Completed
@@ -121,6 +122,19 @@ Last updated: July 30, 2026
 - The temporary paywall tester tool can copy the installation Firebase UID for
   support during TestFlight and Google Play testing.
 - Build 38 passes `flutter analyze` with no issues and all four Flutter tests.
+
+### Planning Engine foundation
+
+- `PlanningMode` defines Quick Decision, Date Night+, Local Events+, and Trip.
+- `PlanningStop` adds ordering plus future schedule, travel-time, and cost fields
+  while preserving the verified `Activity` provider record.
+- `PlanningOption` and `PlanningResponse` support both two-option outings and
+  future multi-stop itineraries.
+- `DefaultPlanningEngine` is the first shared service boundary and currently adapts
+  the existing recommendation endpoint without changing user-facing behavior.
+- `DecideScreen` now consumes the Planning Engine response instead of calling the
+  recommendation service directly.
+- Model serialization and option-pairing tests are added; local validation is pending.
 
 ## Must verify before merging PR #33
 
