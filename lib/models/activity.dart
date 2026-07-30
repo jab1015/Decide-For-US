@@ -8,6 +8,12 @@ class Activity {
     required this.lat,
     required this.lng,
     this.photoUrl,
+    this.eventUrl,
+    this.eventStart,
+    this.eventLocalDate,
+    this.eventLocalTime,
+    this.venueName,
+    this.source,
   });
 
   final String id;
@@ -18,6 +24,12 @@ class Activity {
   final double lat;
   final double lng;
   final String? photoUrl;
+  final String? eventUrl;
+  final DateTime? eventStart;
+  final String? eventLocalDate;
+  final String? eventLocalTime;
+  final String? venueName;
+  final String? source;
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
@@ -29,6 +41,12 @@ class Activity {
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
       photoUrl: json['photoUrl'],
+      eventUrl: json['eventUrl'],
+      eventStart: DateTime.tryParse(json['eventStart']?.toString() ?? ''),
+      eventLocalDate: json['eventLocalDate'],
+      eventLocalTime: json['eventLocalTime'],
+      venueName: json['venueName'],
+      source: json['source'],
     );
   }
 
@@ -41,5 +59,11 @@ class Activity {
     'lat': lat,
     'lng': lng,
     'photoUrl': photoUrl,
+    'eventUrl': eventUrl,
+    'eventStart': eventStart?.toIso8601String(),
+    'eventLocalDate': eventLocalDate,
+    'eventLocalTime': eventLocalTime,
+    'venueName': venueName,
+    'source': source,
   };
 }
