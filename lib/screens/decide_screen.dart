@@ -40,6 +40,8 @@ class _DecideScreenState extends State<DecideScreen>
   String? selectedGroup;
   String? selectedBudget;
   String? selectedEnergy;
+  String? selectedDateOccasion;
+  String? selectedDateStyle;
   String? _groupBeforeDateNight;
 
   int selectedRadius = 25;
@@ -94,6 +96,8 @@ class _DecideScreenState extends State<DecideScreen>
     selectedRadiusLabel = "25 mi";
     isDateNight = false;
     _groupBeforeDateNight = null;
+    selectedDateOccasion = null;
+    selectedDateStyle = null;
   }
 
   void startSpinAnimation() {
@@ -162,6 +166,8 @@ class _DecideScreenState extends State<DecideScreen>
           lat: userCoords!['lat']!,
           lng: userCoords!['lng']!,
           radiusMiles: selectedRadius,
+          dateOccasion: selectedDateOccasion,
+          dateStyle: selectedDateStyle,
         ),
       );
     } on AIServiceException catch (e) {
@@ -230,6 +236,8 @@ class _DecideScreenState extends State<DecideScreen>
         isDateNight = false;
         selectedGroup = _groupBeforeDateNight;
         _groupBeforeDateNight = null;
+        selectedDateOccasion = null;
+        selectedDateStyle = null;
       });
       return;
     }
@@ -245,6 +253,8 @@ class _DecideScreenState extends State<DecideScreen>
       setState(() {
         _groupBeforeDateNight = selectedGroup;
         selectedGroup = 'Couple';
+        selectedDateOccasion = 'Regular date';
+        selectedDateStyle = 'Romantic';
         isDateNight = true;
       });
     }
@@ -608,6 +618,22 @@ class _DecideScreenState extends State<DecideScreen>
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            if (isDateNight) ...[
+              const SizedBox(height: 16),
+              sectionLabel("What’s the occasion?"),
+              row(
+                ["First date", "Regular date", "Anniversary", "Surprise"],
+                selectedDateOccasion,
+                (v) => selectedDateOccasion = v,
+              ),
+              const SizedBox(height: 16),
+              sectionLabel("What kind of date?"),
+              row(
+                ["Cozy", "Playful", "Romantic", "Adventurous"],
+                selectedDateStyle,
+                (v) => selectedDateStyle = v,
+              ),
+            ],
             const SizedBox(height: 20),
             sectionLabel("Total outing budget"),
             row(
