@@ -29,13 +29,13 @@ Local Events+ is subscription-only.
   allowlist.
 - Event imagery is delivered through a secure Firebase proxy.
 - Chrome testing is verified with live results at 50 miles.
+- Strong events can include unique Google Places companion stops.
+- Today, This Weekend, and Next 14 Days filters are implemented.
+- Sparse searches expand automatically to 25 or 50 miles.
 
 ### Next implementation slice
 
-- Pair a strong event with a complementary Google Places stop.
 - Keep two meaningfully different outing options.
-- Add Today, This Weekend, and Next 14 Days filters.
-- Expand automatically from 10 to 25 or 50 miles when coverage is sparse.
 - Add group and budget suitability scoring.
 - Add community-event providers after provider terms and quotas are reviewed.
 
@@ -118,3 +118,4 @@ Core inputs:
 - Confirm provider terms, attribution, caching, and image requirements.
 - Add monitoring, alerting, budgets, rate limiting, and abuse protection.
 - Validate subscriptions in sandbox and production for iOS and Android.
+
