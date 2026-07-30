@@ -9,8 +9,8 @@ Last updated: July 30, 2026
 | Phase 0: subscription and recommendation foundation | Merged | PR #29 |
 | Phase 1: V2 design system and home experience | Merged | PR #30 |
 | Phase 2: paired results experience | Merged | PR #31 |
-| Phase 3: Local Events+ | In review | Draft PR #32; working in Chrome |
-| Date Night+ specialization | Planned | Premium-only |
+| Phase 3: Local Events+ | Merged | PR #32 |
+| Date Night+ specialization | In review | Draft PR #33; working in Chrome |
 | Trip Planner+ | Planned | Premium-only |
 
 ## Completed
@@ -90,6 +90,19 @@ Last updated: July 30, 2026
 - `getLocalEvents`, `getEventImage`, and `getPremiumAccess` deployed.
 - Google Play license-testing list configured for subscription testing.
 
+### Date Night+ in PR #33
+
+- Premium-only access still supports explicitly enabled Chrome tester UIDs.
+- First Date, Regular Date, Anniversary, and Surprise occasions.
+- Cozy, Playful, Romantic, and Adventurous date styles.
+- Group selection locks to Couple while Date Night+ is active.
+- Occasion-, style-, and energy-specific Google Places searches.
+- Occasion-aware ranking favors conversation, celebration, surprise, or
+  romance signals as appropriate.
+- The strongest activity leads into the dining stop for a more natural date
+  flow.
+- Ordinary Couple mode remains a casual, non-romantic recommendation path.
+
 ## Must verify before merging PR #32
 
 - `flutter analyze`
@@ -112,4 +125,5 @@ Last updated: July 30, 2026
 - Ticketmaster does not provide pricing for every event; unknown prices remain
   unlabeled rather than estimated.
 - The app still needs a formal trip-planning data model and timeline UI.
+
 
