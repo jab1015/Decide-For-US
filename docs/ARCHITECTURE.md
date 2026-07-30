@@ -14,11 +14,13 @@ Flutter app
         v
 Firebase Functions
   |-- verify Firebase identity
-  |-- verify Premium through RevenueCat V1 API
+  |-- verify Premium through RevenueCat V1 API or tester allowlist
   |-- enforce weekly free usage
   |-- read/write recommendation history
   |-- search Google Places
-  `-- proxy Google Places photos
+  |-- search Ticketmaster Discovery
+  |-- proxy Google Places photos
+  `-- proxy Ticketmaster event images
         |
         v
 Flutter renders two option cards with two stops each
@@ -43,11 +45,14 @@ initializes RevenueCat, and then starts `DecideApp`.
 - radius in miles
 
 `AIService` sends the request and Firebase ID token to `getIdeas`.
+It also requests normalized live events from `getLocalEvents`.
 
 ### Presentation
 
 - `DecideScreen` owns the current selections and request lifecycle.
 - `ExperienceCard` renders one two-stop option.
+- `LocalEventsScreen` renders upcoming live events with distance filters,
+  verified links, and maps.
 - `DecisionCard` remains the single-place presentation used by Favorites.
 - Favorites are stored locally in `SharedPreferences`.
 
@@ -59,7 +64,7 @@ layer before Date Night+, events, and trips substantially expand.
 ### `getIdeas`
 
 1. Verify the Firebase bearer token.
-2. Query RevenueCat for `premium`.
+2. Resolve Premium access through RevenueCat or `premium_testers/{uid}`.
 3. Reject Date Night+ for non-Premium users.
 4. Validate location and constraints.
 5. Read the last 40 recommended place IDs.
@@ -77,10 +82,20 @@ Accepts a Google photo reference, retrieves the image with the protected Google
 API key, and returns a cacheable image response. The Flutter app never receives
 the Google API key.
 
-### `resetTesterUsage`
+### `getLocalEvents`
 
-Temporary authenticated endpoint. It deletes only the caller's current weekly
-usage document. It must be removed before launch.
+Requires Premium access, queries Ticketmaster for upcoming events near the
+provided coordinates, and returns normalized `Activity` records.
+
+### `getEventImage`
+
+Proxies image responses only from approved Ticketmaster image domains. This
+keeps browser behavior consistent without creating an unrestricted proxy.
+
+### `getPremiumAccess`
+
+Returns whether the authenticated user has the RevenueCat `premium` entitlement
+or an enabled Firestore tester record.
 
 ## Firestore data
 
@@ -95,6 +110,13 @@ usage document. It must be removed before launch.
 
 - `recentIds`: newest-first list capped at 40 IDs
 - `updatedAt`
+
+### `premium_testers/{uid}`
+
+- `enabled`: boolean
+
+This collection is server-read only. It provides controlled Premium access for
+anonymous Firebase users during Chrome development.
 
 The Functions runtime service account requires `roles/datastore.user`.
 Firestore mobile-client rules do not replace server IAM for Admin SDK calls.
@@ -114,9 +136,6 @@ Required Firebase Function secrets:
 
 - `GOOGLE_API_KEY`
 - `REVENUECAT_SECRET_API_KEY`
-
-Planned:
-
 - `TICKETMASTER_API_KEY`
 
 Secrets must never be committed, logged, returned to Flutter, or placed in
@@ -124,10 +143,11 @@ Codemagic build output.
 
 ## Current limitations
 
-- Google Places is a place provider, not a verified local-events provider.
+- Ticketmaster primarily covers ticketed events and does not replace broader
+  community-event coverage.
 - Descriptions are structured from Places metadata rather than editorial or AI
   prose.
 - Favorites are device-local and store individual stops, not full itineraries.
-- No weather, routing, travel-time, reservation, or ticketing provider exists.
+- Event/place pairing, weather, routing, and travel-time logic are not yet
+  implemented.
 - Free usage is weekly, but there is no user-facing countdown/reset date yet.
-
