@@ -17,8 +17,9 @@ const PHOTO_PROXY_URL =
 
 const foodQueries = {
   Free: ["affordable restaurant", "casual restaurant"],
-  "$": ["casual restaurant", "local restaurant"],
-  "$$": ["upscale restaurant", "fine dining restaurant"],
+  "Under $30": ["affordable restaurant", "casual restaurant"],
+  "$30–$75": ["casual restaurant", "local restaurant"],
+  "$75+": ["upscale restaurant", "fine dining restaurant"],
 };
 
 const activityQueries = {
@@ -33,8 +34,15 @@ function milesToMeters(miles) {
 
 function priceAllowed(place, budget) {
   if (budget === "Free") return place.price_level == null || place.price_level === 0;
-  if (budget === "$") return place.price_level == null || place.price_level <= 2;
-  if (budget === "$$") return place.price_level == null || place.price_level <= 3;
+  if (budget === "Under $30" || budget === "$") {
+    return place.price_level == null || place.price_level <= 1;
+  }
+  if (budget === "$30–$75" || budget === "$$") {
+    return place.price_level == null || place.price_level <= 2;
+  }
+  if (budget === "$75+") {
+    return place.price_level == null || place.price_level <= 4;
+  }
   return true;
 }
 
@@ -329,7 +337,7 @@ export const getIdeas = onRequest(
         return res.status(400).json({error: "A valid location is required."});
       }
 
-      const budget = req.body?.budget || "$";
+      const budget = req.body?.budget || "$30–$75";
       const energy = req.body?.energy || "Medium";
       const group = req.body?.group || "Couple";
       const radius = milesToMeters(req.body?.radius);
@@ -338,10 +346,18 @@ export const getIdeas = onRequest(
       const foodTerms = isDateNight
         ? ["romantic restaurant", "fine dining restaurant"]
         : (foodQueries[budget] || foodQueries["$"]);
-      const experienceTerms = isDateNight
-        ? ["romantic activity", "live music", "scenic view", "art gallery"]
-        : (activityQueries[energy] || activityQueries.Medium)
-            .map((term) => group === "Family" ? `family friendly ${term}` : term);
+      const coupleTerms = [
+        "bowling alley",
+        "mini golf",
+        "museum",
+        "local attraction",
+      ];
+      const experienceTerms = isDateNight ?
+        ["romantic activity", "live music", "scenic view", "art gallery"] :
+        (group === "Couple" ?
+          coupleTerms :
+          (activityQueries[energy] || activityQueries.Medium)
+            .map((term) => group === "Family" ? `family friendly ${term}` : term));
 
       const [foodResults, experienceResults, recentIds] = await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
@@ -415,6 +431,9 @@ export const getPlacePhoto = onRequest(
     secrets: [GOOGLE_API_KEY],
   },
   async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    if (req.method === "OPTIONS") return res.status(204).send("");
     const reference = String(req.query.ref || "");
     if (!reference || reference.length > 2000) {
       return res.status(400).send("A valid photo reference is required.");
