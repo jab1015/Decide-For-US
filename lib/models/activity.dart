@@ -16,6 +16,7 @@ class Activity {
     this.source,
     this.companion,
     this.companionDistanceMiles,
+    this.searchRadiusMiles,
   });
 
   final String id;
@@ -34,6 +35,7 @@ class Activity {
   final String? source;
   final Activity? companion;
   final double? companionDistanceMiles;
+  final int? searchRadiusMiles;
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
@@ -56,6 +58,7 @@ class Activity {
           : null,
       companionDistanceMiles: (json['companionDistanceMiles'] as num?)
           ?.toDouble(),
+      searchRadiusMiles: (json['searchRadiusMiles'] as num?)?.toInt(),
     );
   }
 
@@ -76,6 +79,7 @@ class Activity {
     'source': source,
     'companion': companion?.toJson(),
     'companionDistanceMiles': companionDistanceMiles,
+    'searchRadiusMiles': searchRadiusMiles,
   };
 }
 
