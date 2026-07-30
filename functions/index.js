@@ -23,9 +23,15 @@ const foodQueries = {
 };
 
 const activityQueries = {
-  Low: ["museum", "art gallery", "scenic view", "bookstore"],
-  Medium: ["bowling alley", "mini golf", "live music", "tourist attraction"],
-  High: ["hiking trail", "kayaking", "rock climbing", "adventure park"],
+  Low: ["art gallery", "museum", "bookstore", "casual restaurant"],
+  Medium: ["beach", "park", "botanical garden", "walking trail"],
+  High: ["basketball court", "fitness activity", "rock climbing", "adventure park"],
+};
+
+const dateNightActivityQueries = {
+  Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
+  Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
+  High: ["dance class", "kayaking", "rock climbing", "hiking trail"],
 };
 
 function milesToMeters(miles) {
@@ -346,18 +352,10 @@ export const getIdeas = onRequest(
       const foodTerms = isDateNight
         ? ["romantic restaurant", "fine dining restaurant"]
         : (foodQueries[budget] || foodQueries["$"]);
-      const coupleTerms = [
-        "bowling alley",
-        "mini golf",
-        "museum",
-        "local attraction",
-      ];
       const experienceTerms = isDateNight ?
-        ["romantic activity", "live music", "scenic view", "art gallery"] :
-        (group === "Couple" ?
-          coupleTerms :
-          (activityQueries[energy] || activityQueries.Medium)
-            .map((term) => group === "Family" ? `family friendly ${term}` : term));
+        (dateNightActivityQueries[energy] || dateNightActivityQueries.Medium) :
+        (activityQueries[energy] || activityQueries.Medium)
+          .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
       const [foodResults, experienceResults, recentIds] = await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
