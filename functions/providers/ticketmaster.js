@@ -48,6 +48,8 @@ function normalizeEvent(event) {
   return {
     id: `ticketmaster:${event.id}`,
     category: "event",
+    eventType:
+      event.classifications?.[0]?.segment?.name?.toLowerCase() || "event",
     title: event.name,
     description: eventDescription(event, venue),
     address: eventAddress(venue),
@@ -97,3 +99,4 @@ export async function searchTicketmasterEvents({
     .map(normalizeEvent)
     .filter(Boolean);
 }
+
