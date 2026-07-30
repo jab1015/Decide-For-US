@@ -11,7 +11,7 @@ Last updated: July 30, 2026
 | Phase 2: paired results experience | Merged | PR #31 |
 | Phase 3: Local Events+ | Merged | PR #32 |
 | Date Night+ specialization | In review | Draft PR #33; build 37 in store testing |
-| Subscription QA and event sharing | In progress | Build 38 pending validation |
+| Subscription QA and event sharing | In progress | Build 38 passes local validation |
 | Trip Planner+ | Planned | Premium-only |
 
 ## Completed
@@ -120,13 +120,11 @@ Last updated: July 30, 2026
   or manually granted access is recognized without an unnecessary paywall.
 - The temporary paywall tester tool can copy the installation Firebase UID for
   support during TestFlight and Google Play testing.
+- Build 38 passes `flutter analyze` with no issues and all four Flutter tests.
 
 ## Must verify before merging PR #33
 
-- `flutter analyze`
-- `flutter test`
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
-- Build 38 `flutter analyze` and `flutter test`.
 - Validate Local Events sharing on iOS and Android.
 - Google Play sandbox subscription access (Apple TestFlight verified).
 - Date Night+ event links and place fallbacks on real devices.
