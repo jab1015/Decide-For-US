@@ -10,7 +10,7 @@ import '../services/ai_service.dart';
 import '../services/location_service.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/decision_card.dart';
+import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
 import 'paywall_screen.dart';
 
@@ -114,7 +114,19 @@ class _DecideScreenState extends State<DecideScreen>
 
     if (userCoords == null) {
       await loadLocation();
-      if (userCoords == null) return;
+      if (userCoords == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'We need your location to find nearby experiences.',
+              ),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        return;
+      }
     }
 
     setState(() {
@@ -128,6 +140,7 @@ class _DecideScreenState extends State<DecideScreen>
     final start = DateTime.now();
 
     List<Activity> data = [];
+    String? errorMessage;
 
     try {
       data = await AIService.getIdeas(
@@ -148,11 +161,7 @@ class _DecideScreenState extends State<DecideScreen>
           MaterialPageRoute(builder: (_) => const PaywallScreen()),
         );
       }
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      errorMessage = e.toString();
     }
 
     final elapsed = DateTime.now().difference(start).inMilliseconds;
@@ -163,7 +172,7 @@ class _DecideScreenState extends State<DecideScreen>
 
     if (!mounted) return;
 
-    if (data.length > 2) data = data.take(2).toList();
+    if (data.length > 4) data = data.take(4).toList();
     if (data.isNotEmpty) {
       await player.play(AssetSource('sounds/win.mp3'));
     }
@@ -173,6 +182,15 @@ class _DecideScreenState extends State<DecideScreen>
       isLoading = false;
       resetFilters();
     });
+
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 7),
+        ),
+      );
+    }
 
     if (results.isNotEmpty) {
       confetti.play();
@@ -492,9 +510,18 @@ class _DecideScreenState extends State<DecideScreen>
               ),
               const SizedBox(height: 20),
             ],
-            ...results.asMap().entries.map(
-              (e) => DecisionCard(activity: e.value, index: e.key),
-            ),
+            if (results.length >= 4) ...[
+              ExperienceCard(
+                first: results[0],
+                second: results[1],
+                optionIndex: 0,
+              ),
+              ExperienceCard(
+                first: results[2],
+                second: results[3],
+                optionIndex: 1,
+              ),
+            ],
           ],
         ),
       ),
