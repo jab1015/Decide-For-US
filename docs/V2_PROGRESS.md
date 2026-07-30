@@ -70,6 +70,11 @@ Last updated: July 30, 2026
   the normal entitlement flow.
 - Temporary tester usage reset UI and Function removed.
 - Chrome validation completed with live events at a 50-mile radius.
+- Events can be paired with a unique, verified Google Places add-on within
+  five miles.
+- Today, This Weekend, and Next 14 Days date filters.
+- Sparse searches expand from 10 to 25 or 50 miles and disclose the expanded
+  radius in the interface.
 
 ## Operational work completed
 
@@ -101,5 +106,6 @@ Last updated: July 30, 2026
 - Dependency vulnerabilities need a controlled upgrade; do not force-upgrade.
 - Ticketmaster coverage is strongest for ticketed events; additional community
   event providers remain planned.
-- Events are not yet paired with complementary Google Places stops.
+- Event suitability scoring still needs group and budget inputs.
 - The app still needs a formal trip-planning data model and timeline UI.
+
