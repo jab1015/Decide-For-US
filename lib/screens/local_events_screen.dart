@@ -18,6 +18,23 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
   bool _loading = true;
   String? _error;
   int _radius = 25;
+  String _dateRange = '14days';
+
+  ({DateTime start, DateTime end}) get _selectedDates {
+    final today = DateUtils.dateOnly(DateTime.now());
+    if (_dateRange == 'today') return (start: today, end: today);
+    if (_dateRange == 'weekend') {
+      final daysUntilSaturday = (DateTime.saturday - today.weekday + 7) % 7;
+      final start = today.weekday == DateTime.sunday
+          ? today
+          : today.add(Duration(days: daysUntilSaturday));
+      final end = start.weekday == DateTime.sunday
+          ? start
+          : start.add(const Duration(days: 1));
+      return (start: start, end: end);
+    }
+    return (start: today, end: today.add(const Duration(days: 13)));
+  }
 
   @override
   void initState() {
@@ -41,6 +58,8 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
         lat: location['lat']!,
         lng: location['lng']!,
         radiusMiles: _radius,
+        startDate: _selectedDates.start,
+        endDate: _selectedDates.end,
       );
       if (!mounted) return;
       setState(() => _events = events);
@@ -139,6 +158,19 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
                 _loadEvents();
               },
             ),
+            const SizedBox(height: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'today', label: Text('Today')),
+                ButtonSegment(value: 'weekend', label: Text('Weekend')),
+                ButtonSegment(value: '14days', label: Text('Next 14 days')),
+              ],
+              selected: {_dateRange},
+              onSelectionChanged: (selection) {
+                _dateRange = selection.first;
+                _loadEvents();
+              },
+            ),
             const SizedBox(height: 22),
             if (_loading)
               const Padding(
@@ -160,6 +192,26 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
                 onRetry: _loadEvents,
               )
             else ...[
+              if ((_events.first.searchRadiusMiles ?? _radius) > _radius) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.lavender,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Text(
+                    'We widened the search to '
+                    '${_events.first.searchRadiusMiles} miles to find '
+                    'more happening near you.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
               Text(
                 '${_events.length} upcoming events',
                 style: Theme.of(context).textTheme.titleMedium,
