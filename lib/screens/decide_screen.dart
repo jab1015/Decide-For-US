@@ -16,6 +16,7 @@ import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
 import 'local_events_screen.dart';
 import 'paywall_screen.dart';
+import 'saved_trips_screen.dart';
 import 'trip_planner_screen.dart';
 
 class DecideScreen extends StatefulWidget {
@@ -492,6 +493,19 @@ class _DecideScreenState extends State<DecideScreen>
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Saved trips',
+            icon: const Icon(
+              Icons.luggage_outlined,
+              color: AppColors.primary,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedTripsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(
               Icons.favorite_border_rounded,
