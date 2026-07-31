@@ -7,6 +7,7 @@ import '../models/trip_discovery_zone.dart';
 import '../models/trip_plan_draft.dart';
 import '../models/trip_route.dart';
 import '../services/itinerary_scheduler.dart';
+import '../services/trip_itinerary_pacer.dart';
 import '../services/trip_route_service.dart';
 import '../theme/app_theme.dart';
 import 'trip_itinerary_screen.dart';
@@ -91,9 +92,13 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
           PlanningStop(sequence: index, activity: selected[index]),
       ],
     );
-    final itinerary = const ItineraryScheduler()
+    final scheduled = const ItineraryScheduler()
         .schedule([option], request)
         .single;
+    final itinerary = const TripItineraryPacer().pace(
+      scheduled,
+      startsAt: timedDraft.startsAt!,
+    );
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => TripItineraryScreen(
