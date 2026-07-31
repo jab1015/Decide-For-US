@@ -54,6 +54,12 @@ It also requests normalized live events from `getLocalEvents`.
 `DefaultPlanningEngine` currently adapts the existing `getIdeas` response so the
 current recommendation behavior stays stable while the app migrates.
 
+`CandidateProvider` is the collection boundary. Recommendation and Local Events
+providers convert existing `Activity` responses into `PlanningCandidate` records
+with an explicit place/event kind, source, provider ID, verification state, and
+source URL. The engine consumes candidates and remains independent of a specific
+external provider.
+
 The normalized planning model is:
 
 ```text
