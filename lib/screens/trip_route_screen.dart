@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/activity.dart';
 import '../models/planning_option.dart';
@@ -523,6 +524,25 @@ class _TripCandidateTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  Future<void> _openDetails(BuildContext context) async {
+    final directUrl = candidate.eventUrl ?? candidate.placeUrl;
+    final uri = directUrl == null || directUrl.isEmpty
+        ? Uri.https('www.google.com', '/maps/search/', {
+            'api': '1',
+            'query': [
+              candidate.title,
+              if (candidate.address.isNotEmpty) candidate.address,
+            ].join(' '),
+          })
+        : Uri.parse(directUrl);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open this place.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final imageUrl = candidate.photoUrl;
@@ -591,7 +611,7 @@ class _TripCandidateTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     candidate.description,
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.muted,
@@ -600,6 +620,21 @@ class _TripCandidateTile extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 3),
+                TextButton.icon(
+                  onPressed: () => _openDetails(context),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                  label: Text(
+                    candidate.eventUrl == null
+                        ? 'CHECK IT OUT'
+                        : 'VIEW EVENT',
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
               ],
             ),
           ),
