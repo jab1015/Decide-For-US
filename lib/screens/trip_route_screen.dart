@@ -17,10 +17,12 @@ class TripRouteScreen extends StatefulWidget {
     super.key,
     required this.draft,
     required this.route,
+    this.initialSelectedActivityIds = const [],
   });
 
   final TripPlanDraft draft;
   final TripRoute route;
+  final List<String> initialSelectedActivityIds;
 
   @override
   State<TripRouteScreen> createState() => _TripRouteScreenState();
@@ -45,6 +47,17 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
         .discoverStops(route: route, draft: draft)
         .then((zones) {
       _zones = zones;
+      if (widget.initialSelectedActivityIds.isNotEmpty) {
+        final selectedIds = widget.initialSelectedActivityIds.toSet();
+        for (final zone in zones) {
+          final match = zone.candidates.where(
+            (candidate) => selectedIds.contains(candidate.id),
+          );
+          if (match.isNotEmpty) {
+            _selectedByZone[zone.index] = match.first.id;
+          }
+        }
+      }
       return zones;
     });
   }
