@@ -65,6 +65,7 @@ class _SavedTripsScreenState extends State<SavedTripsScreen> {
                     initialSelectedActivityIds: [
                       for (final stop in itinerary.stops) stop.activity.id,
                     ],
+                    itineraryId: itinerary.id,
                   ),
                 ),
               );
