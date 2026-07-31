@@ -220,4 +220,12 @@ Last updated: July 30, 2026
 - The app still needs a formal trip-planning data model and timeline UI.
 - Remove the temporary Copy Tester ID control before production.
 
+## Trip Planner route discovery
 
+- Added Premium-authenticated `resolveTripRoute` Firebase endpoint.
+- Resolves typed origins and destinations without exposing Google credentials.
+- Uses the device position when the starting point is Current location.
+- Computes verified driving distance, duration, and encoded route geometry.
+- Samples up to 12 route-corridor discovery zones using the selected maximum drive interval.
+- Trip Planner+ now displays a verified route review before attraction discovery.
+- Added route-model parsing and round-trip tests.
