@@ -1,6 +1,6 @@
 # Decide For Us Architecture
 
-Last updated: July 30, 2026
+Last updated: July 31, 2026
 
 ## System overview
 
@@ -23,7 +23,7 @@ Firebase Functions
   `-- proxy Ticketmaster event images
         |
         v
-Flutter renders two option cards with two stops each
+Flutter renders paired outings, live events, and multi-stop trip itineraries
 ```
 
 ## Flutter application
@@ -70,7 +70,8 @@ reordering eligible provider results; later itinerary ranking can use the score.
 `PlanningOptionBuilder` consumes eligible evaluations. It selects distinct
 category anchors, prevents food-with-food pairings, limits food to one option,
 orders events or activities before food, and emits ordered `PlanningStop`
-records. Its configurable stop count supports future multi-stop itineraries.
+records. Its configurable stop count supports paired outings and implemented
+multi-stop itineraries.
 
 
 `ItineraryScheduler` enriches the selected options after construction. It assigns
@@ -90,9 +91,9 @@ PlanningEngineRequest
             -> PlanningStop (ordered Activity plus schedule/travel/cost fields)
 ```
 
-Quick Decision and Date Night+ now use this boundary. Local Events+ remains on
-its specialized endpoint until the provider-normalization slice. Trip Planner+
-will use the same response model with more stops and scheduled timestamps.
+Quick Decision and Date Night+ use this boundary. Local Events+ retains its
+specialized provider screen. Trip Planner+ uses the shared request, location,
+constraint, option, stop, scheduler, and pacing models for multi-stop plans.
 
 ### Presentation
 
@@ -101,13 +102,16 @@ will use the same response model with more stops and scheduled timestamps.
 - `LocalEventsScreen` renders upcoming live events with distance filters,
   verified links, maps, companion stops, and native plan sharing.
 
-- `TripPlannerScreen` collects and validates trip setup through `TripPlanDraft`;
-  geocoding and route discovery remain the next integration boundary.
+- `TripPlannerScreen` collects and validates trip setup through `TripPlanDraft`.
+- `TripRouteScreen` renders verified corridor discoveries and traveler selection.
+- `TripItineraryScreen` renders, saves, edits, shares, and hands completed routes
+  to Google Maps.
+- `SavedTripsScreen` reopens and deletes device-local trip plans.
 - `DecisionCard` remains the single-place presentation used by Favorites.
 - Favorites are stored locally in `SharedPreferences`.
 
-Longer term, screen orchestration should move into a planning controller/state
-layer before Date Night+, events, and trips substantially expand.
+Longer term, screen orchestration can move into a planning controller/state
+layer as personalization and collaborative planning expand.
 
 ## Firebase Functions
 
@@ -171,9 +175,8 @@ navigation so recent purchases, restores, grants, and tester changes are honored
 - `enabled`: boolean
 
 This collection is server-read only. It provides controlled Premium access for
-anonymous Firebase users during development and store testing. A temporary
-paywall control copies the current Firebase UID for tester support and must be
-removed before production.
+anonymous Firebase users during development and store testing. A temporary paywall control copies the current Firebase UID for tester support
+and must be removed before production.
 
 The Functions runtime service account requires `roles/datastore.user`.
 Firestore mobile-client rules do not replace server IAM for Admin SDK calls.
@@ -204,11 +207,11 @@ Codemagic build output.
 
 - Ticketmaster primarily covers ticketed events and does not replace broader
   community-event coverage.
-- Descriptions are structured from Places metadata rather than editorial or AI
-  prose.
-- Favorites are device-local and store individual stops, not full itineraries.
-- Event/place pairing, weather, routing, and travel-time logic are not yet
-  implemented.
+- Trip descriptions use Google editorial summaries when available and factual
+  type, locality, rating, and review fallbacks otherwise.
+- Favorites and Saved Trips are device-local; account sync is not implemented.
+- Event/place pairing and trip routing are implemented; weather-aware replanning,
+  lodging, and automatic detour optimization are not.
 - Date Night+ timing is a preference window, not a reservation or guaranteed
   availability check.
 - Free usage is weekly, but there is no user-facing countdown/reset date yet.
