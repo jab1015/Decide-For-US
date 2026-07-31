@@ -153,6 +153,14 @@ Last updated: July 30, 2026
 - `DefaultPlanningEngine` accepts an injectable provider, enabling deterministic
   tests and future multi-provider composition.
 
+- `CandidateEvaluator` records deterministic eligibility, rejection reasons,
+  scores, and score reasons before option construction.
+- Hard filters cover verification, provider identity, required display data,
+  coordinates, explicit exclusions, event time windows, known price limits, and
+  Local Events mode.
+- Soft scoring recognizes provider completeness, energy, interests, group fit,
+  and Date Night relevance while retaining provider order for now.
+
 ## Must verify before merging PR #33
 
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
