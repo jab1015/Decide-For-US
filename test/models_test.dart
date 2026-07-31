@@ -9,6 +9,7 @@ import 'package:decide_for_us/models/planning_option.dart';
 import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
 import 'package:decide_for_us/models/planning_stop.dart';
+import 'package:decide_for_us/models/trip_plan_draft.dart';
 import 'package:decide_for_us/services/candidate_evaluator.dart';
 import 'package:decide_for_us/services/candidate_provider.dart';
 import 'package:decide_for_us/services/itinerary_scheduler.dart';
@@ -573,6 +574,55 @@ void main() {
     expect(scheduled.stops.first.estimatedCostCents, 6000);
     expect(scheduled.stops.last.estimatedCostCents, 3000);
     expect(scheduled.estimatedCostCents, 9000);
+  });
+
+  test('TripPlanDraft requires destination and dates', () {
+    const draft = TripPlanDraft();
+
+    expect(draft.isValid, isFalse);
+    expect(draft.validationErrors, contains('Choose a destination.'));
+    expect(draft.validationErrors, contains('Choose your trip dates.'));
+  });
+
+  test('TripPlanDraft creates a trip Planning Engine request', () {
+    final draft = TripPlanDraft(
+      originLabel: ' Jacksonville ',
+      destinationLabel: ' Savannah ',
+      startsAt: DateTime.utc(2026, 10, 2),
+      endsAt: DateTime.utc(2026, 10, 5),
+      travelerCount: 4,
+      budget: r'$1,000–$2,500',
+      maxTravelMinutesBetweenStops: 120,
+      interests: const ['History', 'Local food'],
+      exclusions: const ['Toll roads'],
+    );
+    final request = draft.toPlanningRequest(
+      origin: const PlanningLocation(lat: 30.3322, lng: -81.6557),
+      destination: const PlanningLocation(lat: 32.0809, lng: -81.0912),
+    );
+
+    expect(draft.isValid, isTrue);
+    expect(request.mode, PlanningMode.trip);
+    expect(request.origin.label, 'Jacksonville');
+    expect(request.destination?.label, 'Savannah');
+    expect(request.constraints.travelerCount, 4);
+    expect(request.constraints.maxTravelMinutesBetweenStops, 120);
+    expect(request.constraints.interests, ['History', 'Local food']);
+    expect(request.constraints.exclusions, ['Toll roads']);
+  });
+
+  test('TripPlanDraft rejects impossible return dates', () {
+    final draft = TripPlanDraft(
+      destinationLabel: 'Savannah',
+      startsAt: DateTime.utc(2026, 10, 5),
+      endsAt: DateTime.utc(2026, 10, 2),
+    );
+
+    expect(draft.isValid, isFalse);
+    expect(
+      draft.validationErrors,
+      contains('The return date must be after the departure date.'),
+    );
   });
 
 }
