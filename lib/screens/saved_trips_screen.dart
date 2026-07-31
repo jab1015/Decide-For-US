@@ -6,6 +6,7 @@ import '../models/trip_route.dart';
 import '../services/trip_plan_storage.dart';
 import '../theme/app_theme.dart';
 import 'trip_itinerary_screen.dart';
+import 'trip_route_screen.dart';
 
 class SavedTripsScreen extends StatefulWidget {
   const SavedTripsScreen({super.key});
@@ -45,13 +46,29 @@ class _SavedTripsScreenState extends State<SavedTripsScreen> {
       final itineraryJson = Map<String, dynamic>.from(
         trip['itinerary'] as Map,
       );
+      final draft = TripPlanDraft.fromJson(trip);
+      final route = TripRoute.fromJson(routeJson);
+      final itinerary = PlanningOption.fromJson(itineraryJson);
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => TripItineraryScreen(
-            draft: TripPlanDraft.fromJson(trip),
-            route: TripRoute.fromJson(routeJson),
-            itinerary: PlanningOption.fromJson(itineraryJson),
+          builder: (itineraryContext) => TripItineraryScreen(
+            draft: draft,
+            route: route,
+            itinerary: itinerary,
+            onChangeStops: () {
+              Navigator.of(itineraryContext).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => TripRouteScreen(
+                    draft: draft,
+                    route: route,
+                    initialSelectedActivityIds: [
+                      for (final stop in itinerary.stops) stop.activity.id,
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       );
