@@ -197,16 +197,16 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
               color: AppColors.lavender,
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Row(
+            child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.tune_rounded, color: AppColors.primary),
-                const SizedBox(width: 12),
+                Icon(Icons.tune_rounded, color: AppColors.primary),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Choose one favorite in any discovery zone. '
                     'Choosing another option in that zone replaces it.',
-                    style: const TextStyle(height: 1.4),
+                    style: TextStyle(height: 1.4),
                   ),
                 ),
               ],
