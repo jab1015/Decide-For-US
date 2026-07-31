@@ -213,3 +213,16 @@ Codemagic build output.
   availability check.
 - Free usage is weekly, but there is no user-facing countdown/reset date yet.
 
+## Trip route boundary
+
+Flutter calls `TripRouteService`, which sends a Firebase ID token and route setup to the Premium-only `resolveTripRoute` function. Firebase owns the Google credential, geocodes text locations, calls Google Routes, decodes the returned polyline, and returns only normalized route data.
+
+```text
+Trip Planner UI
+  -> TripRouteService (Firebase ID token)
+  -> resolveTripRoute (Premium/tester authorization)
+  -> Geocoding API + Routes API
+  -> normalized endpoints, distance, duration, polyline, corridor zones
+```
+
+Route-corridor points are planning inputs rather than recommendations. Candidate providers will search around those points before the existing evaluator, option builder, and itinerary scheduler select the final trip.
