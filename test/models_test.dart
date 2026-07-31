@@ -2,9 +2,12 @@ import 'package:decide_for_us/models/activity.dart';
 import 'package:decide_for_us/models/planning_constraints.dart';
 import 'package:decide_for_us/models/planning_engine_request.dart';
 import 'package:decide_for_us/models/planning_location.dart';
+import 'package:decide_for_us/models/planning_candidate.dart';
 import 'package:decide_for_us/models/planning_mode.dart';
 import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
+import 'package:decide_for_us/services/candidate_provider.dart';
+import 'package:decide_for_us/services/planning_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -194,5 +197,83 @@ void main() {
     expect(engineRequest.constraints.travelerCount, 2);
     expect(adapted.toJson(), recommendation.toJson());
   });
+
+  test('PlanningCandidate normalizes verified places and events', () {
+    const place = Activity(
+      id: 'place-1',
+      category: 'culture',
+      title: 'Gallery',
+      description: '',
+      address: '',
+      lat: 30,
+      lng: -81,
+    );
+    final event = Activity(
+      id: 'event-1',
+      category: 'event',
+      title: 'Live Music',
+      description: '',
+      address: '',
+      lat: 30,
+      lng: -81,
+      eventUrl: 'https://example.com/event',
+      eventStart: DateTime.utc(2026, 8, 1),
+      source: 'ticketmaster',
+    );
+
+    final placeCandidate = PlanningCandidate.fromActivity(place);
+    final eventCandidate = PlanningCandidate.fromActivity(event);
+
+    expect(placeCandidate.kind, CandidateKind.place);
+    expect(placeCandidate.source, CandidateSource.googlePlaces);
+    expect(eventCandidate.kind, CandidateKind.event);
+    expect(eventCandidate.source, CandidateSource.ticketmaster);
+    expect(eventCandidate.sourceUrl, event.eventUrl);
+
+    final restored = PlanningCandidate.fromJson(eventCandidate.toJson());
+    expect(restored.providerId, 'event-1');
+    expect(restored.activity.title, 'Live Music');
+    expect(restored.isVerified, isTrue);
+  });
+
+  test('PlanningEngine consumes candidates through an injected provider', () async {
+    const activity = Activity(
+      id: 'provider-result',
+      category: 'outdoors',
+      title: 'Scenic Walk',
+      description: '',
+      address: '',
+      lat: 30,
+      lng: -81,
+    );
+    final engine = DefaultPlanningEngine(
+      provider: _FakeCandidateProvider([
+        PlanningCandidate.fromActivity(activity),
+      ]),
+    );
+    final response = await engine.createPlan(
+      const PlanningEngineRequest(
+        mode: PlanningMode.quickDecision,
+        origin: PlanningLocation(lat: 30, lng: -81),
+        constraints: PlanningConstraints(),
+      ),
+    );
+
+    expect(response.activities.single.id, 'provider-result');
+  });
 }
 
+
+class _FakeCandidateProvider implements CandidateProvider {
+  const _FakeCandidateProvider(this.candidates);
+
+  final List<PlanningCandidate> candidates;
+
+  @override
+  String get id => 'fake';
+
+  @override
+  Future<List<PlanningCandidate>> fetch(PlanningEngineRequest request) async {
+    return candidates;
+  }
+}
