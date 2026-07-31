@@ -171,7 +171,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     if (minutes < 60) return '$minutes min';
     final hours = minutes ~/ 60;
     final remainder = minutes % 60;
-    return remainder == 0 ? '$hours hr' : '$hours hr ${remainder} min';
+    return remainder == 0 ? '$hours hr' : '$hours hr $remainder min';
   }
 
   Widget _section({
