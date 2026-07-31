@@ -104,6 +104,7 @@ Foundation delivered:
 - compatibility adapter from the current recommendation request
 - shared candidate model for verified places and events
 - provider contract with recommendation and Local Events adapters
+- deterministic eligibility and explainable candidate scoring
 
 Core inputs:
 
