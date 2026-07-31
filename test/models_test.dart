@@ -9,6 +9,7 @@ import 'package:decide_for_us/models/planning_option.dart';
 import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
 import 'package:decide_for_us/models/planning_stop.dart';
+import 'package:decide_for_us/models/trip_discovery_zone.dart';
 import 'package:decide_for_us/models/trip_plan_draft.dart';
 import 'package:decide_for_us/models/trip_route.dart';
 import 'package:decide_for_us/services/candidate_evaluator.dart';
@@ -663,6 +664,39 @@ void main() {
     expect(restored.duration, const Duration(hours: 2));
     expect(restored.encodedPolyline, 'route-shape');
     expect(restored.corridorPoints, hasLength(1));
+  });
+
+  test('TripDiscoveryZone parses unique route candidates', () {
+    final zone = TripDiscoveryZone.fromJson({
+      'index': 2,
+      'lat': 35.5,
+      'lng': -78.2,
+      'candidates': [
+        {
+          'id': 'event-1',
+          'category': 'event',
+          'title': 'Summer Concert',
+          'description': 'Live downtown.',
+          'address': 'Main Street',
+          'lat': 35.5,
+          'lng': -78.2,
+        },
+        {
+          'id': 'place-1',
+          'category': 'food',
+          'title': 'Local Kitchen',
+          'description': 'A regional favorite.',
+          'address': 'Market Street',
+          'lat': 35.51,
+          'lng': -78.21,
+        },
+      ],
+    });
+
+    expect(zone.index, 2);
+    expect(zone.location.label, 'Discovery zone 3');
+    expect(zone.candidates, hasLength(2));
+    expect(zone.candidates.map((item) => item.category), ['event', 'food']);
   });
 
 }
