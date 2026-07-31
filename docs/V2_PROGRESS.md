@@ -161,6 +161,14 @@ Last updated: July 30, 2026
 - Soft scoring recognizes provider completeness, energy, interests, group fit,
   and Date Night relevance while retaining provider order for now.
 
+- `PlanningOptionBuilder` now turns eligible, scored candidates into at most two
+  complementary options for the current UI.
+- Food-with-food pairings are prohibited, and food appears in at most one option.
+- Events and activities lead before dining; option anchors prefer different
+  category families.
+- Configurable stops per option provides the first tested path to multi-stop trip
+  itineraries without changing the current two-card presentation.
+
 ## Must verify before merging PR #33
 
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
