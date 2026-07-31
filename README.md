@@ -26,6 +26,10 @@ weekends, and trips.
   miles and includes verified dates, venues, maps, images, and event links.
 - Explicit Firestore tester UIDs can receive Premium access during Chrome
   development without changing production entitlement rules.
+- Trip Planner+ verifies a driving route, discovers real places and dated events
+  along the corridor, lets travelers research and choose stops, schedules a
+  multi-day itinerary, and supports saving, editing, sharing, and Google Maps
+  GPS handoff.
 
 See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 [architecture](docs/ARCHITECTURE.md), and the
@@ -77,6 +81,10 @@ See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 - `getLocalEvents`: returns Premium-only upcoming events from Ticketmaster.
 - `getEventImage`: securely proxies allowlisted Ticketmaster images.
 - `getPremiumAccess`: resolves RevenueCat or Firestore tester access.
+- `resolveTripRoute`: resolves Premium trip endpoints and returns a verified
+  Google Routes corridor without exposing credentials.
+- `discoverTripStops`: returns Premium-only, interest-aware Google Places and
+  Ticketmaster candidates for each route discovery zone.
 
 ## Premium testers
 
@@ -124,7 +132,8 @@ Android reads `versionName` and `versionCode` from `pubspec.yaml`.
 ### iOS
 
 iOS archives are built on macOS through Codemagic and published to TestFlight.
-Every App Store Connect upload requires a previously unused build number.
+Every App Store Connect upload requires a previously unused build number. The
+current shared Flutter release is `1.0.24+39`.
 
 ## Validation
 
