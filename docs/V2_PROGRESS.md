@@ -229,3 +229,6 @@ Last updated: July 30, 2026
 - Samples up to 12 route-corridor discovery zones using the selected maximum drive interval.
 - Trip Planner+ now displays a verified route review before attraction discovery.
 - Added route-model parsing and round-trip tests.
+
+- Route confirmation now advances to a dedicated road-trip route page instead of closing back to setup.
+- The route page presents verified distance, duration, endpoints, and every corridor discovery zone.
