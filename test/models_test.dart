@@ -27,13 +27,19 @@ void main() {
       'place_id': 'place-123',
       'category': 'outdoors',
       'title': 'River Walk',
+      'placeUrl': 'https://maps.example/river-walk',
       'lat': 30,
       'lng': -81,
     });
 
     expect(activity.id, 'place-123');
     expect(activity.category, 'outdoors');
+    expect(activity.placeUrl, 'https://maps.example/river-walk');
     expect(activity.toJson()['category'], 'outdoors');
+    expect(
+      activity.toJson()['placeUrl'],
+      'https://maps.example/river-walk',
+    );
   });
 
   test('PlanningRequest serializes every recommendation filter', () {
