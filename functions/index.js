@@ -812,11 +812,45 @@ function tripDiscoveryQueries(interests = []) {
   ])].slice(0, 3);
 }
 
+async function tripPlaceDetails(apiKey, place) {
+  try {
+    const params = new URLSearchParams({
+      place_id: place.place_id,
+      fields: "editorial_summary,url,website",
+      key: apiKey,
+    });
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/details/json?${params}`,
+    );
+    const payload = await response.json();
+    if (!response.ok || !["OK", "ZERO_RESULTS"].includes(payload.status)) {
+      return place;
+    }
+    return {...place, ...(payload.result || {})};
+  } catch (error) {
+    console.warn(`Place details skipped for ${place.place_id}:`, error.message);
+    return place;
+  }
+}
+
 function tripPlaceDescription(place) {
-  const reason = String(place.matchedQuery || "local favorite").toLowerCase();
+  const editorial = String(place.editorial_summary?.overview || "").trim();
+  if (editorial) return editorial;
+
+  const type = readableType(
+    place,
+    activityCategory(place) === "food",
+  );
+  const address = String(place.formatted_address || "");
+  const location = address.split(",").slice(0, 2).join(",").trim();
   const rating = Number(place.rating);
-  const proof = Number.isFinite(rating) ? ` with a ${rating.toFixed(1)} rating` : "";
-  return `${place.name} stands out near this part of the route for ${reason}${proof}.`;
+  const reviews = Number(place.user_ratings_total);
+  const proof = Number.isFinite(rating) ?
+    ` It is rated ${rating.toFixed(1)} stars` +
+      (reviews > 0 ? ` by ${reviews.toLocaleString("en-US")} visitors.` : ".") :
+    "";
+  return `${place.name} is a ${type}` +
+    (location ? ` in ${location}.` : ".") + proof;
 }
 
 function excludedTripCandidate(candidate, exclusions) {
@@ -878,8 +912,13 @@ async function discoverTripZone({
     const category = activityCategory(place);
     if (candidates.some((item) => item.category === category)) continue;
     usedIds.add(place.place_id);
+    const detailedPlace = await tripPlaceDetails(apiKey, place);
     candidates.push(
-      serialize(place, category, tripPlaceDescription(place)),
+      serialize(
+        detailedPlace,
+        category,
+        tripPlaceDescription(detailedPlace),
+      ),
     );
   }
 
