@@ -1,6 +1,6 @@
 # Decide For Us V2 Progress
 
-Last updated: July 30, 2026
+Last updated: July 31, 2026
 
 ## Status summary
 
@@ -10,10 +10,10 @@ Last updated: July 30, 2026
 | Phase 1: V2 design system and home experience | Merged | PR #30 |
 | Phase 2: paired results experience | Merged | PR #31 |
 | Phase 3: Local Events+ | Merged | PR #32 |
-| Date Night+ specialization | In review | Draft PR #33; build 37 in store testing |
-| Subscription QA and event sharing | In progress | Build 38 passes local validation |
-| Planning Engine foundation | In progress | Shared modes, options, and stops |
-| Trip Planner+ | Planned | Premium-only |
+| Date Night+ specialization | Complete | Premium flow implemented and validated |
+| Subscription QA and event sharing | Device testing | Build 39 prepared for both stores |
+| Planning Engine foundation | Complete | Shared candidates, scoring, options, stops, and scheduler |
+| Trip Planner+ Phase 1 | Complete | End-to-end Premium planner manually verified |
 
 ## Completed
 
@@ -121,25 +121,25 @@ Last updated: July 30, 2026
   or manually granted access is recognized without an unnecessary paywall.
 - The temporary paywall tester tool can copy the installation Firebase UID for
   support during TestFlight and Google Play testing.
-- Build 38 passes `flutter analyze` with no issues and all four Flutter tests.
+- Build 39 passes `flutter analyze` with no issues and all 29 Flutter tests.
 
 ### Planning Engine foundation
 
 - `PlanningMode` defines Quick Decision, Date Night+, Local Events+, and Trip.
-- `PlanningStop` adds ordering plus future schedule, travel-time, and cost fields
+- `PlanningStop` adds ordering plus schedule, travel-time, and cost fields
   while preserving the verified `Activity` provider record.
 - `PlanningOption` and `PlanningResponse` support both two-option outings and
-  future multi-stop itineraries.
+  both paired outings and multi-stop itineraries.
 - `DefaultPlanningEngine` is the first shared service boundary and currently adapts
   the existing recommendation endpoint without changing user-facing behavior.
 - `DecideScreen` now consumes the Planning Engine response instead of calling the
   recommendation service directly.
 - Model serialization and option-pairing tests are added.
-- The first Planning Engine slice passes `flutter analyze` with no issues and
-  all six Flutter tests.
+- The completed Planning Engine and Trip Planner slices pass `flutter analyze`
+  with no issues and all 29 Flutter tests.
 
 - `PlanningEngineRequest` now provides one mode-aware contract for present-day
-  recommendations and future trips.
+  recommendations and implemented trips.
 - `PlanningLocation` supports labeled origins and destinations.
 - `PlanningConstraints` carries radius, travelers, travel intervals, interests,
   and exclusions without expanding screen method signatures.
@@ -185,7 +185,7 @@ Last updated: July 30, 2026
   budget, maximum drive interval, interests, and exclusions.
 - `TripPlanDraft` owns validation and converts completed setup into the shared
   `PlanningEngineRequest` trip contract.
-- Review sheet confirms the trip setup before future route discovery.
+- Review sheet confirms the trip setup before verified route discovery.
 - Model and widget coverage protects validation, request conversion, and the
   visible setup flow.
 
@@ -239,7 +239,7 @@ Last updated: July 30, 2026
 - Includes Ticketmaster events occurring during the selected trip dates.
 - Filters user exclusions and prevents repeated candidates across route zones.
 - Route page now loads real, image-backed discoveries instead of coordinate-only placeholders.
-- Added discovery-zone model coverage; expected Flutter test total is 26.
+- Added discovery-zone, itinerary, pacing, persistence, and Maps handoff coverage.
 
 ## Verified Trip Planner+ milestone
 
