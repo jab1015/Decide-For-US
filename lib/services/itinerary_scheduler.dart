@@ -130,7 +130,10 @@ class ItineraryScheduler {
             math.cos(lat2) *
             math.sin(deltaLng / 2) *
             math.sin(deltaLng / 2);
-    return earthRadiusMiles * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final normalized = a.clamp(0, 1).toDouble();
+    return earthRadiusMiles *
+        2 *
+        math.atan2(math.sqrt(normalized), math.sqrt(1 - normalized));
   }
 
   double _radians(double degrees) => degrees * math.pi / 180;
