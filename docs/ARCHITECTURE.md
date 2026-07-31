@@ -57,7 +57,10 @@ current recommendation behavior stays stable while the app migrates.
 The normalized planning model is:
 
 ```text
-PlanningMode
+PlanningEngineRequest
+  -> PlanningMode
+  -> PlanningLocation (origin and optional destination)
+  -> PlanningConstraints
   -> PlanningResponse
        -> PlanningOption (one candidate outing or itinerary)
             -> PlanningStop (ordered Activity plus schedule/travel/cost fields)
