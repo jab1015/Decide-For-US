@@ -27,13 +27,28 @@ void main() {
     expect(find.text('Starting point'), findsOneWidget);
     expect(find.text('Destination'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Travelers').first, 250);
+    final pageList = find.byType(ListView);
+    expect(pageList, findsOneWidget);
+
+    await tester.dragUntilVisible(
+      find.text('Travelers').first,
+      pageList,
+      const Offset(0, -250),
+    );
     expect(find.text('Travelers').first, findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Total trip budget').first, 250);
+    await tester.dragUntilVisible(
+      find.text('Total trip budget').first,
+      pageList,
+      const Offset(0, -250),
+    );
     expect(find.text('Total trip budget').first, findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('REVIEW MY TRIP').first, 300);
+    await tester.dragUntilVisible(
+      find.text('REVIEW MY TRIP').first,
+      pageList,
+      const Offset(0, -300),
+    );
     expect(find.text('REVIEW MY TRIP').first, findsOneWidget);
   });
 }
