@@ -100,6 +100,9 @@ will use the same response model with more stops and scheduled timestamps.
 - `ExperienceCard` renders one two-stop option.
 - `LocalEventsScreen` renders upcoming live events with distance filters,
   verified links, maps, companion stops, and native plan sharing.
+
+- `TripPlannerScreen` collects and validates trip setup through `TripPlanDraft`;
+  geocoding and route discovery remain the next integration boundary.
 - `DecisionCard` remains the single-place presentation used by Favorites.
 - Favorites are stored locally in `SharedPreferences`.
 
