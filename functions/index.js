@@ -584,6 +584,215 @@ async function consumeFreeRequest(uid) {
   });
 }
 
+async function geocodeTripLocation(apiKey, text) {
+  const params = new URLSearchParams({
+    address: text,
+    key: apiKey,
+  });
+  const response = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?${params}`,
+  );
+  const data = await response.json();
+  const result = data.results?.[0];
+  const location = result?.geometry?.location;
+  if (!response.ok || data.status !== "OK" || !location) {
+    const error = new Error(
+      data.status === "ZERO_RESULTS" ?
+        `We could not find "${text}". Try a city, address, or landmark.` :
+        "Destination lookup failed.",
+    );
+    error.status = data.status === "ZERO_RESULTS" ? 404 : 502;
+    throw error;
+  }
+  return {
+    lat: location.lat,
+    lng: location.lng,
+    label: result.formatted_address || text,
+  };
+}
+
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  while (index < encoded.length) {
+    let result = 0;
+    let shift = 0;
+    let byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20 && index <= encoded.length);
+    lat += (result & 1) ? ~(result >> 1) : result >> 1;
+
+    result = 0;
+    shift = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20 && index <= encoded.length);
+    lng += (result & 1) ? ~(result >> 1) : result >> 1;
+    points.push({lat: lat / 1e5, lng: lng / 1e5});
+  }
+  return points;
+}
+
+function sampleRouteCorridor(points, durationSeconds, intervalMinutes) {
+  if (points.length < 3) return [];
+  const intervalSeconds = intervalMinutes * 60;
+  const requested = Math.max(
+    0,
+    Math.min(12, Math.floor(durationSeconds / intervalSeconds)),
+  );
+  const samples = [];
+  for (let i = 1; i <= requested; i++) {
+    const progress = i / (requested + 1);
+    const index = Math.min(
+      points.length - 2,
+      Math.max(1, Math.round(progress * (points.length - 1))),
+    );
+    samples.push({...points[index], label: `Route zone ${i}`});
+  }
+  return samples;
+}
+
+async function computeTripRoute(apiKey, origin, destination) {
+  const response = await fetch(
+    "https://routes.googleapis.com/directions/v2:computeRoutes",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": [
+          "routes.distanceMeters",
+          "routes.duration",
+          "routes.polyline.encodedPolyline",
+        ].join(","),
+      },
+      body: JSON.stringify({
+        origin: {
+          location: {
+            latLng: {
+              latitude: origin.lat,
+              longitude: origin.lng,
+            },
+          },
+        },
+        destination: {
+          location: {
+            latLng: {
+              latitude: destination.lat,
+              longitude: destination.lng,
+            },
+          },
+        },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_UNAWARE",
+        polylineQuality: "HIGH_QUALITY",
+      }),
+    },
+  );
+  const data = await response.json();
+  const route = data.routes?.[0];
+  if (!response.ok || !route) {
+    const error = new Error(
+      data.error?.message || "No driving route was found.",
+    );
+    error.status = response.status === 400 ? 400 : 502;
+    throw error;
+  }
+  const durationSeconds = Number.parseFloat(
+    String(route.duration || "0s").replace("s", ""),
+  );
+  return {
+    distanceMeters: Number(route.distanceMeters || 0),
+    durationSeconds: Math.round(durationSeconds),
+    encodedPolyline: route.polyline?.encodedPolyline || "",
+  };
+}
+
+export const resolveTripRoute = onRequest(
+  {
+    region: "us-central1",
+    secrets: [GOOGLE_API_KEY, REVENUECAT_SECRET_API_KEY],
+  },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      if (!premium) {
+        return res.status(403).json({
+          error: "Trip Planner+ requires Premium.",
+        });
+      }
+
+      const originText = String(req.body?.origin || "").trim();
+      const destinationText = String(req.body?.destination || "").trim();
+      const interval = Number(req.body?.maxTravelMinutesBetweenStops || 120);
+      if (!originText || !destinationText ||
+          originText.length > 250 || destinationText.length > 250) {
+        return res.status(400).json({
+          error: "Starting point and destination are required.",
+        });
+      }
+      if (![60, 120, 180].includes(interval)) {
+        return res.status(400).json({error: "Choose a valid stop interval."});
+      }
+
+      const suppliedLat = Number(req.body?.originLat);
+      const suppliedLng = Number(req.body?.originLng);
+      const hasSuppliedOrigin =
+        Number.isFinite(suppliedLat) && Number.isFinite(suppliedLng);
+      const apiKey = GOOGLE_API_KEY.value();
+      const [origin, destination] = await Promise.all([
+        hasSuppliedOrigin ?
+          Promise.resolve({
+            lat: suppliedLat,
+            lng: suppliedLng,
+            label: originText,
+          }) :
+          geocodeTripLocation(apiKey, originText),
+        geocodeTripLocation(apiKey, destinationText),
+      ]);
+      const route = await computeTripRoute(apiKey, origin, destination);
+      const decoded = decodePolyline(route.encodedPolyline);
+      return res.json({
+        origin,
+        destination,
+        ...route,
+        corridorPoints: sampleRouteCorridor(
+          decoded,
+          route.durationSeconds,
+          interval,
+        ),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(error.status || 502).json({
+        error: error.message || "Trip route discovery failed.",
+      });
+    }
+  },
+);
+
 export const getIdeas = onRequest(
   {
     region: "us-central1",
