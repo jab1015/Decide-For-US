@@ -205,3 +205,13 @@ Acceptance criteria for the next milestone:
 - Food, activities, and events remain varied.
 - The finished plan clearly separates driving time from activity time.
 - Users can return to the saved itinerary after leaving the planner.
+
+### Implemented: traveler choice and first-pass itinerary
+
+- One intentional selection per corridor zone
+- Toggle and replace behavior
+- Zone-order preservation
+- Shared scheduler integration
+- Timed itinerary presentation
+
+Next validation focus: selection clarity, realistic pacing on long routes, authoritative event placement, and layout behavior with one through eight selected stops.
