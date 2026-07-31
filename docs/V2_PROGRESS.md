@@ -217,7 +217,6 @@ Last updated: July 30, 2026
   event providers remain planned.
 - Ticketmaster does not provide pricing for every event; unknown prices remain
   unlabeled rather than estimated.
-- The app still needs a formal trip-planning data model and timeline UI.
 - Remove the temporary Copy Tester ID control before production.
 
 ## Trip Planner route discovery
@@ -260,17 +259,17 @@ Verified end-to-end flow:
 Quality status:
 
 - `flutter analyze`: clean
-- `flutter test`: 26 passing tests
+- `flutter test`: 29 passing tests
 - `resolveTripRoute`: deployed and verified
 - `discoverTripStops`: deployed and verified
 - Manual QA route: current location to New York, NY
 - Manual QA confirmed local attractions, outdoor stops, cultural stops, and an event
 
-Current Trip Planner boundary: route discovery, traveler selection, replacement, scheduling, multi-day pacing, local persistence, reopening, editing, and deletion are implemented. Sharing remains future work.
+Current Trip Planner boundary: Phase 1 is complete. Route discovery, candidate research links, traveler selection, replacement, scheduling, multi-day pacing, local persistence, reopening, editing, deletion, navigation, sharing, send-to-phone, and Google Maps GPS handoff are implemented.
 
 ## Trip stop selection and itinerary presentation
 
-Implementation status: complete, awaiting manual QA.
+Implementation status: complete and manually verified.
 
 - Travelers can select one discovery per route zone.
 - Selecting a different candidate in the same zone replaces the earlier choice.
@@ -278,3 +277,31 @@ Implementation status: complete, awaiting manual QA.
 - Selected activities are ordered by corridor zone.
 - The shared Itinerary Scheduler assigns estimated travel gaps, visit durations, costs when known, and authoritative event times.
 - A dedicated itinerary screen presents the route summary and timed stop cards.
+
+## Trip Planner+ Phase 1 completion
+
+Status: complete and manually verified on July 30, 2026.
+
+The finished Premium flow now includes:
+
+- verified Google Routes mileage, duration, and corridor sampling;
+- interest-aware Google Places and date-aware Ticketmaster discovery;
+- real images and place-specific descriptions;
+- Check it out / View event research links before selection;
+- one intentional selection per corridor zone with replacement behavior;
+- itinerary scheduling with authoritative event times and next-morning pacing;
+- local save, reopen, edit, update-in-place, and delete behavior;
+- itinerary navigation to Decide, Saved Trips, and Favorites;
+- Google Maps multi-stop GPS handoff; and
+- native sharing/send-to-phone with a clipboard fallback.
+
+Phase 1 quality gate:
+
+- `flutter analyze`: clean
+- `flutter test`: 29 passing tests
+- Premium/tester authorization: verified
+- Route and discovery Firebase functions: deployed and verified
+- Chrome end-to-end QA: verified
+
+Remaining Trip Planner ideas are Phase 2 enhancements rather than launch blockers: hotel and overnight planning, automatic stop-order optimization, weather-aware replanning, reservation links, cost tracking, and account-synced trips.
+
