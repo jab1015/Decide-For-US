@@ -145,6 +145,13 @@ Last updated: July 30, 2026
   and exclusions without expanding screen method signatures.
 - The existing Quick Decision and Date Night+ request is adapted into the new
   contract, preserving current backend behavior.
+- `PlanningCandidate` normalizes verified places and events with explicit kind,
+  provider source, provider ID, and source URL.
+- `CandidateProvider` separates candidate collection from itinerary construction.
+- Recommendation and Local Events adapters normalize their existing endpoint
+  responses without changing shipped UI behavior.
+- `DefaultPlanningEngine` accepts an injectable provider, enabling deterministic
+  tests and future multi-provider composition.
 
 ## Must verify before merging PR #33
 
