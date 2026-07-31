@@ -1,22 +1,21 @@
-import '../models/planning_mode.dart';
-import '../models/planning_request.dart';
+import '../models/planning_engine_request.dart';
 import '../models/planning_response.dart';
 import 'ai_service.dart';
 
 abstract interface class PlanningEngine {
-  Future<PlanningResponse> createPlan(PlanningRequest request);
+  Future<PlanningResponse> createPlan(PlanningEngineRequest request);
 }
 
 class DefaultPlanningEngine implements PlanningEngine {
   const DefaultPlanningEngine();
 
   @override
-  Future<PlanningResponse> createPlan(PlanningRequest request) async {
-    final activities = await AIService.getIdeas(request);
+  Future<PlanningResponse> createPlan(PlanningEngineRequest request) async {
+    final activities = await AIService.getIdeas(
+      request.toRecommendationRequest(),
+    );
     return PlanningResponse.fromActivities(
-      mode: request.isDateNight
-          ? PlanningMode.dateNight
-          : PlanningMode.quickDecision,
+      mode: request.mode,
       activities: activities,
     );
   }
