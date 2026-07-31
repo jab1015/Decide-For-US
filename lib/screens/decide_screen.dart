@@ -5,6 +5,7 @@ import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 import '../models/activity.dart';
+import '../models/planning_engine_request.dart';
 import '../models/planning_request.dart';
 import '../services/ai_service.dart';
 import '../services/location_service.dart';
@@ -162,17 +163,19 @@ class _DecideScreenState extends State<DecideScreen>
 
     try {
       final plan = await _planningEngine.createPlan(
-        PlanningRequest(
-          group: selectedGroup,
-          budget: selectedBudget,
-          energy: selectedEnergy,
-          isDateNight: isDateNight,
-          lat: userCoords!['lat']!,
-          lng: userCoords!['lng']!,
-          radiusMiles: selectedRadius,
-          dateOccasion: selectedDateOccasion,
-          dateStyle: selectedDateStyle,
-          dateTiming: selectedDateTiming,
+        PlanningEngineRequest.fromRecommendation(
+          PlanningRequest(
+            group: selectedGroup,
+            budget: selectedBudget,
+            energy: selectedEnergy,
+            isDateNight: isDateNight,
+            lat: userCoords!['lat']!,
+            lng: userCoords!['lng']!,
+            radiusMiles: selectedRadius,
+            dateOccasion: selectedDateOccasion,
+            dateStyle: selectedDateStyle,
+            dateTiming: selectedDateTiming,
+          ),
         ),
       );
       data = plan.activities;
