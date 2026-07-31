@@ -138,6 +138,14 @@ Last updated: July 30, 2026
 - The first Planning Engine slice passes `flutter analyze` with no issues and
   all six Flutter tests.
 
+- `PlanningEngineRequest` now provides one mode-aware contract for present-day
+  recommendations and future trips.
+- `PlanningLocation` supports labeled origins and destinations.
+- `PlanningConstraints` carries radius, travelers, travel intervals, interests,
+  and exclusions without expanding screen method signatures.
+- The existing Quick Decision and Date Night+ request is adapted into the new
+  contract, preserving current backend behavior.
+
 ## Must verify before merging PR #33
 
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
