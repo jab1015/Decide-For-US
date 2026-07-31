@@ -35,8 +35,7 @@ class TripRouteScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'The journey is
-starting to take shape.',
+            'The journey is\nstarting to take shape.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.displaySmall,
           ),
