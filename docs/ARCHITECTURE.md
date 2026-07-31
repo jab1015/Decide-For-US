@@ -66,6 +66,12 @@ external provider.
 and score reasons. The engine currently removes ineligible candidates without
 reordering eligible provider results; later itinerary ranking can use the score.
 
+
+`PlanningOptionBuilder` consumes eligible evaluations. It selects distinct
+category anchors, prevents food-with-food pairings, limits food to one option,
+orders events or activities before food, and emits ordered `PlanningStop`
+records. Its configurable stop count supports future multi-stop itineraries.
+
 The normalized planning model is:
 
 ```text
