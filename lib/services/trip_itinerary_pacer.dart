@@ -23,11 +23,10 @@ class TripItineraryPacer {
       final eventStart = original.activity.eventStart;
       if (eventStart != null) {
         proposed = eventStart;
-      } else if (proposed.hour >= dayEndsAtHour ||
-          proposed
-              .add(Duration(minutes: original.durationMinutes ?? 75))
-              .hour >=
-              dayEndsAtHour) {
+      } else if (_pastDayEnd(
+        proposed,
+        original.durationMinutes ?? 75,
+      )) {
         proposed = DateTime(
           proposed.year,
           proposed.month,
@@ -59,5 +58,17 @@ class TripItineraryPacer {
       estimatedCostCents: itinerary.estimatedCostCents,
       totalTravelMinutes: itinerary.totalTravelMinutes,
     );
+  }
+
+  bool _pastDayEnd(DateTime startsAt, int durationMinutes) {
+    final cutoff = DateTime(
+      startsAt.year,
+      startsAt.month,
+      startsAt.day,
+      dayEndsAtHour,
+    );
+    return !startsAt
+        .add(Duration(minutes: durationMinutes))
+        .isBefore(cutoff);
   }
 }
