@@ -258,3 +258,17 @@ Key rules:
 - Corridor discovery produces candidates, not a finalized itinerary.
 
 The next architecture boundary will store traveler selections as Planning Stops and pass them through the shared Itinerary Scheduler. Event start times remain authoritative; non-event stops receive estimated duration and travel gaps.
+
+## Trip selection-to-itinerary boundary
+
+The route screen owns temporary selection state as a map of corridor-zone index to candidate ID. This guarantees no more than one chosen stop per zone while making replacement deterministic. Selected candidates are restored in zone order and converted to `PlanningStop` values inside one `PlanningOption`.
+
+The existing `ItineraryScheduler` then assigns:
+
+- sequential start times beginning at 9:00 AM on the departure date;
+- estimated driving gaps between selected places;
+- category-aware visit durations;
+- price estimates when provider pricing exists; and
+- authoritative Ticketmaster start times for events.
+
+The resulting `PlanningOption` is passed to `TripItineraryScreen`. Selection remains session-local in this slice; persistence and multi-day pacing are separate boundaries.
