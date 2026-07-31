@@ -16,6 +16,7 @@ import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
 import 'local_events_screen.dart';
 import 'paywall_screen.dart';
+import 'trip_planner_screen.dart';
 
 class DecideScreen extends StatefulWidget {
   const DecideScreen({super.key});
@@ -297,6 +298,24 @@ class _DecideScreenState extends State<DecideScreen>
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const LocalEventsScreen()),
+    );
+  }
+
+  Future<void> _openTripPlanner() async {
+    final hasPremiumAccess = await _hasPremiumAccess();
+    if (!mounted) return;
+    if (!hasPremiumAccess) {
+      final paywallResult = await Navigator.push<PaywallResult>(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      if (paywallResult != PaywallResult.subscribed) return;
+      await SubscriptionService.refresh();
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TripPlannerScreen()),
     );
   }
 
@@ -599,6 +618,67 @@ class _DecideScreenState extends State<DecideScreen>
                           const SizedBox(height: 2),
                           const Text(
                             'See what’s happening near you.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      SubscriptionService.isSubscribed
+                          ? Icons.arrow_forward_rounded
+                          : Icons.lock_outline_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _openTripPlanner,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.sky, AppColors.lavender],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: const Color(0xFFDCD7F5)),
+                  boxShadow: AppShadows.soft,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.route_rounded,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trip Planner+',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Plan the destination and every good stop.',
                             style: TextStyle(
                               color: AppColors.muted,
                               fontSize: 13,
