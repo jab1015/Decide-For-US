@@ -102,6 +102,8 @@ Foundation delivered:
 - existing Decide UI preserved while the service boundary changes
 - shared origin/destination and constraint models for multi-stop planning
 - compatibility adapter from the current recommendation request
+- shared candidate model for verified places and events
+- provider contract with recommendation and Local Events adapters
 
 Core inputs:
 
