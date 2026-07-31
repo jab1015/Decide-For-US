@@ -6,6 +6,7 @@ import 'package:decide_for_us/models/planning_candidate.dart';
 import 'package:decide_for_us/models/planning_mode.dart';
 import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
+import 'package:decide_for_us/services/candidate_evaluator.dart';
 import 'package:decide_for_us/services/candidate_provider.dart';
 import 'package:decide_for_us/services/planning_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,6 +262,110 @@ void main() {
 
     expect(response.activities.single.id, 'provider-result');
   });
+  test('CandidateEvaluator rejects exclusions and over-budget events', () {
+    final event = PlanningCandidate.fromActivity(
+      Activity(
+        id: 'event-expensive',
+        category: 'nightlife',
+        title: 'Downtown Nightclub',
+        description: '',
+        address: '',
+        lat: 30,
+        lng: -81,
+        eventUrl: 'https://example.com/event',
+        eventStart: DateTime.utc(2026, 8, 2),
+        source: 'ticketmaster',
+        minPrice: 80,
+      ),
+    );
+    final evaluation = const CandidateEvaluator().evaluate(
+      event,
+      PlanningEngineRequest(
+        mode: PlanningMode.localEvents,
+        origin: const PlanningLocation(lat: 30, lng: -81),
+        startsAt: DateTime.utc(2026, 8, 1),
+        endsAt: DateTime.utc(2026, 8, 3),
+        constraints: const PlanningConstraints(
+          group: 'Family',
+          budget: r'Under $30',
+          exclusions: ['nightclub'],
+        ),
+      ),
+    );
+
+    expect(evaluation.eligible, isFalse);
+    expect(evaluation.rejectionReasons, contains('excluded:nightclub'));
+    expect(evaluation.rejectionReasons, contains('over_budget'));
+  });
+
+  test('CandidateEvaluator enforces event time windows', () {
+    final event = PlanningCandidate.fromActivity(
+      Activity(
+        id: 'event-late',
+        category: 'event',
+        title: 'Late Concert',
+        description: '',
+        address: '',
+        lat: 30,
+        lng: -81,
+        eventUrl: 'https://example.com/late',
+        eventStart: DateTime.utc(2026, 8, 10),
+        source: 'ticketmaster',
+      ),
+    );
+    final evaluation = const CandidateEvaluator().evaluate(
+      event,
+      PlanningEngineRequest(
+        mode: PlanningMode.localEvents,
+        origin: const PlanningLocation(lat: 30, lng: -81),
+        startsAt: DateTime.utc(2026, 8, 1),
+        endsAt: DateTime.utc(2026, 8, 3),
+        constraints: const PlanningConstraints(),
+      ),
+    );
+
+    expect(evaluation.eligible, isFalse);
+    expect(evaluation.rejectionReasons, contains('after_time_window'));
+  });
+
+  test('CandidateEvaluator rewards energy and interest matches', () {
+    final candidate = PlanningCandidate.fromActivity(
+      const Activity(
+        id: 'kayak-1',
+        category: 'adventure',
+        title: 'Sunrise Kayak Adventure',
+        description: 'An active outdoor trip on the water.',
+        address: '',
+        lat: 30,
+        lng: -81,
+      ),
+    );
+    final matched = const CandidateEvaluator().evaluate(
+      candidate,
+      const PlanningEngineRequest(
+        mode: PlanningMode.quickDecision,
+        origin: PlanningLocation(lat: 30, lng: -81),
+        constraints: PlanningConstraints(
+          energy: 'High',
+          interests: ['water'],
+        ),
+      ),
+    );
+    final unmatched = const CandidateEvaluator().evaluate(
+      candidate,
+      const PlanningEngineRequest(
+        mode: PlanningMode.quickDecision,
+        origin: PlanningLocation(lat: 30, lng: -81),
+        constraints: PlanningConstraints(energy: 'Low'),
+      ),
+    );
+
+    expect(matched.eligible, isTrue);
+    expect(matched.score, greaterThan(unmatched.score));
+    expect(matched.scoreReasons, contains('energy_match'));
+    expect(matched.scoreReasons, contains('interest_match'));
+  });
+
 }
 
 
