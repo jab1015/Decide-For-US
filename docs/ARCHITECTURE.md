@@ -72,6 +72,12 @@ category anchors, prevents food-with-food pairings, limits food to one option,
 orders events or activities before food, and emits ordered `PlanningStop`
 records. Its configurable stop count supports future multi-stop itineraries.
 
+
+`ItineraryScheduler` enriches the selected options after construction. It assigns
+ordered start times when a request supplies a start, preserves verified event
+times, infers conservative durations, estimates travel gaps from coordinates,
+and totals only provider-known prices across the traveler count.
+
 The normalized planning model is:
 
 ```text
