@@ -154,4 +154,16 @@ Core inputs:
 - Validate Google Play sandbox subscriptions and both stores in production.
 - Remove temporary tester-ID UI and audit tester access before launch.
 
+## Trip Planner+ delivery status
 
+### Complete: route foundation
+
+- Origin and destination setup
+- Date, travelers, budget, pace, interests, and exclusions
+- Protected destination resolution
+- Verified driving route, distance, and duration
+- Route-corridor discovery zones
+
+### Next: corridor candidates
+
+Query places, events, scenic stops, and local food near each corridor zone, then run them through the shared eligibility, scoring, option-building, and itinerary scheduling pipeline.
