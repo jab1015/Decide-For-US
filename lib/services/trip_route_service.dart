@@ -77,8 +77,11 @@ class TripRouteService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'corridorPoints':
-              route.corridorPoints.map((point) => point.toJson()).toList(),
+          'corridorPoints': (
+            route.corridorPoints.isEmpty
+                ? [route.destination]
+                : route.corridorPoints
+          ).map((point) => point.toJson()).toList(),
           'interests': draft.interests,
           'exclusions': draft.exclusions,
           if (draft.startsAt != null)
