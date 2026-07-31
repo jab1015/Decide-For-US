@@ -15,6 +15,7 @@ import 'package:decide_for_us/models/trip_route.dart';
 import 'package:decide_for_us/services/candidate_evaluator.dart';
 import 'package:decide_for_us/services/candidate_provider.dart';
 import 'package:decide_for_us/services/itinerary_scheduler.dart';
+import 'package:decide_for_us/services/trip_itinerary_pacer.dart';
 import 'package:decide_for_us/services/planning_engine.dart';
 import 'package:decide_for_us/services/planning_option_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -697,6 +698,68 @@ void main() {
     expect(zone.location.label, 'Discovery zone 3');
     expect(zone.candidates, hasLength(2));
     expect(zone.candidates.map((item) => item.category), ['event', 'food']);
+  });
+
+  test('TripItineraryPacer moves late stops to the next morning', () {
+    final option = PlanningOption(
+      id: 'road-trip',
+      title: 'Road trip',
+      stops: [
+        PlanningStop(
+          sequence: 0,
+          activity: _activity('first', 'culture', 'First Stop'),
+          startsAt: DateTime(2026, 8, 21, 18),
+          durationMinutes: 75,
+        ),
+        PlanningStop(
+          sequence: 1,
+          activity: _activity('second', 'outdoors', 'Second Stop'),
+          startsAt: DateTime(2026, 8, 21, 21, 15),
+          durationMinutes: 90,
+          travelMinutesFromPrevious: 120,
+        ),
+      ],
+    );
+
+    final paced = const TripItineraryPacer().pace(
+      option,
+      startsAt: DateTime(2026, 8, 21, 18),
+    );
+
+    expect(paced.stops.first.startsAt, DateTime(2026, 8, 21, 18));
+    expect(paced.stops.last.startsAt, DateTime(2026, 8, 22, 9));
+  });
+
+  test('TripItineraryPacer preserves authoritative event times', () {
+    final eventTime = DateTime(2026, 8, 21, 21, 30);
+    final option = PlanningOption(
+      id: 'event-trip',
+      title: 'Event trip',
+      stops: [
+        PlanningStop(
+          sequence: 0,
+          activity: Activity(
+            id: 'concert',
+            category: 'event',
+            title: 'Concert',
+            description: '',
+            address: '',
+            lat: 30,
+            lng: -81,
+            eventStart: eventTime,
+          ),
+          startsAt: eventTime,
+          durationMinutes: 120,
+        ),
+      ],
+    );
+
+    final paced = const TripItineraryPacer().pace(
+      option,
+      startsAt: DateTime(2026, 8, 21, 9),
+    );
+
+    expect(paced.stops.single.startsAt, eventTime);
   });
 
 }
