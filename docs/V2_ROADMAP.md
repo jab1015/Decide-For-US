@@ -107,6 +107,7 @@ Foundation delivered:
 - deterministic eligibility and explainable candidate scoring
 - complementary, category-aware option construction
 - configurable multi-stop option support for Trip Planner+
+- timeline scheduling, travel gaps, duration estimates, and known-cost totals
 
 Core inputs:
 
