@@ -21,14 +21,7 @@ class TripPlanStorage {
     final payload = jsonEncode({
       'id': itinerary.id,
       'savedAt': DateTime.now().toUtc().toIso8601String(),
-      'originLabel': draft.originLabel,
-      'destinationLabel': draft.destinationLabel,
-      'startsAt': draft.startsAt?.toIso8601String(),
-      'endsAt': draft.endsAt?.toIso8601String(),
-      'travelerCount': draft.travelerCount,
-      'budget': draft.budget,
-      'interests': draft.interests,
-      'exclusions': draft.exclusions,
+      ...draft.toJson(),
       'route': route.toJson(),
       'itinerary': itinerary.toJson(),
     });
@@ -55,5 +48,18 @@ class TripPlanStorage {
         })
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+  }
+
+  Future<void> delete(String id) async {
+    final preferences = await SharedPreferences.getInstance();
+    final saved = preferences.getStringList(_key) ?? <String>[];
+    saved.removeWhere((item) {
+      try {
+        return jsonDecode(item)['id'] == id;
+      } catch (_) {
+        return false;
+      }
+    });
+    await preferences.setStringList(_key, saved);
   }
 }
