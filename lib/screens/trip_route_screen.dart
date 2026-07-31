@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../models/activity.dart';
+import '../models/planning_option.dart';
+import '../models/planning_stop.dart';
 import '../models/trip_discovery_zone.dart';
 import '../models/trip_plan_draft.dart';
 import '../models/trip_route.dart';
+import '../services/itinerary_scheduler.dart';
 import '../services/trip_route_service.dart';
 import '../theme/app_theme.dart';
+import 'trip_itinerary_screen.dart';
 
 class TripRouteScreen extends StatefulWidget {
   const TripRouteScreen({
@@ -23,6 +27,8 @@ class TripRouteScreen extends StatefulWidget {
 
 class _TripRouteScreenState extends State<TripRouteScreen> {
   late Future<List<TripDiscoveryZone>> _discovery;
+  List<TripDiscoveryZone> _zones = const [];
+  final Map<int, String> _selectedByZone = {};
 
   TripPlanDraft get draft => widget.draft;
   TripRoute get route => widget.route;
@@ -34,14 +40,69 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
   }
 
   void _loadDiscoveries() {
-    _discovery = const TripRouteService().discoverStops(
-      route: route,
-      draft: draft,
-    );
+    _discovery = const TripRouteService()
+        .discoverStops(route: route, draft: draft)
+        .then((zones) {
+      _zones = zones;
+      return zones;
+    });
   }
 
   void _retryDiscoveries() {
     setState(_loadDiscoveries);
+  }
+
+
+  void _selectCandidate(int zoneIndex, Activity candidate) {
+    setState(() {
+      if (_selectedByZone[zoneIndex] == candidate.id) {
+        _selectedByZone.remove(zoneIndex);
+      } else {
+        _selectedByZone[zoneIndex] = candidate.id;
+      }
+    });
+  }
+
+  void _buildItinerary() {
+    if (_selectedByZone.isEmpty) return;
+    final selected = <Activity>[];
+    for (final zone in [..._zones]..sort((a, b) => a.index.compareTo(b.index))) {
+      final id = _selectedByZone[zone.index];
+      if (id == null) continue;
+      final matches = zone.candidates.where((candidate) => candidate.id == id);
+      if (matches.isNotEmpty) selected.add(matches.first);
+    }
+    if (selected.isEmpty || draft.startsAt == null) return;
+
+    final date = draft.startsAt!;
+    final timedDraft = draft.copyWith(
+      startsAt: DateTime(date.year, date.month, date.day, 9),
+    );
+    final request = timedDraft.toPlanningRequest(
+      origin: route.origin,
+      destination: route.destination,
+    );
+    final option = PlanningOption(
+      id: 'trip-${DateTime.now().millisecondsSinceEpoch}',
+      title: route.destination.label ?? draft.destinationLabel,
+      summary: 'Your selected road-trip discoveries.',
+      stops: [
+        for (var index = 0; index < selected.length; index++)
+          PlanningStop(sequence: index, activity: selected[index]),
+      ],
+    );
+    final itinerary = const ItineraryScheduler()
+        .schedule([option], request)
+        .single;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TripItineraryScreen(
+          draft: timedDraft,
+          route: route,
+          itinerary: itinerary,
+        ),
+      ),
+    );
   }
 
   @override
@@ -107,7 +168,12 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
               return Column(
                 children: [
                   for (final zone in zones)
-                    _DiscoveryZoneCard(zone: zone),
+                    _DiscoveryZoneCard(
+                      zone: zone,
+                      selectedId: _selectedByZone[zone.index],
+                      onSelected: (candidate) =>
+                          _selectCandidate(zone.index, candidate),
+                    ),
                 ],
               );
             },
@@ -133,12 +199,22 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Next we’ll search these zones using your interests: '
-                    '${draft.interests.isEmpty ? 'the best local finds' : draft.interests.join(' • ')}.',
+                    'Choose one favorite in any discovery zone. '
+                    'Choosing another option in that zone replaces it.',
                     style: const TextStyle(height: 1.4),
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _selectedByZone.isEmpty ? null : _buildItinerary,
+            icon: const Icon(Icons.auto_awesome_rounded),
+            label: Text(
+              _selectedByZone.isEmpty
+                  ? 'CHOOSE YOUR STOPS'
+                  : 'BUILD MY ITINERARY (${_selectedByZone.length})',
             ),
           ),
         ],
@@ -360,9 +436,15 @@ class _DiscoveryError extends StatelessWidget {
 }
 
 class _DiscoveryZoneCard extends StatelessWidget {
-  const _DiscoveryZoneCard({required this.zone});
+  const _DiscoveryZoneCard({
+    required this.zone,
+    required this.selectedId,
+    required this.onSelected,
+  });
 
   final TripDiscoveryZone zone;
+  final String? selectedId;
+  final ValueChanged<Activity> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -398,7 +480,11 @@ class _DiscoveryZoneCard extends StatelessWidget {
             const Text('No strong matches found in this stretch.')
           else
             for (final candidate in zone.candidates)
-              _TripCandidateTile(candidate: candidate),
+              _TripCandidateTile(
+                candidate: candidate,
+                selected: selectedId == candidate.id,
+                onTap: () => onSelected(candidate),
+              ),
         ],
       ),
     );
@@ -406,16 +492,33 @@ class _DiscoveryZoneCard extends StatelessWidget {
 }
 
 class _TripCandidateTile extends StatelessWidget {
-  const _TripCandidateTile({required this.candidate});
+  const _TripCandidateTile({
+    required this.candidate,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Activity candidate;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = candidate.photoUrl;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.lavender : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: selected ? AppColors.primary : Colors.transparent,
+          ),
+        ),
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
@@ -481,6 +584,7 @@ class _TripCandidateTile extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
