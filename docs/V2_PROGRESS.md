@@ -169,6 +169,13 @@ Last updated: July 30, 2026
 - Configurable stops per option provides the first tested path to multi-stop trip
   itineraries without changing the current two-card presentation.
 
+- `ItineraryScheduler` assigns start times, inferred durations, distance-based
+  travel gaps, per-stop costs, and option totals after option construction.
+- Verified provider event times remain authoritative.
+- Known provider prices are multiplied by traveler count; unknown prices remain
+  unknown instead of being invented.
+- The scheduler enriches current responses without changing existing card UI.
+
 ## Must verify before merging PR #33
 
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
