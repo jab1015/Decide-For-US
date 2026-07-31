@@ -13,11 +13,13 @@ class TripItineraryScreen extends StatefulWidget {
     required this.draft,
     required this.route,
     required this.itinerary,
+    this.onChangeStops,
   });
 
   final TripPlanDraft draft;
   final TripRoute route;
   final PlanningOption itinerary;
+  final VoidCallback? onChangeStops;
 
   @override
   State<TripItineraryScreen> createState() => _TripItineraryScreenState();
@@ -88,7 +90,7 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
             _ItineraryStopCard(stop: stop),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: widget.onChangeStops ?? () => Navigator.pop(context),
             icon: const Icon(Icons.tune_rounded),
             label: const Text('CHANGE MY STOPS'),
             style: OutlinedButton.styleFrom(
