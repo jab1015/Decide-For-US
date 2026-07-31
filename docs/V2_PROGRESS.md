@@ -176,6 +176,19 @@ Last updated: July 30, 2026
   unknown instead of being invented.
 - The scheduler enriches current responses without changing existing card UI.
 
+
+### Trip Planner+ setup
+
+- Premium-only Trip Planner+ entry added to the home experience.
+- The existing RevenueCat and explicit tester-access flow protects navigation.
+- Branded setup screen collects origin, destination, dates, travelers, total
+  budget, maximum drive interval, interests, and exclusions.
+- `TripPlanDraft` owns validation and converts completed setup into the shared
+  `PlanningEngineRequest` trip contract.
+- Review sheet confirms the trip setup before future route discovery.
+- Model and widget coverage protects validation, request conversion, and the
+  visible setup flow.
+
 ## Must verify before merging PR #33
 
 - Updated `getIdeas` deployed with `TICKETMASTER_API_KEY` access.
