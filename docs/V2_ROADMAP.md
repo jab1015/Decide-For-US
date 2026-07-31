@@ -167,3 +167,6 @@ Core inputs:
 ### Next: corridor candidates
 
 Query places, events, scenic stops, and local food near each corridor zone, then run them through the shared eligibility, scoring, option-building, and itinerary scheduling pipeline.
+
+- Completed route-review navigation and the dedicated corridor presentation screen.
+- Next implementation slice: fetch and rank real candidates around each discovery zone.
