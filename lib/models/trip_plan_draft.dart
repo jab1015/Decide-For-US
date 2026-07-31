@@ -16,6 +16,31 @@ class TripPlanDraft {
     this.exclusions = const [],
   });
 
+  factory TripPlanDraft.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(Object? value) {
+      if (value == null) return null;
+      return DateTime.tryParse(value.toString());
+    }
+
+    List<String> parseStrings(Object? value) {
+      if (value is! List) return const [];
+      return value.map((item) => item.toString()).toList(growable: false);
+    }
+
+    return TripPlanDraft(
+      originLabel: json['originLabel']?.toString() ?? 'Current location',
+      destinationLabel: json['destinationLabel']?.toString() ?? '',
+      startsAt: parseDate(json['startsAt']),
+      endsAt: parseDate(json['endsAt']),
+      travelerCount: (json['travelerCount'] as num?)?.round() ?? 2,
+      budget: json['budget']?.toString() ?? r'$500–$1,000',
+      maxTravelMinutesBetweenStops:
+          (json['maxTravelMinutesBetweenStops'] as num?)?.round() ?? 120,
+      interests: parseStrings(json['interests']),
+      exclusions: parseStrings(json['exclusions']),
+    );
+  }
+
   final String originLabel;
   final String destinationLabel;
   final DateTime? startsAt;
@@ -68,6 +93,18 @@ class TripPlanDraft {
       exclusions: exclusions ?? this.exclusions,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'originLabel': originLabel,
+    'destinationLabel': destinationLabel,
+    'startsAt': startsAt?.toIso8601String(),
+    'endsAt': endsAt?.toIso8601String(),
+    'travelerCount': travelerCount,
+    'budget': budget,
+    'maxTravelMinutesBetweenStops': maxTravelMinutesBetweenStops,
+    'interests': interests,
+    'exclusions': exclusions,
+  };
 
   PlanningEngineRequest toPlanningRequest({
     required PlanningLocation origin,
