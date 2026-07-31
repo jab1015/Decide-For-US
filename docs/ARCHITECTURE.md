@@ -60,6 +60,12 @@ with an explicit place/event kind, source, provider ID, verification state, and
 source URL. The engine consumes candidates and remains independent of a specific
 external provider.
 
+
+`CandidateEvaluator` runs before option construction. It returns an explainable
+`CandidateEvaluation` containing eligibility, rejection reasons, a bounded score,
+and score reasons. The engine currently removes ineligible candidates without
+reordering eligible provider results; later itinerary ranking can use the score.
+
 The normalized planning model is:
 
 ```text
