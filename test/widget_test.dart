@@ -27,13 +27,13 @@ void main() {
     expect(find.text('Starting point'), findsOneWidget);
     expect(find.text('Destination'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Travelers'), 250);
-    expect(find.text('Travelers'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Travelers').first, 250);
+    expect(find.text('Travelers').first, findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Total trip budget'), 250);
-    expect(find.text('Total trip budget'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Total trip budget').first, 250);
+    expect(find.text('Total trip budget').first, findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('REVIEW MY TRIP'), 300);
-    expect(find.text('REVIEW MY TRIP'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('REVIEW MY TRIP').first, 300);
+    expect(find.text('REVIEW MY TRIP').first, findsOneWidget);
   });
 }
