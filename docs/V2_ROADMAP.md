@@ -105,6 +105,8 @@ Foundation delivered:
 - shared candidate model for verified places and events
 - provider contract with recommendation and Local Events adapters
 - deterministic eligibility and explainable candidate scoring
+- complementary, category-aware option construction
+- configurable multi-stop option support for Trip Planner+
 
 Core inputs:
 
