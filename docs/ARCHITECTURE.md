@@ -226,3 +226,35 @@ Trip Planner UI
 ```
 
 Route-corridor points are planning inputs rather than recommendations. Candidate providers will search around those points before the existing evaluator, option builder, and itinerary scheduler select the final trip.
+
+## Trip corridor discovery boundary
+
+After `resolveTripRoute` returns normalized endpoints, route geometry, and sampled corridor zones, Flutter calls `TripRouteService.discoverStops`. The Premium-only `discoverTripStops` function coordinates the live provider search.
+
+```text
+TripRouteScreen
+  -> TripRouteService.discoverStops (Firebase ID token)
+  -> discoverTripStops
+       -> Premium/tester authorization
+       -> interest-to-query mapping
+       -> Google Places searches per corridor zone
+       -> Ticketmaster searches within trip dates
+       -> exclusion filtering
+       -> cross-zone duplicate prevention
+       -> category-diverse candidate selection
+  -> List<TripDiscoveryZone>
+  -> image-backed discovery cards
+```
+
+Key rules:
+
+- Provider credentials never enter Flutter.
+- At most eight sampled corridor zones are searched in one request.
+- Each zone returns at most three candidates.
+- A live event may occupy one candidate position.
+- Place candidates must satisfy the existing minimum rating threshold.
+- Candidate identifiers are unique across the complete route response.
+- Short routes without intermediate corridor points search around the destination.
+- Corridor discovery produces candidates, not a finalized itinerary.
+
+The next architecture boundary will store traveler selections as Planning Stops and pass them through the shared Itinerary Scheduler. Event start times remain authoritative; non-event stops receive estimated duration and travel gaps.
