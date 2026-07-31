@@ -271,4 +271,4 @@ The existing `ItineraryScheduler` then assigns:
 - price estimates when provider pricing exists; and
 - authoritative Ticketmaster start times for events.
 
-The resulting `PlanningOption` is passed to `TripItineraryScreen`. Selection remains session-local in this slice; persistence and multi-day pacing are separate boundaries.
+The scheduled `PlanningOption` passes through `TripItineraryPacer`, which moves late non-event stops to the next day while preserving authoritative event times. `TripItineraryScreen` can persist the draft, route, and itinerary through `TripPlanStorage`. `SavedTripsScreen` reconstructs those models for reopening, supports deletion, and returns travelers to the existing route-selection screen when they choose to change stops. Storage is currently device-local through SharedPreferences; account-synced Firestore storage remains a later boundary.
