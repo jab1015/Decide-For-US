@@ -453,9 +453,9 @@ void main() {
           sequence: 0,
           activity: _activity('museum', 'culture', 'History Museum'),
         ),
-        PlanningStop(
+        const PlanningStop(
           sequence: 1,
-          activity: const Activity(
+          activity: Activity(
             id: 'lunch',
             category: 'food',
             title: 'Local Lunch',
