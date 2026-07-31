@@ -170,3 +170,14 @@ Query places, events, scenic stops, and local food near each corridor zone, then
 
 - Completed route-review navigation and the dedicated corridor presentation screen.
 - Next implementation slice: fetch and rank real candidates around each discovery zone.
+
+### Complete: real corridor discoveries
+
+- Interest-aware Google Places searches around route zones
+- Date-aware Ticketmaster event searches
+- Cross-zone duplicate prevention and exclusion filtering
+- Loading, retry, empty, and image-fallback states in Trip Planner+
+
+### Next: itinerary selection
+
+Let travelers select or replace discoveries, then schedule the chosen stops against drive time, trip dates, opening constraints, and the shared itinerary scheduler.
