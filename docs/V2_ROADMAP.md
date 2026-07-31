@@ -164,7 +164,7 @@ Core inputs:
 - Verified driving route, distance, and duration
 - Route-corridor discovery zones
 
-### Next: corridor candidates
+### Completed: corridor candidates
 
 Query places, events, scenic stops, and local food near each corridor zone, then run them through the shared eligibility, scoring, option-building, and itinerary scheduling pipeline.
 
@@ -178,13 +178,13 @@ Query places, events, scenic stops, and local food near each corridor zone, then
 - Cross-zone duplicate prevention and exclusion filtering
 - Loading, retry, empty, and image-fallback states in Trip Planner+
 
-### Next: itinerary selection
+### Completed: itinerary selection
 
 Let travelers select or replace discoveries, then schedule the chosen stops against drive time, trip dates, opening constraints, and the shared itinerary scheduler.
 
 ## Current execution point
 
-Trip Planner+ has completed its route and live-discovery foundation. The next delivery slice is **traveler choice and itinerary generation**.
+Trip Planner+ Phase 1 is complete. The execution focus now moves to release polish and the next Premium planning mode.
 
 Planned order:
 
@@ -220,4 +220,30 @@ Completed after the first-pass itinerary:
 - Live events retain their authoritative provider start time.
 - Trips can be saved locally, reopened from Saved Trips, returned to selection for changes, and deleted.
 
-Next validation focus: saved-trip reopening across restarts, edit flow clarity, and share/export behavior.
+Validated: saved-trip reopening, edit flow, update-in-place behavior, itinerary navigation, Google Maps GPS handoff, and share/send-to-phone behavior.
+
+### Complete: Trip Planner+ Phase 1
+
+- Place-specific descriptions and real provider images
+- Check it out and View event links before selection
+- Multi-day pacing with authoritative event times
+- Saved Trips library with reopen, edit, delete, and update-in-place behavior
+- Decide, Saved Trips, and Favorites navigation from itineraries
+- Google Maps multi-stop GPS handoff
+- Native share/send-to-phone and clipboard fallback
+- Clean Flutter analysis and 29 passing tests
+- Manual Chrome QA complete
+
+### Trip Planner+ Phase 2 backlog
+
+These are optional enhancements and do not block the completed Phase 1:
+
+1. Hotels, overnight cities, and lodging-aware pacing
+2. Automatic stop-order and detour optimization
+3. Weather-aware trip rebuilding
+4. Reservation and ticket-booking links
+5. Fuel, lodging, ticket, and meal cost estimates
+6. Account-synced trips across devices
+7. Collaborative trip editing
+8. Offline itinerary access
+
