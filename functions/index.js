@@ -833,14 +833,40 @@ async function tripPlaceDetails(apiKey, place) {
   }
 }
 
+function specificTripPlaceType(place) {
+  const labels = {
+    aquarium: "aquarium",
+    amusement_park: "amusement park",
+    art_gallery: "art gallery",
+    bakery: "bakery",
+    bar: "bar",
+    book_store: "bookstore",
+    bowling_alley: "bowling alley",
+    cafe: "cafe",
+    campground: "campground",
+    church: "historic church",
+    library: "library",
+    meal_takeaway: "local food stop",
+    movie_theater: "movie theater",
+    museum: "museum",
+    night_club: "nightlife venue",
+    park: "park",
+    restaurant: "restaurant",
+    shopping_mall: "shopping destination",
+    spa: "spa",
+    stadium: "stadium",
+    tourist_attraction: "visitor attraction",
+    zoo: "zoo",
+  };
+  const type = (place.types || []).find((value) => labels[value]);
+  return type ? labels[type] : "local attraction";
+}
+
 function tripPlaceDescription(place) {
   const editorial = String(place.editorial_summary?.overview || "").trim();
   if (editorial) return editorial;
 
-  const type = readableType(
-    place,
-    activityCategory(place) === "food",
-  );
+  const type = specificTripPlaceType(place);
   const address = String(place.formatted_address || "");
   const location = address.split(",").slice(0, 2).join(",").trim();
   const rating = Number(place.rating);
