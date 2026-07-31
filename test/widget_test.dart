@@ -31,24 +31,24 @@ void main() {
     expect(pageList, findsOneWidget);
 
     await tester.dragUntilVisible(
-      find.text('Travelers').first,
+      find.text('Travelers'),
       pageList,
       const Offset(0, -250),
     );
-    expect(find.text('Travelers').first, findsOneWidget);
+    expect(find.text('Travelers'), findsOneWidget);
 
     await tester.dragUntilVisible(
-      find.text('Total trip budget').first,
+      find.text('Total trip budget'),
       pageList,
       const Offset(0, -250),
     );
-    expect(find.text('Total trip budget').first, findsOneWidget);
+    expect(find.text('Total trip budget'), findsOneWidget);
 
     await tester.dragUntilVisible(
-      find.text('REVIEW MY TRIP').first,
+      find.text('REVIEW MY TRIP'),
       pageList,
       const Offset(0, -300),
     );
-    expect(find.text('REVIEW MY TRIP').first, findsOneWidget);
+    expect(find.text('REVIEW MY TRIP'), findsOneWidget);
   });
 }
