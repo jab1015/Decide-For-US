@@ -214,4 +214,10 @@ Acceptance criteria for the next milestone:
 - Shared scheduler integration
 - Timed itinerary presentation
 
-Next validation focus: selection clarity, realistic pacing on long routes, authoritative event placement, and layout behavior with one through eight selected stops.
+Completed after the first-pass itinerary:
+
+- Multi-day pacing rolls late non-event activities to the next morning.
+- Live events retain their authoritative provider start time.
+- Trips can be saved locally, reopened from Saved Trips, returned to selection for changes, and deleted.
+
+Next validation focus: saved-trip reopening across restarts, edit flow clarity, and share/export behavior.
