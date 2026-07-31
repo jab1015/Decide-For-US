@@ -232,3 +232,12 @@ Last updated: July 30, 2026
 
 - Route confirmation now advances to a dedicated road-trip route page instead of closing back to setup.
 - The route page presents verified distance, duration, endpoints, and every corridor discovery zone.
+
+## Corridor discovery implementation
+
+- Added Premium-authenticated `discoverTripStops` Firebase endpoint.
+- Searches every route zone for highly rated local food, attractions, scenic stops, history, outdoor options, family activities, and hidden gems based on selected interests.
+- Includes Ticketmaster events occurring during the selected trip dates.
+- Filters user exclusions and prevents repeated candidates across route zones.
+- Route page now loads real, image-backed discoveries instead of coordinate-only placeholders.
+- Added discovery-zone model coverage; expected Flutter test total is 26.
