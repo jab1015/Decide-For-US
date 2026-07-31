@@ -128,7 +128,7 @@ class _RouteHero extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: AppShadows.glow,
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +214,7 @@ class _RoutePointCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           width: 38,
@@ -230,8 +230,10 @@ class _RoutePointCard extends StatelessWidget {
                 child: Icon(icon, color: AppColors.primary, size: 17),
               ),
               if (!isLast)
-                Expanded(
-                  child: Container(width: 2, color: AppColors.border),
+                Container(
+                  width: 2,
+                  height: 64,
+                  color: AppColors.border,
                 ),
             ],
           ),
