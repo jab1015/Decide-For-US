@@ -111,7 +111,7 @@ class ItineraryScheduler {
   int _estimateTravelMinutes(Activity from, Activity to) {
     final miles = _distanceMiles(from.lat, from.lng, to.lat, to.lng);
     final drivingMinutes = (miles / 25 * 60).round();
-    return (drivingMinutes + 8).clamp(5, 180);
+    return (drivingMinutes + 8).clamp(5, 180).toInt();
   }
 
   double _distanceMiles(
