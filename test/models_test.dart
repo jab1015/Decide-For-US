@@ -1,4 +1,7 @@
 import 'package:decide_for_us/models/activity.dart';
+import 'package:decide_for_us/models/planning_constraints.dart';
+import 'package:decide_for_us/models/planning_engine_request.dart';
+import 'package:decide_for_us/models/planning_location.dart';
 import 'package:decide_for_us/models/planning_mode.dart';
 import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
@@ -126,6 +129,70 @@ void main() {
     expect(PlanningMode.localEvents.requiresPremium, isTrue);
     expect(PlanningMode.trip.requiresPremium, isTrue);
     expect(PlanningMode.fromWireName('trip'), PlanningMode.trip);
+  });
+  test('PlanningEngineRequest preserves trip constraints', () {
+    final startsAt = DateTime.utc(2026, 10, 2, 12);
+    final endsAt = DateTime.utc(2026, 10, 5, 20);
+    final request = PlanningEngineRequest(
+      mode: PlanningMode.trip,
+      origin: const PlanningLocation(
+        lat: 30.3322,
+        lng: -81.6557,
+        label: 'Jacksonville',
+      ),
+      destination: const PlanningLocation(
+        lat: 32.0809,
+        lng: -81.0912,
+        label: 'Savannah',
+      ),
+      startsAt: startsAt,
+      endsAt: endsAt,
+      constraints: const PlanningConstraints(
+        group: 'Family',
+        budget: r'$100+',
+        energy: 'Medium',
+        radiusMiles: 50,
+        travelerCount: 4,
+        maxTravelMinutesBetweenStops: 120,
+        interests: ['history', 'scenic'],
+        exclusions: ['nightlife'],
+      ),
+    );
+
+    final restored = PlanningEngineRequest.fromJson(request.toJson());
+
+    expect(restored.mode, PlanningMode.trip);
+    expect(restored.origin.label, 'Jacksonville');
+    expect(restored.destination?.label, 'Savannah');
+    expect(restored.startsAt, startsAt);
+    expect(restored.endsAt, endsAt);
+    expect(restored.constraints.travelerCount, 4);
+    expect(restored.constraints.maxTravelMinutesBetweenStops, 120);
+    expect(restored.constraints.interests, ['history', 'scenic']);
+    expect(restored.constraints.exclusions, ['nightlife']);
+  });
+
+  test('PlanningEngineRequest adapts the current recommendation request', () {
+    const recommendation = PlanningRequest(
+      group: 'Couple',
+      budget: r'$50–$100',
+      energy: 'Low',
+      isDateNight: true,
+      lat: 30.8,
+      lng: -81.7,
+      radiusMiles: 25,
+      dateOccasion: 'Anniversary',
+      dateStyle: 'Romantic',
+      dateTiming: 'This Weekend',
+    );
+
+    final engineRequest =
+        PlanningEngineRequest.fromRecommendation(recommendation);
+    final adapted = engineRequest.toRecommendationRequest();
+
+    expect(engineRequest.mode, PlanningMode.dateNight);
+    expect(engineRequest.constraints.travelerCount, 2);
+    expect(adapted.toJson(), recommendation.toJson());
   });
 }
 
