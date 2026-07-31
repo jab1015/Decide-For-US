@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/trip_plan_draft.dart';
+import '../models/trip_route.dart';
+import '../services/location_service.dart';
+import '../services/trip_route_service.dart';
 import '../theme/app_theme.dart';
 
 class TripPlannerScreen extends StatefulWidget {
@@ -21,6 +24,8 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   String _budget = r'$500–$1,000';
   int _driveInterval = 120;
   final Set<String> _interests = {'Hidden gems'};
+  final _routeService = const TripRouteService();
+  bool _isResolvingRoute = false;
 
   static const _interestChoices = [
     'Local food',
@@ -73,10 +78,46 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
     });
   }
 
-  void _reviewTrip() {
+  Future<void> _reviewTrip() async {
     final draft = _draft;
-    if (!draft.isValid) return;
+    if (!draft.isValid || _isResolvingRoute) return;
     FocusScope.of(context).unfocus();
+    setState(() => _isResolvingRoute = true);
+
+    try {
+      double? originLat;
+      double? originLng;
+      if (draft.originLabel.toLowerCase() == 'current location') {
+        final current = await LocationService.getLatLng();
+        originLat = current?['lat'];
+        originLng = current?['lng'];
+        if (current == null) {
+          throw const TripRouteException(
+            'Turn on location access or enter a starting city.',
+          );
+        }
+      }
+
+      final route = await _routeService.resolve(
+        origin: draft.originLabel,
+        destination: draft.destinationLabel,
+        maxTravelMinutesBetweenStops: draft.maxTravelMinutesBetweenStops,
+        originLat: originLat,
+        originLng: originLng,
+      );
+      if (!mounted) return;
+      _showRouteReview(draft, route);
+    } on TripRouteException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isResolvingRoute = false);
+    }
+  }
+
+  void _showRouteReview(TripPlanDraft draft, TripRoute route) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -85,14 +126,14 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
       builder: (context) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '✦  TRIP SETUP READY',
+                '✦  ROUTE DISCOVERED',
                 style: TextStyle(
                   color: AppColors.coral,
                   fontSize: 11,
@@ -102,25 +143,35 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                '${draft.originLabel} → ${draft.destinationLabel}',
+                '${route.origin.label ?? draft.originLabel} → '
+                '${route.destination.label ?? draft.destinationLabel}',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 16),
+              _ReviewLine(
+                icon: Icons.route_outlined,
+                text: '${route.distanceLabel} • ${route.durationLabel} driving',
+              ),
               _ReviewLine(
                 icon: Icons.calendar_month_outlined,
                 text: _dateLabel,
               ),
               _ReviewLine(
                 icon: Icons.group_outlined,
-                text: '$_travelers ${_travelers == 1 ? 'traveler' : 'travelers'}',
+                text: '$_travelers '
+                    '${_travelers == 1 ? 'traveler' : 'travelers'}',
               ),
               _ReviewLine(
                 icon: Icons.account_balance_wallet_outlined,
                 text: '$_budget total budget',
               ),
               _ReviewLine(
-                icon: Icons.route_outlined,
-                text: 'An interesting stop about every ${_driveLabel(_driveInterval)}',
+                icon: Icons.explore_outlined,
+                text: route.corridorPoints.isEmpty
+                    ? 'Direct route — destination discoveries come next'
+                    : '${route.corridorPoints.length} route '
+                        '${route.corridorPoints.length == 1 ? 'zone' : 'zones'} '
+                        'ready for discovery',
               ),
               if (_interests.isNotEmpty)
                 _ReviewLine(
@@ -129,7 +180,8 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 ),
               const SizedBox(height: 14),
               const Text(
-                'Your setup is ready for route discovery and itinerary building.',
+                'Your route is verified. Next, we’ll discover worthwhile '
+                'stops along the way and shape them into a paced itinerary.',
                 style: TextStyle(color: AppColors.muted, height: 1.4),
               ),
               const SizedBox(height: 20),
@@ -449,9 +501,16 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
           ),
           const SizedBox(height: 4),
           FilledButton.icon(
-            onPressed: valid ? _reviewTrip : null,
-            icon: const Icon(Icons.route_rounded),
-            label: const Text('REVIEW MY TRIP'),
+            onPressed: valid && !_isResolvingRoute ? _reviewTrip : null,
+            icon: _isResolvingRoute
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.route_rounded),
+            label: Text(
+              _isResolvingRoute ? 'MAPPING YOUR ROUTE…' : 'REVIEW MY TRIP',
+            ),
           ),
           if (!valid) ...[
             const SizedBox(height: 10),
