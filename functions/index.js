@@ -793,6 +793,193 @@ export const resolveTripRoute = onRequest(
   },
 );
 
+function tripDiscoveryQueries(interests = []) {
+  const queryByInterest = {
+    "Local food": "locally owned restaurant",
+    "Scenic stops": "scenic viewpoint",
+    History: "historic landmark museum",
+    Outdoors: "state park nature attraction",
+    "Family fun": "family attraction",
+    "Hidden gems": "unique local attraction",
+  };
+  const selected = interests
+    .map((interest) => queryByInterest[String(interest)])
+    .filter(Boolean);
+  return [...new Set([
+    ...selected,
+    "popular local attraction",
+    "local restaurant",
+  ])].slice(0, 3);
+}
+
+function tripPlaceDescription(place) {
+  const reason = String(place.matchedQuery || "local favorite").toLowerCase();
+  const rating = Number(place.rating);
+  const proof = Number.isFinite(rating) ? ` with a ${rating.toFixed(1)} rating` : "";
+  return `${place.name} stands out near this part of the route for ${reason}${proof}.`;
+}
+
+function excludedTripCandidate(candidate, exclusions) {
+  const text = [
+    candidate.name,
+    candidate.title,
+    candidate.matchedQuery,
+    ...(candidate.types || []),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return exclusions.some(
+    (exclusion) => text.includes(String(exclusion).toLowerCase()),
+  );
+}
+
+async function discoverTripZone({
+  point,
+  index,
+  apiKey,
+  eventApiKey,
+  interests,
+  exclusions,
+  startsAt,
+  endsAt,
+  usedIds,
+}) {
+  const placesPromise = searchPlaces(
+    apiKey,
+    tripDiscoveryQueries(interests),
+    point.lat,
+    point.lng,
+    milesToMeters(15),
+  );
+  const eventsPromise = searchTicketmasterEvents({
+    apiKey: eventApiKey,
+    lat: point.lat,
+    lng: point.lng,
+    radiusMiles: 20,
+    startDateTime: startsAt,
+    endDateTime: endsAt,
+  }).catch(() => []);
+
+  const [places, events] = await Promise.all([placesPromise, eventsPromise]);
+  const candidates = [];
+  const event = events.find(
+    (item) => !usedIds.has(item.id) &&
+      !excludedTripCandidate(item, exclusions),
+  );
+  if (event) {
+    usedIds.add(event.id);
+    candidates.push(event);
+  }
+
+  for (const place of places) {
+    if (candidates.length >= 3) break;
+    if (usedIds.has(place.place_id) ||
+        excludedTripCandidate(place, exclusions)) {
+      continue;
+    }
+    const category = activityCategory(place);
+    if (candidates.some((item) => item.category === category)) continue;
+    usedIds.add(place.place_id);
+    candidates.push(
+      serialize(place, category, tripPlaceDescription(place)),
+    );
+  }
+
+  return {
+    index,
+    lat: point.lat,
+    lng: point.lng,
+    candidates,
+  };
+}
+
+export const discoverTripStops = onRequest(
+  {
+    region: "us-central1",
+    secrets: [
+      GOOGLE_API_KEY,
+      TICKETMASTER_API_KEY,
+      REVENUECAT_SECRET_API_KEY,
+    ],
+    timeoutSeconds: 120,
+  },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      if (!premium) {
+        return res.status(403).json({
+          error: "Trip Planner+ requires Premium.",
+        });
+      }
+
+      const rawPoints = Array.isArray(req.body?.corridorPoints) ?
+        req.body.corridorPoints :
+        [];
+      const points = rawPoints.slice(0, 8).map((point) => ({
+        lat: Number(point?.lat),
+        lng: Number(point?.lng),
+      })).filter(
+        (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng),
+      );
+      if (!points.length) {
+        return res.status(400).json({
+          error: "A route with discovery zones is required.",
+        });
+      }
+
+      const interests = Array.isArray(req.body?.interests) ?
+        req.body.interests.slice(0, 8) :
+        [];
+      const exclusions = Array.isArray(req.body?.exclusions) ?
+        req.body.exclusions.slice(0, 12) :
+        [];
+      const startsAt = req.body?.startsAt ?
+        new Date(req.body.startsAt) :
+        new Date();
+      const requestedEnd = req.body?.endsAt ?
+        new Date(req.body.endsAt) :
+        new Date(startsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const endsAt = requestedEnd > startsAt ?
+        requestedEnd :
+        new Date(startsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const usedIds = new Set();
+      const zones = [];
+      for (let index = 0; index < points.length; index++) {
+        zones.push(await discoverTripZone({
+          point: points[index],
+          index,
+          apiKey: GOOGLE_API_KEY.value(),
+          eventApiKey: TICKETMASTER_API_KEY.value(),
+          interests,
+          exclusions,
+          startsAt,
+          endsAt,
+          usedIds,
+        }));
+      }
+      return res.json(zones);
+    } catch (error) {
+      console.error(error);
+      return res.status(502).json({
+        error: error.message || "Trip discovery failed.",
+      });
+    }
+  },
+);
+
 export const getIdeas = onRequest(
   {
     region: "us-central1",
