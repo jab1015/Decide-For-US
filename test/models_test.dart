@@ -1,4 +1,5 @@
 import 'package:decide_for_us/models/activity.dart';
+import 'package:decide_for_us/models/candidate_evaluation.dart';
 import 'package:decide_for_us/models/planning_constraints.dart';
 import 'package:decide_for_us/models/planning_engine_request.dart';
 import 'package:decide_for_us/models/planning_location.dart';
@@ -9,6 +10,7 @@ import 'package:decide_for_us/models/planning_response.dart';
 import 'package:decide_for_us/services/candidate_evaluator.dart';
 import 'package:decide_for_us/services/candidate_provider.dart';
 import 'package:decide_for_us/services/planning_engine.dart';
+import 'package:decide_for_us/services/planning_option_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -366,6 +368,78 @@ void main() {
     expect(matched.scoreReasons, contains('interest_match'));
   });
 
+  test('PlanningOptionBuilder never pairs food with food', () {
+    final evaluations = [
+      _evaluation(_activity('dinner', 'food', 'Italian Dinner'), 95),
+      _evaluation(_activity('coffee', 'food', 'Coffee House'), 90),
+      _evaluation(_activity('park', 'outdoors', 'River Park'), 85),
+      _evaluation(_activity('gallery', 'culture', 'Art Gallery'), 80),
+      _evaluation(_activity('arcade', 'entertainment', 'Retro Arcade'), 75),
+    ];
+    final options = const PlanningOptionBuilder().build(
+      evaluations,
+      _quickRequest,
+    );
+
+    expect(options, hasLength(2));
+    for (final option in options) {
+      final foodStops = option.activities.where(
+        (activity) => activity.category == 'food',
+      );
+      expect(foodStops.length, lessThanOrEqualTo(1));
+    }
+    final optionsWithFood = options.where(
+      (option) => option.activities.any((activity) => activity.category == 'food'),
+    );
+    expect(optionsWithFood.length, 1);
+  });
+
+  test('PlanningOptionBuilder orders an event before its companion', () {
+    final event = Activity(
+      id: 'concert',
+      category: 'event',
+      title: 'Live Concert',
+      description: '',
+      address: '',
+      lat: 30,
+      lng: -81,
+      eventUrl: 'https://example.com/concert',
+      eventStart: DateTime.utc(2026, 8, 2),
+      source: 'ticketmaster',
+    );
+    final options = const PlanningOptionBuilder(maxOptions: 1).build(
+      [
+        _evaluation(_activity('dinner', 'food', 'Dinner'), 95),
+        _evaluation(event, 90),
+      ],
+      _quickRequest,
+    );
+
+    expect(options.single.activities.map((item) => item.id), [
+      'concert',
+      'dinner',
+    ]);
+    expect(options.single.summary, 'A live moment, made into an outing.');
+  });
+
+  test('PlanningOptionBuilder supports future multi-stop options', () {
+    final options = const PlanningOptionBuilder(
+      maxOptions: 1,
+      stopsPerOption: 3,
+    ).build(
+      [
+        _evaluation(_activity('trail', 'outdoors', 'Scenic Trail'), 90),
+        _evaluation(_activity('museum', 'culture', 'History Museum'), 85),
+        _evaluation(_activity('lunch', 'food', 'Local Lunch'), 80),
+      ],
+      _quickRequest,
+    );
+
+    expect(options.single.stops, hasLength(3));
+    expect(options.single.stops.map((stop) => stop.sequence), [0, 1, 2]);
+    expect(options.single.activities.last.id, 'lunch');
+  });
+
 }
 
 
@@ -381,4 +455,30 @@ class _FakeCandidateProvider implements CandidateProvider {
   Future<List<PlanningCandidate>> fetch(PlanningEngineRequest request) async {
     return candidates;
   }
+}
+
+const _quickRequest = PlanningEngineRequest(
+  mode: PlanningMode.quickDecision,
+  origin: PlanningLocation(lat: 30, lng: -81),
+  constraints: PlanningConstraints(),
+);
+
+Activity _activity(String id, String category, String title) {
+  return Activity(
+    id: id,
+    category: category,
+    title: title,
+    description: '',
+    address: '',
+    lat: 30,
+    lng: -81,
+  );
+}
+
+CandidateEvaluation _evaluation(Activity activity, double score) {
+  return CandidateEvaluation(
+    candidate: PlanningCandidate.fromActivity(activity),
+    eligible: true,
+    score: score,
+  );
 }
