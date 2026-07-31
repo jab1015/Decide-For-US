@@ -225,7 +225,7 @@ Trip Planner UI
   -> normalized endpoints, distance, duration, polyline, corridor zones
 ```
 
-Route-corridor points are planning inputs rather than recommendations. Candidate providers will search around those points before the existing evaluator, option builder, and itinerary scheduler select the final trip.
+Route-corridor points are planning inputs rather than recommendations. The discovery provider searches around those points before traveler selection, scheduling, pacing, persistence, and Maps handoff produce the final trip.
 
 ## Trip corridor discovery boundary
 
@@ -257,7 +257,7 @@ Key rules:
 - Short routes without intermediate corridor points search around the destination.
 - Corridor discovery produces candidates, not a finalized itinerary.
 
-The next architecture boundary will store traveler selections as Planning Stops and pass them through the shared Itinerary Scheduler. Event start times remain authoritative; non-event stops receive estimated duration and travel gaps.
+Traveler selections are stored as Planning Stops and passed through the shared Itinerary Scheduler. Event start times remain authoritative; non-event stops receive estimated duration and travel gaps.
 
 ## Trip selection-to-itinerary boundary
 
@@ -272,3 +272,41 @@ The existing `ItineraryScheduler` then assigns:
 - authoritative Ticketmaster start times for events.
 
 The scheduled `PlanningOption` passes through `TripItineraryPacer`, which moves late non-event stops to the next day while preserving authoritative event times. `TripItineraryScreen` can persist the draft, route, and itinerary through `TripPlanStorage`. `SavedTripsScreen` reconstructs those models for reopening, supports deletion, and returns travelers to the existing route-selection screen when they choose to change stops. Storage is currently device-local through SharedPreferences; account-synced Firestore storage remains a later boundary.
+
+## Trip research and navigation boundary
+
+Trip discovery candidates carry normalized provider metadata through `Activity`, including image, event URL, Google place URL, address, coordinates, and a place-specific description. Firebase requests Google editorial summaries when available; otherwise it produces a factual fallback from place type, locality, rating, and review count.
+
+The candidate tile separates two intentions:
+
+- tapping the tile selects or replaces that stop;
+- Check it out / View event opens the provider detail page without changing selection.
+
+## Trip handoff boundary
+
+`TripHandoffService` converts the completed itinerary into a standard Google Maps Directions URL:
+
+```text
+origin
+  -> selected itinerary stops as ordered waypoints
+  -> destination
+```
+
+The same URL is included in native share text. On mobile, users can open the route for GPS navigation or share it through Messages, email, AirDrop, and installed apps. When browser-native sharing is unavailable, the complete itinerary and route link are copied to the clipboard.
+
+Itinerary navigation exposes Decide home, Saved Trips, and Favorites without discarding persisted trip data.
+
+## Trip Planner+ Phase 1 architecture status
+
+Phase 1 is complete. Its stable boundaries are:
+
+1. Premium authorization
+2. Route resolution
+3. Corridor provider discovery
+4. Candidate inspection and selection
+5. Itinerary scheduling and multi-day pacing
+6. Device-local persistence and editing
+7. Google Maps and native-share handoff
+
+Phase 2 may add account-synced storage, lodging, route-order optimization, weather replanning, reservations, and collaborative editing without replacing these boundaries.
+
