@@ -181,3 +181,27 @@ Query places, events, scenic stops, and local food near each corridor zone, then
 ### Next: itinerary selection
 
 Let travelers select or replace discoveries, then schedule the chosen stops against drive time, trip dates, opening constraints, and the shared itinerary scheduler.
+
+## Current execution point
+
+Trip Planner+ has completed its route and live-discovery foundation. The next delivery slice is **traveler choice and itinerary generation**.
+
+Planned order:
+
+1. Add select/skip controls for every discovery.
+2. Enforce a practical stop count based on trip length and dates.
+3. Allow replacement of an individual recommendation without rebuilding the route.
+4. Feed selected stops into the shared itinerary scheduler.
+5. Present a day-by-day timeline with driving legs and estimated visit durations.
+6. Save the generated trip under the existing saved-plan architecture.
+7. Add share/export behavior.
+8. Add destination-area discoveries and overnight planning in a later slice.
+
+Acceptance criteria for the next milestone:
+
+- A traveler can intentionally choose stops rather than receiving a fixed list.
+- The app prevents impossible or overcrowded itineraries.
+- Events retain authoritative start times.
+- Food, activities, and events remain varied.
+- The finished plan clearly separates driving time from activity time.
+- Users can return to the saved itinerary after leaving the planner.
