@@ -5,10 +5,13 @@ import 'package:decide_for_us/models/planning_engine_request.dart';
 import 'package:decide_for_us/models/planning_location.dart';
 import 'package:decide_for_us/models/planning_candidate.dart';
 import 'package:decide_for_us/models/planning_mode.dart';
+import 'package:decide_for_us/models/planning_option.dart';
 import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
+import 'package:decide_for_us/models/planning_stop.dart';
 import 'package:decide_for_us/services/candidate_evaluator.dart';
 import 'package:decide_for_us/services/candidate_provider.dart';
+import 'package:decide_for_us/services/itinerary_scheduler.dart';
 import 'package:decide_for_us/services/planning_engine.dart';
 import 'package:decide_for_us/services/planning_option_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -438,6 +441,138 @@ void main() {
     expect(options.single.stops, hasLength(3));
     expect(options.single.stops.map((stop) => stop.sequence), [0, 1, 2]);
     expect(options.single.activities.last.id, 'lunch');
+  });
+
+  test('ItineraryScheduler assigns sequential times and travel gaps', () {
+    final start = DateTime.utc(2026, 8, 1, 9);
+    final option = PlanningOption(
+      id: 'option-1',
+      title: 'Option 1',
+      stops: [
+        PlanningStop(
+          sequence: 0,
+          activity: _activity('museum', 'culture', 'History Museum'),
+        ),
+        PlanningStop(
+          sequence: 1,
+          activity: const Activity(
+            id: 'lunch',
+            category: 'food',
+            title: 'Local Lunch',
+            description: '',
+            address: '',
+            lat: 30.08,
+            lng: -81.08,
+          ),
+        ),
+      ],
+    );
+    final scheduled = const ItineraryScheduler().schedule(
+      [option],
+      PlanningEngineRequest(
+        mode: PlanningMode.trip,
+        origin: const PlanningLocation(lat: 30, lng: -81),
+        startsAt: start,
+        constraints: const PlanningConstraints(),
+      ),
+    ).single;
+
+    final first = scheduled.stops.first;
+    final second = scheduled.stops.last;
+    expect(first.startsAt, start);
+    expect(first.durationMinutes, 90);
+    expect(second.travelMinutesFromPrevious, greaterThan(0));
+    expect(
+      second.startsAt,
+      start.add(
+        Duration(
+          minutes: first.durationMinutes! + second.travelMinutesFromPrevious!,
+        ),
+      ),
+    );
+    expect(scheduled.totalTravelMinutes, second.travelMinutesFromPrevious);
+  });
+
+  test('ItineraryScheduler preserves authoritative event start times', () {
+    final eventStart = DateTime.utc(2026, 8, 1, 19, 30);
+    final option = PlanningOption(
+      id: 'event-option',
+      title: 'Event Option',
+      stops: [
+        PlanningStop(
+          sequence: 0,
+          activity: Activity(
+            id: 'concert',
+            category: 'event',
+            title: 'Live Concert',
+            description: '',
+            address: '',
+            lat: 30,
+            lng: -81,
+            eventStart: eventStart,
+          ),
+        ),
+      ],
+    );
+    final scheduled = const ItineraryScheduler().schedule(
+      [option],
+      PlanningEngineRequest(
+        mode: PlanningMode.dateNight,
+        origin: const PlanningLocation(lat: 30, lng: -81),
+        startsAt: DateTime.utc(2026, 8, 1, 17),
+        constraints: const PlanningConstraints(),
+      ),
+    ).single;
+
+    expect(scheduled.stops.single.startsAt, eventStart);
+    expect(scheduled.stops.single.durationMinutes, 120);
+  });
+
+  test('ItineraryScheduler totals known costs for all travelers', () {
+    const option = PlanningOption(
+      id: 'priced-option',
+      title: 'Priced Option',
+      stops: [
+        PlanningStop(
+          sequence: 0,
+          activity: Activity(
+            id: 'event',
+            category: 'event',
+            title: 'Festival',
+            description: '',
+            address: '',
+            lat: 30,
+            lng: -81,
+            minPrice: 20,
+          ),
+        ),
+        PlanningStop(
+          sequence: 1,
+          activity: Activity(
+            id: 'tour',
+            category: 'culture',
+            title: 'Historic Tour',
+            description: '',
+            address: '',
+            lat: 30,
+            lng: -81,
+            minPrice: 10,
+          ),
+        ),
+      ],
+    );
+    final scheduled = const ItineraryScheduler().schedule(
+      [option],
+      const PlanningEngineRequest(
+        mode: PlanningMode.trip,
+        origin: PlanningLocation(lat: 30, lng: -81),
+        constraints: PlanningConstraints(travelerCount: 3),
+      ),
+    ).single;
+
+    expect(scheduled.stops.first.estimatedCostCents, 6000);
+    expect(scheduled.stops.last.estimatedCostCents, 3000);
+    expect(scheduled.estimatedCostCents, 9000);
   });
 
 }
