@@ -124,6 +124,10 @@ Core inputs:
 
 ## Phase 6: Trip Planner+
 
+- Premium home entry and validated trip setup form completed.
+- Origin, destination, dates, travelers, budget, drive interval, interests, and
+  exclusions map to the shared Planning Engine request.
+
 - Origin, destination, dates, travelers, budget, and maximum drive interval.
 - Along-route attractions, meals, scenic stops, events, charging, and lodging.
 - Multi-day timeline with travel-time feasibility.
