@@ -267,3 +267,14 @@ Quality status:
 - Manual QA confirmed local attractions, outdoor stops, cultural stops, and an event
 
 Current Trip Planner boundary: discovery candidates are presented, but traveler selection, replacement, scheduling, persistence, and sharing remain future work.
+
+## Trip stop selection and itinerary presentation
+
+Implementation status: complete, awaiting manual QA.
+
+- Travelers can select one discovery per route zone.
+- Selecting a different candidate in the same zone replaces the earlier choice.
+- The route page shows the live selected-stop count.
+- Selected activities are ordered by corridor zone.
+- The shared Itinerary Scheduler assigns estimated travel gaps, visit durations, costs when known, and authoritative event times.
+- A dedicated itinerary screen presents the route summary and timed stop cards.
