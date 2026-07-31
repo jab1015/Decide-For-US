@@ -100,6 +100,8 @@ Foundation delivered:
 - reusable options and serializable planning responses
 - adapter around the current verified recommendation endpoint
 - existing Decide UI preserved while the service boundary changes
+- shared origin/destination and constraint models for multi-stop planning
+- compatibility adapter from the current recommendation request
 
 Core inputs:
 
