@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/activity.dart';
-import '../models/planning_location.dart';
 import '../models/trip_discovery_zone.dart';
 import '../models/trip_plan_draft.dart';
 import '../models/trip_route.dart';
@@ -145,11 +144,6 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
         ],
       ),
     );
-  }
-
-  String _coordinateLabel(PlanningLocation point) {
-    return '${point.lat.toStringAsFixed(2)}, '
-        '${point.lng.toStringAsFixed(2)} • ready for discovery';
   }
 }
 
