@@ -266,7 +266,7 @@ Quality status:
 - Manual QA route: current location to New York, NY
 - Manual QA confirmed local attractions, outdoor stops, cultural stops, and an event
 
-Current Trip Planner boundary: discovery candidates are presented, but traveler selection, replacement, scheduling, persistence, and sharing remain future work.
+Current Trip Planner boundary: route discovery, traveler selection, replacement, scheduling, multi-day pacing, local persistence, reopening, editing, and deletion are implemented. Sharing remains future work.
 
 ## Trip stop selection and itinerary presentation
 
