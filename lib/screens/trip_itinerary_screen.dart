@@ -4,8 +4,11 @@ import '../models/planning_option.dart';
 import '../models/planning_stop.dart';
 import '../models/trip_plan_draft.dart';
 import '../models/trip_route.dart';
+import '../services/trip_handoff_service.dart';
 import '../services/trip_plan_storage.dart';
 import '../theme/app_theme.dart';
+import 'favorites_screen.dart';
+import 'saved_trips_screen.dart';
 
 class TripItineraryScreen extends StatefulWidget {
   const TripItineraryScreen({
@@ -33,6 +36,51 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
   TripRoute get route => widget.route;
   PlanningOption get itinerary => widget.itinerary;
 
+  void _goHome() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  void _openSavedTrips() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SavedTripsScreen()),
+    );
+  }
+
+  void _openFavorites() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const FavoritesScreen()),
+    );
+  }
+
+  Future<void> _openMaps() async {
+    try {
+      await const TripHandoffService().openMaps(
+        draft: draft,
+        route: route,
+        itinerary: itinerary,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google Maps could not be opened.')),
+      );
+    }
+  }
+
+  Future<void> _shareTrip() async {
+    final shared = await const TripHandoffService().share(
+      draft: draft,
+      route: route,
+      itinerary: itinerary,
+    );
+    if (!mounted || shared) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Trip details copied. Paste them into a message.'),
+      ),
+    );
+  }
+
   Future<void> _saveTrip() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -55,7 +103,29 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('YOUR ITINERARY')),
+      appBar: AppBar(
+        title: const Text('YOUR ITINERARY'),
+        actions: [
+          IconButton(
+            tooltip: 'Decide home',
+            onPressed: _goHome,
+            icon: const Icon(Icons.home_outlined),
+          ),
+          IconButton(
+            tooltip: 'Saved trips',
+            onPressed: _openSavedTrips,
+            icon: const Icon(Icons.luggage_outlined),
+          ),
+          IconButton(
+            tooltip: 'Favorites',
+            onPressed: _openFavorites,
+            icon: const Icon(
+              Icons.favorite_border_rounded,
+              color: AppColors.coral,
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
@@ -89,6 +159,21 @@ class _TripItineraryScreenState extends State<TripItineraryScreen> {
           for (final stop in itinerary.stops)
             _ItineraryStopCard(stop: stop),
           const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _openMaps,
+            icon: const Icon(Icons.navigation_rounded),
+            label: const Text('OPEN ROUTE IN MAPS'),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _shareTrip,
+            icon: const Icon(Icons.ios_share_rounded),
+            label: const Text('SHARE OR SEND TO PHONE'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+          const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: widget.onChangeStops ?? () => Navigator.pop(context),
             icon: const Icon(Icons.tune_rounded),
