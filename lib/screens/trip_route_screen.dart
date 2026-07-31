@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../models/activity.dart';
 import '../models/planning_location.dart';
+import '../models/trip_discovery_zone.dart';
 import '../models/trip_plan_draft.dart';
 import '../models/trip_route.dart';
+import '../services/trip_route_service.dart';
 import '../theme/app_theme.dart';
 
-class TripRouteScreen extends StatelessWidget {
+class TripRouteScreen extends StatefulWidget {
   const TripRouteScreen({
     super.key,
     required this.draft,
@@ -14,6 +17,33 @@ class TripRouteScreen extends StatelessWidget {
 
   final TripPlanDraft draft;
   final TripRoute route;
+
+  @override
+  State<TripRouteScreen> createState() => _TripRouteScreenState();
+}
+
+class _TripRouteScreenState extends State<TripRouteScreen> {
+  late Future<List<TripDiscoveryZone>> _discovery;
+
+  TripPlanDraft get draft => widget.draft;
+  TripRoute get route => widget.route;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDiscoveries();
+  }
+
+  void _loadDiscoveries() {
+    _discovery = const TripRouteService().discoverStops(
+      route: route,
+      draft: draft,
+    );
+  }
+
+  void _retryDiscoveries() {
+    setState(_loadDiscoveries);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +92,26 @@ class TripRouteScreen extends StatelessWidget {
             subtitle: 'Your journey begins',
             icon: Icons.trip_origin_rounded,
           ),
-          ...points.indexed.map(
-            (entry) => _RoutePointCard(
-              number: entry.$1 + 1,
-              title: 'Discovery zone ${entry.$1 + 1}',
-              subtitle: _coordinateLabel(entry.$2),
-              icon: Icons.auto_awesome_rounded,
-            ),
+          FutureBuilder<List<TripDiscoveryZone>>(
+            future: _discovery,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const _DiscoveryLoading();
+              }
+              if (snapshot.hasError) {
+                return _DiscoveryError(
+                  message: snapshot.error.toString(),
+                  onRetry: _retryDiscoveries,
+                );
+              }
+              final zones = snapshot.data ?? const [];
+              return Column(
+                children: [
+                  for (final zone in zones)
+                    _DiscoveryZoneCard(zone: zone),
+                ],
+              );
+            },
           ),
           _RoutePointCard(
             number: points.length + 1,
@@ -265,6 +308,185 @@ class _RoutePointCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+
+class _DiscoveryLoading extends StatelessWidget {
+  const _DiscoveryLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.lavender,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: const Column(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 14),
+          Text(
+            'Finding local favorites, events, and worthwhile stops…',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiscoveryError extends StatelessWidget {
+  const _DiscoveryError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.peach,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          OutlinedButton(onPressed: onRetry, child: const Text('TRY AGAIN')),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiscoveryZoneCard extends StatelessWidget {
+  const _DiscoveryZoneCard({required this.zone});
+
+  final TripDiscoveryZone zone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'DISCOVERY ZONE ${zone.index + 1}',
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${zone.location.lat.toStringAsFixed(2)}, '
+            '${zone.location.lng.toStringAsFixed(2)}',
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          if (zone.candidates.isEmpty)
+            const Text('No strong matches found in this stretch.')
+          else
+            for (final candidate in zone.candidates)
+              _TripCandidateTile(candidate: candidate),
+        ],
+      ),
+    );
+  }
+}
+
+class _TripCandidateTile extends StatelessWidget {
+  const _TripCandidateTile({required this.candidate});
+
+  final Activity candidate;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = candidate.photoUrl;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: imageUrl == null || imageUrl.isEmpty
+                  ? Container(
+                      color: AppColors.lavender,
+                      child: const Icon(
+                        Icons.explore_rounded,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.lavender,
+                        child: const Icon(
+                          Icons.explore_rounded,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  candidate.category.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.coral,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  candidate.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                if (candidate.description.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    candidate.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
