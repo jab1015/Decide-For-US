@@ -4,9 +4,10 @@ import '../models/planning_option.dart';
 import '../models/planning_stop.dart';
 import '../models/trip_plan_draft.dart';
 import '../models/trip_route.dart';
+import '../services/trip_plan_storage.dart';
 import '../theme/app_theme.dart';
 
-class TripItineraryScreen extends StatelessWidget {
+class TripItineraryScreen extends StatefulWidget {
   const TripItineraryScreen({
     super.key,
     required this.draft,
@@ -17,6 +18,37 @@ class TripItineraryScreen extends StatelessWidget {
   final TripPlanDraft draft;
   final TripRoute route;
   final PlanningOption itinerary;
+
+  @override
+  State<TripItineraryScreen> createState() => _TripItineraryScreenState();
+}
+
+class _TripItineraryScreenState extends State<TripItineraryScreen> {
+  bool _saving = false;
+  bool _saved = false;
+
+  TripPlanDraft get draft => widget.draft;
+  TripRoute get route => widget.route;
+  PlanningOption get itinerary => widget.itinerary;
+
+  Future<void> _saveTrip() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await const TripPlanStorage().save(
+        draft: draft,
+        route: route,
+        itinerary: itinerary,
+      );
+      if (!mounted) return;
+      setState(() => _saved = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Road trip saved.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +86,28 @@ class TripItineraryScreen extends StatelessWidget {
           const SizedBox(height: 14),
           for (final stop in itinerary.stops)
             _ItineraryStopCard(stop: stop),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.tune_rounded),
+            label: const Text('CHANGE MY STOPS'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: _saving ? null : _saveTrip,
+            icon: _saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _saved ? Icons.check_rounded : Icons.bookmark_add_outlined,
+                  ),
+            label: Text(_saved ? 'TRIP SAVED' : 'SAVE THIS TRIP'),
+          ),
         ],
       ),
     );
