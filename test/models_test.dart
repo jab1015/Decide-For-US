@@ -763,6 +763,48 @@ void main() {
     expect(paced.stops.single.startsAt, eventTime);
   });
 
+  test('Trip handoff builds a Google Maps route with every stop', () {
+    const route = TripRoute(
+      origin: PlanningLocation(lat: 30.33, lng: -81.66, label: 'Jacksonville, FL'),
+      destination: PlanningLocation(lat: 32.08, lng: -81.09, label: 'Savannah, GA'),
+      distanceMeters: 225000,
+      durationSeconds: 9000,
+      encodedPolyline: '',
+    );
+    const draft = TripPlanDraft(destinationLabel: 'Savannah, GA');
+    const itinerary = PlanningOption(
+      id: 'trip-share',
+      title: 'Savannah',
+      stops: [
+        PlanningStop(
+          sequence: 0,
+          activity: Activity(
+            id: 'stop-1',
+            category: 'culture',
+            title: 'Historic Fort',
+            description: '',
+            address: '1 Fort Road, GA',
+            lat: 31.5,
+            lng: -81.3,
+          ),
+        ),
+      ],
+    );
+
+    final uri = const TripHandoffService().mapsUri(
+      draft: draft,
+      route: route,
+      itinerary: itinerary,
+    );
+
+    expect(uri.host, 'www.google.com');
+    expect(uri.queryParameters['origin'], 'Jacksonville, FL');
+    expect(uri.queryParameters['destination'], 'Savannah, GA');
+    expect(uri.queryParameters['waypoints'], '1 Fort Road, GA');
+    expect(uri.queryParameters['travelmode'], 'driving');
+  });
+
+
 }
 
 
@@ -804,46 +846,5 @@ CandidateEvaluation _evaluation(Activity activity, double score) {
     eligible: true,
     score: score,
   );
-
-  test('Trip handoff builds a Google Maps route with every stop', () {
-    const route = TripRoute(
-      origin: PlanningLocation(lat: 30.33, lng: -81.66, label: 'Jacksonville, FL'),
-      destination: PlanningLocation(lat: 32.08, lng: -81.09, label: 'Savannah, GA'),
-      distanceMeters: 225000,
-      durationSeconds: 9000,
-      encodedPolyline: '',
-    );
-    const draft = TripPlanDraft(destinationLabel: 'Savannah, GA');
-    const itinerary = PlanningOption(
-      id: 'trip-share',
-      title: 'Savannah',
-      stops: [
-        PlanningStop(
-          sequence: 0,
-          activity: Activity(
-            id: 'stop-1',
-            category: 'culture',
-            title: 'Historic Fort',
-            description: '',
-            address: '1 Fort Road, GA',
-            lat: 31.5,
-            lng: -81.3,
-          ),
-        ),
-      ],
-    );
-
-    final uri = const TripHandoffService().mapsUri(
-      draft: draft,
-      route: route,
-      itinerary: itinerary,
-    );
-
-    expect(uri.host, 'www.google.com');
-    expect(uri.queryParameters['origin'], 'Jacksonville, FL');
-    expect(uri.queryParameters['destination'], 'Savannah, GA');
-    expect(uri.queryParameters['waypoints'], '1 Fort Road, GA');
-    expect(uri.queryParameters['travelmode'], 'driving');
-  });
 
 }
