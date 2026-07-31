@@ -10,6 +10,7 @@ import 'package:decide_for_us/models/planning_request.dart';
 import 'package:decide_for_us/models/planning_response.dart';
 import 'package:decide_for_us/models/planning_stop.dart';
 import 'package:decide_for_us/models/trip_plan_draft.dart';
+import 'package:decide_for_us/models/trip_route.dart';
 import 'package:decide_for_us/services/candidate_evaluator.dart';
 import 'package:decide_for_us/services/candidate_provider.dart';
 import 'package:decide_for_us/services/itinerary_scheduler.dart';
@@ -623,6 +624,45 @@ void main() {
       draft.validationErrors,
       contains('The return date must be after the departure date.'),
     );
+  });
+
+  test('TripRoute parses route distance, duration, and corridor points', () {
+    final route = TripRoute.fromJson({
+      'origin': {'lat': 30.3322, 'lng': -81.6557, 'label': 'Jacksonville'},
+      'destination': {'lat': 32.0809, 'lng': -81.0912, 'label': 'Savannah'},
+      'distanceMeters': 225308,
+      'durationSeconds': 8460,
+      'encodedPolyline': 'encoded',
+      'corridorPoints': [
+        {'lat': 31.1, 'lng': -81.5, 'label': 'Route zone 1'},
+      ],
+    });
+
+    expect(route.origin.label, 'Jacksonville');
+    expect(route.destination.label, 'Savannah');
+    expect(route.distanceLabel, '140 miles');
+    expect(route.durationLabel, '2 hr 21 min');
+    expect(route.corridorPoints.single.label, 'Route zone 1');
+  });
+
+  test('TripRoute round trips its Planning Engine route data', () {
+    const route = TripRoute(
+      origin: PlanningLocation(lat: 30, lng: -81, label: 'Start'),
+      destination: PlanningLocation(lat: 32, lng: -81, label: 'Finish'),
+      distanceMeters: 160934,
+      durationSeconds: 7200,
+      encodedPolyline: 'route-shape',
+      corridorPoints: [
+        PlanningLocation(lat: 31, lng: -81, label: 'Route zone 1'),
+      ],
+    );
+
+    final restored = TripRoute.fromJson(route.toJson());
+
+    expect(restored.distanceMiles, closeTo(100, 0.01));
+    expect(restored.duration, const Duration(hours: 2));
+    expect(restored.encodedPolyline, 'route-shape');
+    expect(restored.corridorPoints, hasLength(1));
   });
 
 }
