@@ -18,11 +18,13 @@ class TripRouteScreen extends StatefulWidget {
     required this.draft,
     required this.route,
     this.initialSelectedActivityIds = const [],
+    this.itineraryId,
   });
 
   final TripPlanDraft draft;
   final TripRoute route;
   final List<String> initialSelectedActivityIds;
+  final String? itineraryId;
 
   @override
   State<TripRouteScreen> createState() => _TripRouteScreenState();
@@ -97,7 +99,8 @@ class _TripRouteScreenState extends State<TripRouteScreen> {
       destination: route.destination,
     );
     final option = PlanningOption(
-      id: 'trip-${DateTime.now().millisecondsSinceEpoch}',
+      id: widget.itineraryId ??
+          'trip-${DateTime.now().millisecondsSinceEpoch}',
       title: route.destination.label ?? draft.destinationLabel,
       summary: 'Your selected road-trip discoveries.',
       stops: [
