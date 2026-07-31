@@ -5,6 +5,7 @@ import '../models/trip_route.dart';
 import '../services/location_service.dart';
 import '../services/trip_route_service.dart';
 import '../theme/app_theme.dart';
+import 'trip_route_screen.dart';
 
 class TripPlannerScreen extends StatefulWidget {
   const TripPlannerScreen({super.key});
@@ -118,6 +119,7 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
   }
 
   void _showRouteReview(TripPlanDraft draft, TripRoute route) {
+    final pageContext = context;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -185,9 +187,20 @@ class _TripPlannerScreenState extends State<TripPlannerScreen> {
                 style: TextStyle(color: AppColors.muted, height: 1.4),
               ),
               const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('LOOKS GOOD'),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(pageContext).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TripRouteScreen(
+                        draft: draft,
+                        route: route,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: const Text('CONTINUE TO MY ROUTE'),
               ),
             ],
           ),
