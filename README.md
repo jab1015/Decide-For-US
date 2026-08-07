@@ -15,12 +15,21 @@ weekends, and trips.
   to reduce repetition.
 - Free users receive three decisions per week.
 - Date Night+ and unlimited usage require the RevenueCat `premium` entitlement.
+- Date Night+ supports First Date, Regular Date, Anniversary, and Surprise
+  occasions; Cozy, Playful, Romantic, and Adventurous styles; and Tonight,
+  This Weekend, or Plan Ahead timing.
+- Strong matching local events may lead a Date Night+ plan. Weak event matches
+  fall back to curated Google Places recommendations.
 - Google Places photos are delivered through a Firebase proxy so the Google API
   key is not exposed in Flutter.
 - Local Events+ discovers upcoming Ticketmaster events within 10, 25, or 50
   miles and includes verified dates, venues, maps, images, and event links.
 - Explicit Firestore tester UIDs can receive Premium access during Chrome
   development without changing production entitlement rules.
+- Trip Planner+ verifies a driving route, discovers real places and dated events
+  along the corridor, lets travelers research and choose stops, schedules a
+  multi-day itinerary, and supports saving, editing, sharing, and Google Maps
+  GPS handoff.
 
 See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 [architecture](docs/ARCHITECTURE.md), and the
@@ -66,11 +75,16 @@ See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
 ## Firebase Functions
 
 - `getIdeas`: authenticates the user, enforces limits and Premium access,
-  searches Google Places, avoids recent results, and creates four candidates.
+  searches Google Places and eligible Ticketmaster events, avoids recent
+  results, and creates four candidates.
 - `getPlacePhoto`: securely proxies a Google Places photo.
 - `getLocalEvents`: returns Premium-only upcoming events from Ticketmaster.
 - `getEventImage`: securely proxies allowlisted Ticketmaster images.
 - `getPremiumAccess`: resolves RevenueCat or Firestore tester access.
+- `resolveTripRoute`: resolves Premium trip endpoints and returns a verified
+  Google Routes corridor without exposing credentials.
+- `discoverTripStops`: returns Premium-only, interest-aware Google Places and
+  Ticketmaster candidates for each route discovery zone.
 
 ## Premium testers
 
@@ -118,7 +132,8 @@ Android reads `versionName` and `versionCode` from `pubspec.yaml`.
 ### iOS
 
 iOS archives are built on macOS through Codemagic and published to TestFlight.
-Every App Store Connect upload requires a previously unused build number.
+Every App Store Connect upload requires a previously unused build number. The
+current shared Flutter release is `1.0.24+39`.
 
 ## Validation
 
@@ -133,3 +148,4 @@ node --check functions/index.js
 
 Do not run `npm audit fix --force` without reviewing the proposed breaking
 dependency changes.
+

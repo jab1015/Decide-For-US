@@ -1,6 +1,6 @@
 # Decide For Us V2 Roadmap
 
-Last updated: July 30, 2026
+Last updated: July 31, 2026
 
 ## Product promise
 
@@ -17,7 +17,7 @@ Premium answers: **Plan the experience for us.**
 - Preserve the 10-decision no-repeat window.
 - Complete TestFlight and Google Play Internal Testing.
 
-## Phase 3: Local Events+ — in progress
+## Phase 3: Local Events+ — device testing
 
 Local Events+ is subscription-only.
 
@@ -34,8 +34,9 @@ Local Events+ is subscription-only.
 - Sparse searches expand automatically to 25 or 50 miles.
 - Group and total-budget suitability influence event order and companion stops.
 - Verified provider prices appear when available.
+- Complete event plans can be shared through the native platform share sheet.
 
-### Next implementation slice
+### Future Local Events+ enhancements
 
 - Keep two meaningfully different outing options.
 - Add community-event providers after provider terms and quotas are reviewed.
@@ -58,18 +59,29 @@ Local Events+ is subscription-only.
 - Never pair food with food.
 - Keep the second option meaningfully different.
 
-## Phase 4: Date Night+
+## Phase 4: Date Night+ — completed, device testing
 
-- First date, regular date, anniversary, surprise, budget, and splurge intents.
-- Romantic, conversation-friendly, scenic, and memorable scoring.
-- Date-specific event prioritization.
+- First date, regular date, anniversary, and surprise intents are implemented.
+- Cozy, playful, romantic, and adventurous styles are implemented.
+- Romantic, conversation-friendly, scenic, and memorable scoring is implemented.
+- Date-specific event prioritization is implemented with timing and relevance
+  thresholds.
+- Chrome functional validation is complete; build 39 is prepared for TestFlight
+  and Google Play Internal Testing.
+- Apple TestFlight sandbox subscription activation is verified; Google Play
+  sandbox purchase validation remains.
 - Reservation and ticket links when verified.
 - Weather and time-of-day awareness.
 - No fast food unless explicitly requested.
 
-## Phase 5: Planning Engine
+## Phase 5: Planning Engine — foundation completed
 
-Replace mode-specific service sprawl with:
+The Flutter foundation now routes Quick Decision and Date Night+ through a
+shared `PlanningEngine` boundary and models responses as ordered options and
+stops. Local Events+ retains its specialized provider screen while Trip Planner+ uses
+the shared location, constraint, option, stop, and scheduler contracts.
+
+Target architecture:
 
 ```text
 PlanningRequest
@@ -79,6 +91,22 @@ PlanningRequest
   -> Pairing / itinerary builder
   -> PlanningResponse
 ```
+
+Foundation delivered:
+
+- shared Premium-aware planning modes
+- reusable ordered stops with schedule, travel-time, and cost fields
+- reusable options and serializable planning responses
+- adapter around the current verified recommendation endpoint
+- existing Decide UI preserved while the service boundary changes
+- shared origin/destination and constraint models for multi-stop planning
+- compatibility adapter from the current recommendation request
+- shared candidate model for verified places and events
+- provider contract with recommendation and Local Events adapters
+- deterministic eligibility and explainable candidate scoring
+- complementary, category-aware option construction
+- configurable multi-stop option support for Trip Planner+
+- timeline scheduling, travel gaps, duration estimates, and known-cost totals
 
 Core inputs:
 
@@ -93,13 +121,19 @@ Core inputs:
 - recent history
 - subscription capabilities
 
-## Phase 6: Trip Planner+
+## Phase 6: Trip Planner+ — Phase 1 completed
 
-- Origin, destination, dates, travelers, budget, and maximum drive interval.
-- Along-route attractions, meals, scenic stops, events, charging, and lodging.
-- Multi-day timeline with travel-time feasibility.
-- Replace, reorder, save, share, and regenerate individual stops.
-- Estimated cost and route-impact summaries.
+- Premium-only home entry and validated setup
+- Verified Google Routes distance, duration, and discovery corridor
+- Interest-aware Google Places and date-aware Ticketmaster candidates
+- Real images, factual descriptions, and pre-selection research links
+- Intentional stop selection and replacement
+- Multi-day pacing with authoritative event times
+- Saved Trips reopen, edit, update, and delete behavior
+- Itinerary navigation to Decide, Saved Trips, and Favorites
+- Google Maps GPS route handoff and native sharing/send-to-phone
+
+Optional Phase 2 work is tracked below and does not block Phase 1 release.
 
 ## Phase 7: personalization and retention
 
@@ -118,5 +152,81 @@ Core inputs:
   deletion flows.
 - Confirm provider terms, attribution, caching, and image requirements.
 - Add monitoring, alerting, budgets, rate limiting, and abuse protection.
-- Validate subscriptions in sandbox and production for iOS and Android.
+- Validate Google Play sandbox subscriptions and both stores in production.
+- Remove temporary tester-ID UI and audit tester access before launch.
+
+## Trip Planner+ delivery status
+
+### Complete: route foundation
+
+- Origin and destination setup
+- Date, travelers, budget, pace, interests, and exclusions
+- Protected destination resolution
+- Verified driving route, distance, and duration
+- Route-corridor discovery zones
+
+### Completed: corridor candidates
+
+Query places, events, scenic stops, and local food near each corridor zone, then run them through the shared eligibility, scoring, option-building, and itinerary scheduling pipeline.
+
+- Completed route-review navigation and the dedicated corridor presentation screen.
+- Real candidates are fetched, ranked, described, and linked in every discovery zone.
+
+### Complete: real corridor discoveries
+
+- Interest-aware Google Places searches around route zones
+- Date-aware Ticketmaster event searches
+- Cross-zone duplicate prevention and exclusion filtering
+- Loading, retry, empty, and image-fallback states in Trip Planner+
+
+### Completed: itinerary selection
+
+Let travelers select or replace discoveries, then schedule the chosen stops against drive time, trip dates, opening constraints, and the shared itinerary scheduler.
+
+## Current execution point
+
+Trip Planner+ Phase 1 is complete. Build 39 is the current store-testing
+candidate. The execution focus is cross-device release validation, production
+gates, and selection of the next Premium planning mode.
+
+### Implemented: traveler choice and first-pass itinerary
+
+- One intentional selection per corridor zone
+- Toggle and replace behavior
+- Zone-order preservation
+- Shared scheduler integration
+- Timed itinerary presentation
+
+Completed after the first-pass itinerary:
+
+- Multi-day pacing rolls late non-event activities to the next morning.
+- Live events retain their authoritative provider start time.
+- Trips can be saved locally, reopened from Saved Trips, returned to selection for changes, and deleted.
+
+Validated: saved-trip reopening, edit flow, update-in-place behavior, itinerary navigation, Google Maps GPS handoff, and share/send-to-phone behavior.
+
+### Complete: Trip Planner+ Phase 1
+
+- Place-specific descriptions and real provider images
+- Check it out and View event links before selection
+- Multi-day pacing with authoritative event times
+- Saved Trips library with reopen, edit, delete, and update-in-place behavior
+- Decide, Saved Trips, and Favorites navigation from itineraries
+- Google Maps multi-stop GPS handoff
+- Native share/send-to-phone and clipboard fallback
+- Clean Flutter analysis and 29 passing tests
+- Manual Chrome QA complete
+
+### Trip Planner+ Phase 2 backlog
+
+These are optional enhancements and do not block the completed Phase 1:
+
+1. Hotels, overnight cities, and lodging-aware pacing
+2. Automatic stop-order and detour optimization
+3. Weather-aware trip rebuilding
+4. Reservation and ticket-booking links
+5. Fuel, lodging, ticket, and meal cost estimates
+6. Account-synced trips across devices
+7. Collaborative trip editing
+8. Offline itinerary access
 

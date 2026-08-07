@@ -28,11 +28,187 @@ const activityQueries = {
   High: ["basketball court", "fitness activity", "rock climbing", "adventure park"],
 };
 
-const dateNightActivityQueries = {
+const dateEnergyQueries = {
   Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
   Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
   High: ["dance class", "kayaking", "rock climbing", "hiking trail"],
 };
+
+const dateStyleQueries = {
+  Cozy: ["jazz lounge", "bookstore cafe", "wine tasting", "intimate live music"],
+  Playful: ["mini golf", "comedy club", "arcade", "dance class"],
+  Romantic: ["botanical garden", "scenic overlook", "art gallery", "live music"],
+  Adventurous: ["kayaking", "rock climbing", "hiking trail", "adventure tour"],
+};
+
+function dateNightTerms(occasion, style, energy) {
+  const occasionTerms = {
+    "First date": "conversation friendly activity",
+    Anniversary: "romantic anniversary experience",
+    Surprise: "unique local experience",
+    "Regular date": "couples activity",
+  };
+  return [...new Set([
+    occasionTerms[occasion],
+    ...(dateStyleQueries[style] || dateStyleQueries.Romantic).slice(0, 2),
+    ...(dateEnergyQueries[energy] || dateEnergyQueries.Medium).slice(0, 2),
+  ].filter(Boolean))].slice(0, 4);
+}
+
+function dateNightFoodTerms(occasion, budget) {
+  if (budget === "Free") return ["romantic picnic spot", "scenic picnic area"];
+  if (occasion === "First date") {
+    return ["conversation friendly restaurant", "cozy cafe"];
+  }
+  if (occasion === "Anniversary") {
+    return ["romantic fine dining restaurant", "special occasion restaurant"];
+  }
+  if (occasion === "Surprise") {
+    return ["unique restaurant", "rooftop restaurant"];
+  }
+  return ["romantic restaurant", "intimate local restaurant"];
+}
+
+function dateNightScore(place, occasion, style) {
+  const text = [
+    place.name,
+    place.matchedQuery,
+    ...(place.types || []),
+  ].join(" ").toLowerCase();
+  const signals = {
+    "First date": [
+      "conversation",
+      "gallery",
+      "museum",
+      "mini golf",
+      "coffee",
+      "book",
+    ],
+    Anniversary: [
+      "romantic",
+      "scenic",
+      "garden",
+      "wine",
+      "fine dining",
+      "special occasion",
+    ],
+    Surprise: [
+      "unique",
+      "adventure",
+      "comedy",
+      "dance",
+      "tour",
+      "live music",
+    ],
+    "Regular date": [
+      "couples",
+      "music",
+      "cooking",
+      "mini golf",
+      "comedy",
+    ],
+  };
+  const styleSignals = {
+    Cozy: ["cozy", "jazz", "book", "wine", "intimate"],
+    Playful: ["mini golf", "comedy", "arcade", "dance"],
+    Romantic: ["romantic", "garden", "scenic", "gallery", "music"],
+    Adventurous: ["kayak", "climbing", "hiking", "adventure"],
+  };
+  let score = rank(place);
+  for (const signal of signals[occasion] || []) {
+    if (text.includes(signal)) score += 4;
+  }
+  for (const signal of styleSignals[style] || []) {
+    if (text.includes(signal)) score += 3;
+  }
+  if (occasion === "First date" &&
+      (text.includes("night_club") || text.includes("loud"))) {
+    score -= 5;
+  }
+  return score;
+}
+
+function dateEventWindow(timing) {
+  const now = new Date();
+  if (timing === "Tonight") {
+    const end = new Date(now);
+    end.setUTCHours(24, 0, 0, 0);
+    return {start: now, end};
+  }
+  if (timing === "This weekend") {
+    const day = now.getUTCDay();
+    const daysUntilSaturday = (6 - day + 7) % 7;
+    const start = day === 0 || day === 6 ?
+      now :
+      new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + daysUntilSaturday,
+      ));
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + (start.getUTCDay() === 0 ? 1 : 2));
+    end.setUTCHours(0, 0, 0, 0);
+    return {start, end};
+  }
+  return {
+    start: now,
+    end: new Date(now.getTime() + 14 * 86400000),
+  };
+}
+
+function dateEventScore(event, occasion, style) {
+  const text = `${event.title} ${event.eventType} ${event.eventGenre}`.toLowerCase();
+  const signals = {
+    "First date": ["comedy", "arts", "theatre", "music"],
+    Anniversary: ["music", "arts", "theatre", "classical"],
+    Surprise: ["comedy", "festival", "music", "sports"],
+    "Regular date": ["comedy", "music", "sports", "arts"],
+    Cozy: ["jazz", "classical", "theatre", "acoustic"],
+    Playful: ["comedy", "sports", "festival"],
+    Romantic: ["jazz", "classical", "theatre", "music"],
+    Adventurous: ["sports", "festival", "outdoor"],
+  };
+  let score = 0;
+  for (const signal of [
+    ...(signals[occasion] || []),
+    ...(signals[style] || []),
+  ]) {
+    if (text.includes(signal)) score += 2;
+  }
+  return score;
+}
+
+async function findDateNightEvent({
+  apiKey,
+  lat,
+  lng,
+  radiusMiles,
+  timing,
+  occasion,
+  style,
+}) {
+  try {
+    const window = dateEventWindow(timing);
+    const events = await searchTicketmasterEvents({
+      apiKey,
+      lat,
+      lng,
+      radiusMiles: Math.min(Number(radiusMiles) || 25, 50),
+      startDateTime: window.start,
+      endDateTime: window.end,
+    });
+    return events
+      .map((event) => ({
+        event,
+        score: dateEventScore(event, occasion, style),
+      }))
+      .filter((candidate) => candidate.score >= 2)
+      .sort((a, b) => b.score - a.score)[0]?.event || null;
+  } catch (error) {
+    console.warn("Date Night event search skipped:", error.message);
+    return null;
+  }
+}
 
 function milesToMeters(miles) {
   return Math.min(Math.max(Number(miles) || 25, 1) * 1609, 50000);
@@ -296,7 +472,14 @@ function readableType(place, isFood) {
   return type ? labels[type] : (isFood ? "restaurant" : "local experience");
 }
 
-function placeDescription(place, isFood, isDateNight, index) {
+function placeDescription(
+  place,
+  isFood,
+  isDateNight,
+  index,
+  dateOccasion,
+  dateStyle,
+) {
   const type = readableType(place, isFood);
   const rating = Number(place.rating);
   const reviews = Number(place.user_ratings_total);
@@ -306,8 +489,14 @@ function placeDescription(place, isFood, isDateNight, index) {
 
   if (isFood) {
     return isDateNight ?
-      `${place.name} brings a ${type} stop to the date, backed by ${proof}.` :
+      `${place.name} brings a ${dateStyle.toLowerCase()} ${type} stop to your ` +
+        `${dateOccasion.toLowerCase()}, backed by ${proof}.` :
       `Make ${place.name} the food stop—a ${type} backed by ${proof}.`;
+  }
+
+  if (isDateNight) {
+    return `${place.name} was chosen for a ${dateStyle.toLowerCase()} ` +
+      `${dateOccasion.toLowerCase()}—a ${type} backed by ${proof}.`;
   }
 
   const templates = [
@@ -395,10 +584,475 @@ async function consumeFreeRequest(uid) {
   });
 }
 
-export const getIdeas = onRequest(
+async function geocodeTripLocation(apiKey, text) {
+  const params = new URLSearchParams({
+    address: text,
+    key: apiKey,
+  });
+  const response = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?${params}`,
+  );
+  const data = await response.json();
+  const result = data.results?.[0];
+  const location = result?.geometry?.location;
+  if (!response.ok || data.status !== "OK" || !location) {
+    const error = new Error(
+      data.status === "ZERO_RESULTS" ?
+        `We could not find "${text}". Try a city, address, or landmark.` :
+        "Destination lookup failed.",
+    );
+    error.status = data.status === "ZERO_RESULTS" ? 404 : 502;
+    throw error;
+  }
+  return {
+    lat: location.lat,
+    lng: location.lng,
+    label: result.formatted_address || text,
+  };
+}
+
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  while (index < encoded.length) {
+    let result = 0;
+    let shift = 0;
+    let byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20 && index <= encoded.length);
+    lat += (result & 1) ? ~(result >> 1) : result >> 1;
+
+    result = 0;
+    shift = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20 && index <= encoded.length);
+    lng += (result & 1) ? ~(result >> 1) : result >> 1;
+    points.push({lat: lat / 1e5, lng: lng / 1e5});
+  }
+  return points;
+}
+
+function sampleRouteCorridor(points, durationSeconds, intervalMinutes) {
+  if (points.length < 3) return [];
+  const intervalSeconds = intervalMinutes * 60;
+  const requested = Math.max(
+    0,
+    Math.min(12, Math.floor(durationSeconds / intervalSeconds)),
+  );
+  const samples = [];
+  for (let i = 1; i <= requested; i++) {
+    const progress = i / (requested + 1);
+    const index = Math.min(
+      points.length - 2,
+      Math.max(1, Math.round(progress * (points.length - 1))),
+    );
+    samples.push({...points[index], label: `Route zone ${i}`});
+  }
+  return samples;
+}
+
+async function computeTripRoute(apiKey, origin, destination) {
+  const response = await fetch(
+    "https://routes.googleapis.com/directions/v2:computeRoutes",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": [
+          "routes.distanceMeters",
+          "routes.duration",
+          "routes.polyline.encodedPolyline",
+        ].join(","),
+      },
+      body: JSON.stringify({
+        origin: {
+          location: {
+            latLng: {
+              latitude: origin.lat,
+              longitude: origin.lng,
+            },
+          },
+        },
+        destination: {
+          location: {
+            latLng: {
+              latitude: destination.lat,
+              longitude: destination.lng,
+            },
+          },
+        },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_UNAWARE",
+        polylineQuality: "HIGH_QUALITY",
+      }),
+    },
+  );
+  const data = await response.json();
+  const route = data.routes?.[0];
+  if (!response.ok || !route) {
+    const error = new Error(
+      data.error?.message || "No driving route was found.",
+    );
+    error.status = response.status === 400 ? 400 : 502;
+    throw error;
+  }
+  const durationSeconds = Number.parseFloat(
+    String(route.duration || "0s").replace("s", ""),
+  );
+  return {
+    distanceMeters: Number(route.distanceMeters || 0),
+    durationSeconds: Math.round(durationSeconds),
+    encodedPolyline: route.polyline?.encodedPolyline || "",
+  };
+}
+
+export const resolveTripRoute = onRequest(
   {
     region: "us-central1",
     secrets: [GOOGLE_API_KEY, REVENUECAT_SECRET_API_KEY],
+  },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      if (!premium) {
+        return res.status(403).json({
+          error: "Trip Planner+ requires Premium.",
+        });
+      }
+
+      const originText = String(req.body?.origin || "").trim();
+      const destinationText = String(req.body?.destination || "").trim();
+      const interval = Number(req.body?.maxTravelMinutesBetweenStops || 120);
+      if (!originText || !destinationText ||
+          originText.length > 250 || destinationText.length > 250) {
+        return res.status(400).json({
+          error: "Starting point and destination are required.",
+        });
+      }
+      if (![60, 120, 180].includes(interval)) {
+        return res.status(400).json({error: "Choose a valid stop interval."});
+      }
+
+      const suppliedLat = Number(req.body?.originLat);
+      const suppliedLng = Number(req.body?.originLng);
+      const hasSuppliedOrigin =
+        Number.isFinite(suppliedLat) && Number.isFinite(suppliedLng);
+      const apiKey = GOOGLE_API_KEY.value();
+      const [origin, destination] = await Promise.all([
+        hasSuppliedOrigin ?
+          Promise.resolve({
+            lat: suppliedLat,
+            lng: suppliedLng,
+            label: originText,
+          }) :
+          geocodeTripLocation(apiKey, originText),
+        geocodeTripLocation(apiKey, destinationText),
+      ]);
+      const route = await computeTripRoute(apiKey, origin, destination);
+      const decoded = decodePolyline(route.encodedPolyline);
+      return res.json({
+        origin,
+        destination,
+        ...route,
+        corridorPoints: sampleRouteCorridor(
+          decoded,
+          route.durationSeconds,
+          interval,
+        ),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(error.status || 502).json({
+        error: error.message || "Trip route discovery failed.",
+      });
+    }
+  },
+);
+
+function tripDiscoveryQueries(interests = []) {
+  const queryByInterest = {
+    "Local food": "locally owned restaurant",
+    "Scenic stops": "scenic viewpoint",
+    History: "historic landmark museum",
+    Outdoors: "state park nature attraction",
+    "Family fun": "family attraction",
+    "Hidden gems": "unique local attraction",
+  };
+  const selected = interests
+    .map((interest) => queryByInterest[String(interest)])
+    .filter(Boolean);
+  return [...new Set([
+    ...selected,
+    "popular local attraction",
+    "local restaurant",
+  ])].slice(0, 3);
+}
+
+async function tripPlaceDetails(apiKey, place) {
+  try {
+    const params = new URLSearchParams({
+      place_id: place.place_id,
+      fields: "editorial_summary,url,website",
+      key: apiKey,
+    });
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/details/json?${params}`,
+    );
+    const payload = await response.json();
+    if (!response.ok || !["OK", "ZERO_RESULTS"].includes(payload.status)) {
+      return place;
+    }
+    return {...place, ...(payload.result || {})};
+  } catch (error) {
+    console.warn(`Place details skipped for ${place.place_id}:`, error.message);
+    return place;
+  }
+}
+
+function specificTripPlaceType(place) {
+  const labels = {
+    aquarium: "aquarium",
+    amusement_park: "amusement park",
+    art_gallery: "art gallery",
+    bakery: "bakery",
+    bar: "bar",
+    book_store: "bookstore",
+    bowling_alley: "bowling alley",
+    cafe: "cafe",
+    campground: "campground",
+    church: "historic church",
+    library: "library",
+    meal_takeaway: "local food stop",
+    movie_theater: "movie theater",
+    museum: "museum",
+    night_club: "nightlife venue",
+    park: "park",
+    restaurant: "restaurant",
+    shopping_mall: "shopping destination",
+    spa: "spa",
+    stadium: "stadium",
+    tourist_attraction: "visitor attraction",
+    zoo: "zoo",
+  };
+  const type = (place.types || []).find((value) => labels[value]);
+  return type ? labels[type] : "local attraction";
+}
+
+function tripPlaceDescription(place) {
+  const editorial = String(place.editorial_summary?.overview || "").trim();
+  if (editorial) return editorial;
+
+  const type = specificTripPlaceType(place);
+  const address = String(place.formatted_address || "");
+  const location = address.split(",").slice(0, 2).join(",").trim();
+  const rating = Number(place.rating);
+  const reviews = Number(place.user_ratings_total);
+  const proof = Number.isFinite(rating) ?
+    ` It is rated ${rating.toFixed(1)} stars` +
+      (reviews > 0 ? ` by ${reviews.toLocaleString("en-US")} visitors.` : ".") :
+    "";
+  return `${place.name} is a ${type}` +
+    (location ? ` in ${location}.` : ".") + proof;
+}
+
+function excludedTripCandidate(candidate, exclusions) {
+  const text = [
+    candidate.name,
+    candidate.title,
+    candidate.matchedQuery,
+    ...(candidate.types || []),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return exclusions.some(
+    (exclusion) => text.includes(String(exclusion).toLowerCase()),
+  );
+}
+
+async function discoverTripZone({
+  point,
+  index,
+  apiKey,
+  eventApiKey,
+  interests,
+  exclusions,
+  startsAt,
+  endsAt,
+  usedIds,
+}) {
+  const placesPromise = searchPlaces(
+    apiKey,
+    tripDiscoveryQueries(interests),
+    point.lat,
+    point.lng,
+    milesToMeters(15),
+  );
+  const eventsPromise = searchTicketmasterEvents({
+    apiKey: eventApiKey,
+    lat: point.lat,
+    lng: point.lng,
+    radiusMiles: 20,
+    startDateTime: startsAt,
+    endDateTime: endsAt,
+  }).catch(() => []);
+
+  const [places, events] = await Promise.all([placesPromise, eventsPromise]);
+  const candidates = [];
+  const event = events.find(
+    (item) => !usedIds.has(item.id) &&
+      !excludedTripCandidate(item, exclusions),
+  );
+  if (event) {
+    usedIds.add(event.id);
+    candidates.push(event);
+  }
+
+  for (const place of places) {
+    if (candidates.length >= 3) break;
+    if (usedIds.has(place.place_id) ||
+        excludedTripCandidate(place, exclusions)) {
+      continue;
+    }
+    const category = activityCategory(place);
+    if (candidates.some((item) => item.category === category)) continue;
+    usedIds.add(place.place_id);
+    const detailedPlace = await tripPlaceDetails(apiKey, place);
+    candidates.push(
+      serialize(
+        detailedPlace,
+        category,
+        tripPlaceDescription(detailedPlace),
+      ),
+    );
+  }
+
+  return {
+    index,
+    lat: point.lat,
+    lng: point.lng,
+    candidates,
+  };
+}
+
+export const discoverTripStops = onRequest(
+  {
+    region: "us-central1",
+    secrets: [
+      GOOGLE_API_KEY,
+      TICKETMASTER_API_KEY,
+      REVENUECAT_SECRET_API_KEY,
+    ],
+    timeoutSeconds: 120,
+  },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "POST required."});
+    }
+
+    try {
+      const user = await authenticatedUser(req);
+      if (!user) {
+        return res.status(401).json({error: "Authentication required."});
+      }
+      const premium = await hasPremiumAccess(
+        user.uid,
+        REVENUECAT_SECRET_API_KEY.value(),
+      );
+      if (!premium) {
+        return res.status(403).json({
+          error: "Trip Planner+ requires Premium.",
+        });
+      }
+
+      const rawPoints = Array.isArray(req.body?.corridorPoints) ?
+        req.body.corridorPoints :
+        [];
+      const points = rawPoints.slice(0, 8).map((point) => ({
+        lat: Number(point?.lat),
+        lng: Number(point?.lng),
+      })).filter(
+        (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng),
+      );
+      if (!points.length) {
+        return res.status(400).json({
+          error: "A route with discovery zones is required.",
+        });
+      }
+
+      const interests = Array.isArray(req.body?.interests) ?
+        req.body.interests.slice(0, 8) :
+        [];
+      const exclusions = Array.isArray(req.body?.exclusions) ?
+        req.body.exclusions.slice(0, 12) :
+        [];
+      const startsAt = req.body?.startsAt ?
+        new Date(req.body.startsAt) :
+        new Date();
+      const requestedEnd = req.body?.endsAt ?
+        new Date(req.body.endsAt) :
+        new Date(startsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const endsAt = requestedEnd > startsAt ?
+        requestedEnd :
+        new Date(startsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const usedIds = new Set();
+      const zones = [];
+      for (let index = 0; index < points.length; index++) {
+        zones.push(await discoverTripZone({
+          point: points[index],
+          index,
+          apiKey: GOOGLE_API_KEY.value(),
+          eventApiKey: TICKETMASTER_API_KEY.value(),
+          interests,
+          exclusions,
+          startsAt,
+          endsAt,
+          usedIds,
+        }));
+      }
+      return res.json(zones);
+    } catch (error) {
+      console.error(error);
+      return res.status(502).json({
+        error: error.message || "Trip discovery failed.",
+      });
+    }
+  },
+);
+
+export const getIdeas = onRequest(
+  {
+    region: "us-central1",
+    secrets: [
+      GOOGLE_API_KEY,
+      REVENUECAT_SECRET_API_KEY,
+      TICKETMASTER_API_KEY,
+    ],
   },
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -428,21 +1082,37 @@ export const getIdeas = onRequest(
       const budget = req.body?.budget || "$30–$75";
       const energy = req.body?.energy || "Medium";
       const group = req.body?.group || "Couple";
-      const radius = milesToMeters(req.body?.radius);
+      const dateOccasion = String(req.body?.dateOccasion || "Regular date");
+      const dateStyle = String(req.body?.dateStyle || "Romantic");
+      const dateTiming = String(req.body?.dateTiming || "Tonight");
+      const radiusMiles = Number(req.body?.radius) || 25;
+      const radius = milesToMeters(radiusMiles);
       const googleKey = GOOGLE_API_KEY.value();
 
       const foodTerms = isDateNight
-        ? ["romantic restaurant", "fine dining restaurant"]
+        ? dateNightFoodTerms(dateOccasion, budget)
         : (foodQueries[budget] || foodQueries["$"]);
       const experienceTerms = isDateNight ?
-        (dateNightActivityQueries[energy] || dateNightActivityQueries.Medium) :
+        dateNightTerms(dateOccasion, dateStyle, energy) :
         (activityQueries[energy] || activityQueries.Medium)
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      const [foodResults, experienceResults, recentIds] = await Promise.all([
+      const [foodResults, experienceResults, recentIds, dateEvent] =
+        await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
         searchPlaces(googleKey, experienceTerms, lat, lng, radius),
         recentRecommendationIds(user.uid),
+        isDateNight ?
+          findDateNightEvent({
+            apiKey: TICKETMASTER_API_KEY.value(),
+            lat,
+            lng,
+            radiusMiles,
+            timing: dateTiming,
+            occasion: dateOccasion,
+            style: dateStyle,
+          }) :
+          Promise.resolve(null),
       ]);
 
       const unseenFood = foodResults
@@ -451,9 +1121,19 @@ export const getIdeas = onRequest(
       const unseenExperiences = experienceResults
         .filter((place) => !recentIds.has(place.place_id));
       const food = unseenFood.length ? unseenFood : foodResults;
-      const experiences = unseenExperiences.length ?
+      let experiences = unseenExperiences.length ?
         unseenExperiences :
         experienceResults;
+      const eligibleDateEvent = dateEvent && !recentIds.has(dateEvent.id) ?
+        dateEvent :
+        null;
+      if (isDateNight) {
+        experiences = [...experiences].sort(
+          (a, b) =>
+            dateNightScore(b, dateOccasion, dateStyle) -
+            dateNightScore(a, dateOccasion, dateStyle),
+        );
+      }
 
       const selectedExperiences = [];
       for (const place of experiences) {
@@ -473,8 +1153,19 @@ export const getIdeas = onRequest(
 
       const foodChoice = budget === "Free" ? null : food[0];
       const selected = foodChoice ?
-        [foodChoice, ...selectedExperiences.slice(0, 3)] :
-        experiences.slice(0, 4);
+        (isDateNight ?
+          [
+            eligibleDateEvent || selectedExperiences[0],
+            foodChoice,
+            ...selectedExperiences.slice(
+              eligibleDateEvent ? 0 : 1,
+              eligibleDateEvent ? 2 : 3,
+            ),
+          ] :
+          [foodChoice, ...selectedExperiences.slice(0, 3)]) :
+        (eligibleDateEvent ?
+          [eligibleDateEvent, ...experiences.slice(0, 3)] :
+          experiences.slice(0, 4));
 
       if (selected.length < 4) {
         return res.status(404).json({
@@ -485,15 +1176,23 @@ export const getIdeas = onRequest(
       if (!premium) await consumeFreeRequest(user.uid);
       await rememberRecommendations(
         user.uid,
-        selected.map((place) => place.place_id),
+        selected.map((place) => place.place_id || place.id),
       );
 
       return res.json(selected.map((place, index) => {
+        if (place.category === "event") return place;
         const isFood = place === foodChoice;
         return serialize(
           place,
           isFood ? "food" : activityCategory(place),
-          placeDescription(place, isFood, isDateNight, index),
+          placeDescription(
+            place,
+            isFood,
+            isDateNight,
+            index,
+            dateOccasion,
+            dateStyle,
+          ),
         );
       }));
     } catch (error) {
@@ -680,4 +1379,5 @@ export const getPremiumAccess = onRequest(
     }
   },
 );
+
 

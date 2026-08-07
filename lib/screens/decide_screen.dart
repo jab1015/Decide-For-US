@@ -5,15 +5,19 @@ import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 import '../models/activity.dart';
+import '../models/planning_engine_request.dart';
 import '../models/planning_request.dart';
 import '../services/ai_service.dart';
 import '../services/location_service.dart';
+import '../services/planning_engine.dart';
 import '../services/subscription_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/experience_card.dart';
 import 'favorites_screen.dart';
 import 'local_events_screen.dart';
 import 'paywall_screen.dart';
+import 'saved_trips_screen.dart';
+import 'trip_planner_screen.dart';
 
 class DecideScreen extends StatefulWidget {
   const DecideScreen({super.key});
@@ -28,6 +32,7 @@ class _DecideScreenState extends State<DecideScreen>
   late ConfettiController confetti;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _firstResultKey = GlobalKey();
+  final PlanningEngine _planningEngine = const DefaultPlanningEngine();
 
   late AnimationController _spinController;
   late Animation<double> _spinAnimation;
@@ -40,6 +45,9 @@ class _DecideScreenState extends State<DecideScreen>
   String? selectedGroup;
   String? selectedBudget;
   String? selectedEnergy;
+  String? selectedDateOccasion;
+  String? selectedDateStyle;
+  String? selectedDateTiming;
   String? _groupBeforeDateNight;
 
   int selectedRadius = 25;
@@ -94,6 +102,9 @@ class _DecideScreenState extends State<DecideScreen>
     selectedRadiusLabel = "25 mi";
     isDateNight = false;
     _groupBeforeDateNight = null;
+    selectedDateOccasion = null;
+    selectedDateStyle = null;
+    selectedDateTiming = null;
   }
 
   void startSpinAnimation() {
@@ -153,17 +164,23 @@ class _DecideScreenState extends State<DecideScreen>
     String? errorMessage;
 
     try {
-      data = await AIService.getIdeas(
-        PlanningRequest(
-          group: selectedGroup,
-          budget: selectedBudget,
-          energy: selectedEnergy,
-          isDateNight: isDateNight,
-          lat: userCoords!['lat']!,
-          lng: userCoords!['lng']!,
-          radiusMiles: selectedRadius,
+      final plan = await _planningEngine.createPlan(
+        PlanningEngineRequest.fromRecommendation(
+          PlanningRequest(
+            group: selectedGroup,
+            budget: selectedBudget,
+            energy: selectedEnergy,
+            isDateNight: isDateNight,
+            lat: userCoords!['lat']!,
+            lng: userCoords!['lng']!,
+            radiusMiles: selectedRadius,
+            dateOccasion: selectedDateOccasion,
+            dateStyle: selectedDateStyle,
+            dateTiming: selectedDateTiming,
+          ),
         ),
       );
+      data = plan.activities;
     } on AIServiceException catch (e) {
       if (e.statusCode == 403 && mounted) {
         final paywallResult = await Navigator.push<PaywallResult>(
@@ -224,16 +241,30 @@ class _DecideScreenState extends State<DecideScreen>
     }
   }
 
+  Future<bool> _hasPremiumAccess() async {
+    try {
+      await SubscriptionService.refresh();
+    } catch (_) {
+      // The paywall can still offer purchase and restore options when refresh fails.
+    }
+    return SubscriptionService.isSubscribed;
+  }
+
   Future<void> _setDateNight(bool value) async {
     if (!value) {
       setState(() {
         isDateNight = false;
         selectedGroup = _groupBeforeDateNight;
         _groupBeforeDateNight = null;
+        selectedDateOccasion = null;
+        selectedDateStyle = null;
+        selectedDateTiming = null;
       });
       return;
     }
-    if (!SubscriptionService.isSubscribed) {
+    final hasPremiumAccess = await _hasPremiumAccess();
+    if (!mounted) return;
+    if (!hasPremiumAccess) {
       final paywallResult = await Navigator.push<PaywallResult>(
         context,
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
@@ -245,13 +276,18 @@ class _DecideScreenState extends State<DecideScreen>
       setState(() {
         _groupBeforeDateNight = selectedGroup;
         selectedGroup = 'Couple';
+        selectedDateOccasion = 'Regular date';
+        selectedDateStyle = 'Romantic';
+        selectedDateTiming = 'Tonight';
         isDateNight = true;
       });
     }
   }
 
   Future<void> _openLocalEvents() async {
-    if (!SubscriptionService.isSubscribed) {
+    final hasPremiumAccess = await _hasPremiumAccess();
+    if (!mounted) return;
+    if (!hasPremiumAccess) {
       final paywallResult = await Navigator.push<PaywallResult>(
         context,
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
@@ -263,6 +299,24 @@ class _DecideScreenState extends State<DecideScreen>
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const LocalEventsScreen()),
+    );
+  }
+
+  Future<void> _openTripPlanner() async {
+    final hasPremiumAccess = await _hasPremiumAccess();
+    if (!mounted) return;
+    if (!hasPremiumAccess) {
+      final paywallResult = await Navigator.push<PaywallResult>(
+        context,
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
+      if (paywallResult != PaywallResult.subscribed) return;
+      await SubscriptionService.refresh();
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TripPlannerScreen()),
     );
   }
 
@@ -440,6 +494,19 @@ class _DecideScreenState extends State<DecideScreen>
         ),
         actions: [
           IconButton(
+            tooltip: 'Saved trips',
+            icon: const Icon(
+              Icons.luggage_outlined,
+              color: AppColors.primary,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedTripsScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(
               Icons.favorite_border_rounded,
               color: AppColors.coral,
@@ -583,6 +650,67 @@ class _DecideScreenState extends State<DecideScreen>
                 ),
               ),
             ),
+
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _openTripPlanner,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.sky, AppColors.lavender],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: const Color(0xFFDCD7F5)),
+                  boxShadow: AppShadows.soft,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.route_rounded,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trip Planner+',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Plan the destination and every good stop.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      SubscriptionService.isSubscribed
+                          ? Icons.arrow_forward_rounded
+                          : Icons.lock_outline_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 25),
             sectionLabel("Distance"),
             row(
@@ -608,6 +736,29 @@ class _DecideScreenState extends State<DecideScreen>
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            if (isDateNight) ...[
+              const SizedBox(height: 16),
+              sectionLabel("What’s the occasion?"),
+              row(
+                ["First date", "Regular date", "Anniversary", "Surprise"],
+                selectedDateOccasion,
+                (v) => selectedDateOccasion = v,
+              ),
+              const SizedBox(height: 16),
+              sectionLabel("What kind of date?"),
+              row(
+                ["Cozy", "Playful", "Romantic", "Adventurous"],
+                selectedDateStyle,
+                (v) => selectedDateStyle = v,
+              ),
+              const SizedBox(height: 16),
+              sectionLabel("When?"),
+              row(
+                ["Tonight", "This weekend", "Plan ahead"],
+                selectedDateTiming,
+                (v) => selectedDateTiming = v,
+              ),
+            ],
             const SizedBox(height: 20),
             sectionLabel("Total outing budget"),
             row(
