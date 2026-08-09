@@ -28,6 +28,33 @@ const activityQueries = {
   High: ["basketball court", "fitness activity", "rock climbing", "adventure park"],
 };
 
+const freeActivityQueries = {
+  Low: [
+    "public library",
+    "free museum",
+    "art gallery",
+    "historic site",
+    "public garden",
+    "bookstore",
+  ],
+  Medium: [
+    "public beach",
+    "public park",
+    "nature preserve",
+    "walking trail",
+    "scenic overlook",
+    "public garden",
+  ],
+  High: [
+    "public basketball court",
+    "hiking trail",
+    "public sports field",
+    "outdoor fitness park",
+    "nature trail",
+    "public skate park",
+  ],
+};
+
 const dateEnergyQueries = {
   Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
   Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
@@ -1147,7 +1174,9 @@ export const getIdeas = onRequest(
         : (foodQueries[budget] || foodQueries["$"]);
       const experienceTerms = isDateNight ?
         dateNightTerms(dateOccasion, dateStyle, energy) :
-        (activityQueries[energy] || activityQueries.Medium)
+        (budget === "Free" ?
+          (freeActivityQueries[energy] || freeActivityQueries.Medium) :
+          (activityQueries[energy] || activityQueries.Medium))
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
       const [foodResults, experienceResults, recentIds, dateEvent] =
@@ -1175,15 +1204,31 @@ export const getIdeas = onRequest(
           Promise.resolve(null),
       ]);
 
-      const unseenFood = foodResults
-        .filter((place) => !recentIds.has(place.place_id))
+      const eligibleFood = foodResults
         .filter((place) => priceAllowed(place, budget));
+      const unseenFood = eligibleFood
+        .filter((place) => !recentIds.has(place.place_id));
       const unseenExperiences = experienceResults
         .filter((place) => !recentIds.has(place.place_id));
-      const food = unseenFood.length ? unseenFood : foodResults;
-      let experiences = unseenExperiences.length ?
-        unseenExperiences :
-        experienceResults;
+      // Prefer fresh recommendations, but do not fail a small-radius request
+      // merely because fewer than four unseen places remain. Top up from the
+      // verified in-radius pool while keeping unseen places first.
+      const food = [
+        ...unseenFood,
+        ...eligibleFood.filter(
+          (place) => !unseenFood.some(
+            (unseen) => unseen.place_id === place.place_id,
+          ),
+        ),
+      ];
+      let experiences = [
+        ...unseenExperiences,
+        ...experienceResults.filter(
+          (place) => !unseenExperiences.some(
+            (unseen) => unseen.place_id === place.place_id,
+          ),
+        ),
+      ];
       const eligibleDateEvent = dateEvent && !recentIds.has(dateEvent.id) &&
           distanceMiles(
             {lat, lng},
