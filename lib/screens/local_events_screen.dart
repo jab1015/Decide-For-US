@@ -84,15 +84,16 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
       if (price != null) price,
       if (event.address.isNotEmpty) event.address,
       if (event.description.isNotEmpty) event.description,
+      if (event.infoUrl?.isNotEmpty == true) ...[
+        '',
+        'Event information: ${event.infoUrl}',
+      ],
       if (companion != null) ...[
         '',
         'Make it an outing: ${companion.title}',
         if (companion.address.isNotEmpty) companion.address,
       ],
-      if (event.eventUrl?.isNotEmpty == true) ...[
-        '',
-        event.eventUrl!,
-      ],
+      if (event.eventUrl?.isNotEmpty == true) ...['', event.eventUrl!],
       '',
       'Shared from Decide For Us',
     ];
@@ -316,6 +317,7 @@ class _LocalEventsScreenState extends State<LocalEventsScreen> {
                   timeLabel: _eventTime(event),
                   priceLabel: _eventPrice(event),
                   onTickets: () => _openUrl(event.eventUrl),
+                  onInfo: () => _openUrl(event.infoUrl),
                   onShare: () => _shareEvent(event),
                   onMap: () => _openMap(event),
                   onCompanionMap: event.companion == null
@@ -337,6 +339,7 @@ class _EventCard extends StatelessWidget {
     required this.timeLabel,
     required this.priceLabel,
     required this.onTickets,
+    required this.onInfo,
     required this.onShare,
     required this.onMap,
     this.onCompanionMap,
@@ -346,6 +349,7 @@ class _EventCard extends StatelessWidget {
   final String timeLabel;
   final String? priceLabel;
   final VoidCallback onTickets;
+  final VoidCallback onInfo;
   final VoidCallback onShare;
   final VoidCallback onMap;
   final VoidCallback? onCompanionMap;
@@ -500,10 +504,19 @@ class _EventCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: onInfo,
+                      icon: const Icon(Icons.info_outline_rounded),
+                      label: const Text('EVENT INFO'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
                     child: FilledButton.icon(
                       onPressed: onTickets,
                       icon: const Icon(Icons.open_in_new_rounded),
-                      label: const Text('VIEW EVENT'),
+                      label: const Text('TICKETS'),
                     ),
                   ),
                 ],
@@ -570,4 +583,3 @@ class _MessageCard extends StatelessWidget {
     );
   }
 }
-

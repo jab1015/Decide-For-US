@@ -35,6 +35,26 @@ function eventDescription(event, venue) {
   return `${category} at ${venueName}${when ? ` on ${when}` : ""}.`;
 }
 
+function firstExternalUrl(externalLinks = {}) {
+  for (const key of ["homepage", "wiki", "facebook", "instagram"]) {
+    const value = externalLinks[key]?.find((link) => link?.url)?.url;
+    if (value) return value;
+  }
+  return null;
+}
+
+function eventInfoUrl(event, venue) {
+  const attraction = event._embedded?.attractions?.[0] || {};
+  const officialUrl = firstExternalUrl(attraction.externalLinks) ||
+    firstExternalUrl(venue.externalLinks);
+  if (officialUrl) return officialUrl;
+
+  const query = [event.name, venue.name, venue.city?.name, "event information"]
+    .filter(Boolean)
+    .join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
 function normalizeEvent(event) {
   const venue = event._embedded?.venues?.[0] || {};
   const classification = event.classifications?.[0] || {};
@@ -60,6 +80,7 @@ function normalizeEvent(event) {
     lng,
     photoUrl: eventImage(event.images),
     eventUrl: event.url || null,
+    infoUrl: eventInfoUrl(event, venue),
     eventStart: event.dates?.start?.dateTime || null,
     eventLocalDate: event.dates?.start?.localDate || null,
     eventLocalTime: event.dates?.start?.localTime || null,
