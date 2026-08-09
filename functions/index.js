@@ -54,6 +54,18 @@ const freeActivityQueries = {
   ],
 };
 
+const nearbyActivityFallbackQueries = {
+  Low: ["museum", "art gallery", "book store", "tourist attraction"],
+  Medium: ["park", "tourist attraction", "museum", "amusement park"],
+  High: ["gym", "bowling alley", "amusement park", "hiking area"],
+};
+
+const nearbyFoodFallbackQueries = [
+  "restaurant",
+  "cafe",
+  "bakery",
+];
+
 const dateEnergyQueries = {
   Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
   Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
@@ -332,6 +344,45 @@ async function searchPlaces(
   // so nationally popular matches can never leak into nearby recommendations.
   return uniqueRanked(results.flat())
     .filter((place) => isWithinRadius(place, lat, lng, hardRadiusMiles));
+}
+
+async function searchNearbyPlaces(
+  apiKey,
+  keywords,
+  lat,
+  lng,
+  radius,
+  hardRadiusMiles,
+) {
+  const results = await Promise.all(keywords.map(async (keyword) => {
+    const params = new URLSearchParams({
+      keyword,
+      location: `${lat},${lng}`,
+      radius: String(radius),
+      key: apiKey,
+    });
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params}`,
+    );
+    const payload = await response.json();
+    if (!response.ok || !["OK", "ZERO_RESULTS"].includes(payload.status)) {
+      throw new Error(
+        `Google Nearby Places error: ${payload.status || response.status}`,
+      );
+    }
+    return (payload.results || []).map((place) => ({
+      ...place,
+      matchedQuery: keyword,
+    }));
+  }));
+  return uniqueRanked(results.flat())
+    .filter((place) => isWithinRadius(place, lat, lng, hardRadiusMiles));
+}
+
+function isFoodPlace(place) {
+  const types = new Set(place.types || []);
+  return types.has("restaurant") || types.has("cafe") ||
+    types.has("bakery") || types.has("meal_takeaway");
 }
 
 function activityCategory(place) {
@@ -1196,7 +1247,7 @@ export const getIdeas = onRequest(
           (activityQueries[energy] || activityQueries.Medium))
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      const [foodResults, initialExperienceResults, recentIds, dateEvent] =
+      const [initialFoodResults, initialExperienceResults, recentIds, dateEvent] =
         await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius, radiusMiles),
         searchPlaces(
@@ -1221,7 +1272,9 @@ export const getIdeas = onRequest(
           Promise.resolve(null),
       ]);
 
-      let experienceResults = initialExperienceResults;
+      let foodResults = initialFoodResults;
+      let experienceResults = initialExperienceResults
+        .filter((place) => !isFoodPlace(place));
       const requiredExperienceCount = budget === "Free" ? 4 : 3;
       if (isDateNight && experienceResults.length < requiredExperienceCount) {
         const fallbackResults = await searchPlaces(
@@ -1235,7 +1288,39 @@ export const getIdeas = onRequest(
         experienceResults = uniqueRanked([
           ...experienceResults,
           ...fallbackResults,
-        ]);
+        ]).filter((place) => !isFoodPlace(place));
+      }
+
+      // Text Search uses location as a ranking preference and can be sparse for
+      // tightly constrained requests. Nearby Search supplies a broader local
+      // pool while the hard distance filter above still guarantees the user's
+      // selected radius.
+      if (budget !== "Free" &&
+          foodResults.filter((place) => priceAllowed(place, budget)).length < 1) {
+        const nearbyFood = await searchNearbyPlaces(
+          googleKey,
+          nearbyFoodFallbackQueries,
+          lat,
+          lng,
+          radius,
+          radiusMiles,
+        );
+        foodResults = uniqueRanked([...foodResults, ...nearbyFood]);
+      }
+      if (experienceResults.length < requiredExperienceCount) {
+        const nearbyExperiences = await searchNearbyPlaces(
+          googleKey,
+          nearbyActivityFallbackQueries[energy] ||
+            nearbyActivityFallbackQueries.Medium,
+          lat,
+          lng,
+          radius,
+          radiusMiles,
+        );
+        experienceResults = uniqueRanked([
+          ...experienceResults,
+          ...nearbyExperiences,
+        ]).filter((place) => !isFoodPlace(place));
       }
 
       const eligibleFood = foodResults
@@ -1311,6 +1396,16 @@ export const getIdeas = onRequest(
           experiences.slice(0, 4));
 
       if (selected.length < 4) {
+        console.warn("Recommendation pool too small", {
+          radiusMiles,
+          budget,
+          energy,
+          group,
+          isDateNight,
+          foodCandidates: eligibleFood.length,
+          experienceCandidates: experienceResults.length,
+          selected: selected.length,
+        });
         return res.status(404).json({
           error: "We could not find four strong, different options nearby.",
         });
