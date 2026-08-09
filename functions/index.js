@@ -95,6 +95,24 @@ function dateNightFoodTerms(occasion, budget) {
   return ["romantic restaurant", "intimate local restaurant"];
 }
 
+function dateNightFallbackTerms(style, energy) {
+  const energyTerms = {
+    Low: ["museum", "art gallery", "bookstore", "scenic park"],
+    Medium: ["botanical garden", "live music", "mini golf", "comedy club"],
+    High: ["kayaking", "hiking trail", "dance class", "rock climbing"],
+  };
+  const styleTerms = {
+    Cozy: ["quiet museum", "bookstore", "scenic park"],
+    Playful: ["mini golf", "arcade", "comedy club"],
+    Romantic: ["botanical garden", "scenic overlook", "art gallery"],
+    Adventurous: ["kayaking", "hiking trail", "adventure activity"],
+  };
+  return [...new Set([
+    ...(styleTerms[style] || styleTerms.Romantic),
+    ...(energyTerms[energy] || energyTerms.Medium),
+  ])].slice(0, 6);
+}
+
 function dateNightScore(place, occasion, style) {
   const text = [
     place.name,
@@ -895,7 +913,7 @@ async function tripPlaceDetails(apiKey, place) {
   try {
     const params = new URLSearchParams({
       place_id: place.place_id,
-      fields: "editorial_summary,url,website",
+      fields: "editorial_summary,url,website,photos",
       key: apiKey,
     });
     const response = await fetch(
@@ -1178,7 +1196,7 @@ export const getIdeas = onRequest(
           (activityQueries[energy] || activityQueries.Medium))
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      const [foodResults, experienceResults, recentIds, dateEvent] =
+      const [foodResults, initialExperienceResults, recentIds, dateEvent] =
         await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius, radiusMiles),
         searchPlaces(
@@ -1202,6 +1220,23 @@ export const getIdeas = onRequest(
           }) :
           Promise.resolve(null),
       ]);
+
+      let experienceResults = initialExperienceResults;
+      const requiredExperienceCount = budget === "Free" ? 4 : 3;
+      if (isDateNight && experienceResults.length < requiredExperienceCount) {
+        const fallbackResults = await searchPlaces(
+          googleKey,
+          dateNightFallbackTerms(dateStyle, energy),
+          lat,
+          lng,
+          radius,
+          radiusMiles,
+        );
+        experienceResults = uniqueRanked([
+          ...experienceResults,
+          ...fallbackResults,
+        ]);
+      }
 
       const eligibleFood = foodResults
         .filter((place) => priceAllowed(place, budget));
@@ -1281,15 +1316,20 @@ export const getIdeas = onRequest(
         });
       }
 
+      const selectedWithPhotos = await Promise.all(selected.map((place) => {
+        if (place.category === "event" || place.photos?.length) return place;
+        return tripPlaceDetails(googleKey, place);
+      }));
+
       if (!premium) await consumeFreeRequest(user.uid);
       await rememberRecommendations(
         user.uid,
-        selected.map((place) => place.place_id || place.id),
+        selectedWithPhotos.map((place) => place.place_id || place.id),
       );
 
-      return res.json(selected.map((place, index) => {
+      return res.json(selectedWithPhotos.map((place, index) => {
         if (place.category === "event") return place;
-        const isFood = place === foodChoice;
+        const isFood = place.place_id === foodChoice?.place_id;
         return serialize(
           place,
           isFood ? "food" : activityCategory(place),
