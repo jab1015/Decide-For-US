@@ -1475,7 +1475,10 @@ export const getPlacePhoto = onRequest(
       }
 
       const contentType = response.headers.get("content-type") || "image/jpeg";
-      const image = await response.buffer();
+      if (!contentType.toLowerCase().startsWith("image/")) {
+        return res.status(502).send("Photo unavailable.");
+      }
+      const image = Buffer.from(await response.arrayBuffer());
       res.set("Content-Type", contentType);
       res.set("Cache-Control", "public, max-age=86400");
       return res.status(200).send(image);
