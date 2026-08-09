@@ -3,7 +3,6 @@ import {getAuth} from "firebase-admin/auth";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {onRequest} from "firebase-functions/v2/https";
-import fetch from "node-fetch";
 import {searchTicketmasterEvents} from "./providers/ticketmaster.js";
 
 initializeApp();
