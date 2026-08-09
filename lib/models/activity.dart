@@ -9,6 +9,7 @@ class Activity {
     required this.lng,
     this.photoUrl,
     this.eventUrl,
+    this.infoUrl,
     this.placeUrl,
     this.eventStart,
     this.eventLocalDate,
@@ -32,6 +33,7 @@ class Activity {
   final double lng;
   final String? photoUrl;
   final String? eventUrl;
+  final String? infoUrl;
   final String? placeUrl;
   final DateTime? eventStart;
   final String? eventLocalDate;
@@ -56,6 +58,7 @@ class Activity {
       lng: (json['lng'] ?? 0).toDouble(),
       photoUrl: json['photoUrl'],
       eventUrl: json['eventUrl'],
+      infoUrl: json['infoUrl'],
       placeUrl: json['placeUrl'],
       eventStart: DateTime.tryParse(json['eventStart']?.toString() ?? ''),
       eventLocalDate: json['eventLocalDate'],
@@ -84,6 +87,7 @@ class Activity {
     'lng': lng,
     'photoUrl': photoUrl,
     'eventUrl': eventUrl,
+    'infoUrl': infoUrl,
     'placeUrl': placeUrl,
     'eventStart': eventStart?.toIso8601String(),
     'eventLocalDate': eventLocalDate,
@@ -98,4 +102,3 @@ class Activity {
     'priceCurrency': priceCurrency,
   };
 }
-

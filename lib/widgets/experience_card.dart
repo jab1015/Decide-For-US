@@ -86,6 +86,18 @@ class _ExperienceCardState extends State<ExperienceCard> {
     }
   }
 
+  Future<void> _openEventInfo(Activity activity) async {
+    final infoUrl = Uri.tryParse(activity.infoUrl ?? '');
+    if (infoUrl == null ||
+        !await launchUrl(infoUrl, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open event information')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final optionName = widget.optionIndex == 0 ? 'OPTION ONE' : 'OPTION TWO';
@@ -142,6 +154,7 @@ class _ExperienceCardState extends State<ExperienceCard> {
               onFavorite: () => _toggleFavorite(widget.first),
               onAddress: () => _openAddress(widget.first),
               onEvent: () => _openEvent(widget.first),
+              onEventInfo: () => _openEventInfo(widget.first),
             ),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -173,6 +186,7 @@ class _ExperienceCardState extends State<ExperienceCard> {
               onFavorite: () => _toggleFavorite(widget.second),
               onAddress: () => _openAddress(widget.second),
               onEvent: () => _openEvent(widget.second),
+              onEventInfo: () => _openEventInfo(widget.second),
             ),
           ],
         ),
@@ -189,6 +203,7 @@ class _Stop extends StatelessWidget {
     required this.onFavorite,
     required this.onAddress,
     required this.onEvent,
+    required this.onEventInfo,
   });
 
   final Activity activity;
@@ -197,6 +212,7 @@ class _Stop extends StatelessWidget {
   final VoidCallback onFavorite;
   final VoidCallback onAddress;
   final VoidCallback onEvent;
+  final VoidCallback onEventInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -349,10 +365,19 @@ class _Stop extends StatelessWidget {
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onEventInfo,
+                    icon: const Icon(Icons.info_outline_rounded),
+                    label: const Text('EVENT INFO'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: onEvent,
                     icon: const Icon(Icons.local_activity_outlined),
-                    label: const Text('VIEW EVENT'),
+                    label: const Text('TICKETS'),
                   ),
                 ),
               ],
@@ -407,4 +432,3 @@ class _ImagePlaceholder extends StatelessWidget {
     );
   }
 }
-
