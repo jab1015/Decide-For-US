@@ -239,7 +239,31 @@ function uniqueRanked(places) {
     .sort((a, b) => rank(b) - rank(a));
 }
 
-async function searchPlaces(apiKey, queries, lat, lng, radius) {
+function placeDistanceMiles(place, lat, lng) {
+  const location = place.geometry?.location;
+  if (!location || !Number.isFinite(Number(location.lat)) ||
+      !Number.isFinite(Number(location.lng))) return Number.POSITIVE_INFINITY;
+  return distanceMiles(
+    {lat, lng},
+    {lat: Number(location.lat), lng: Number(location.lng)},
+  );
+}
+
+function isWithinRadius(place, lat, lng, radiusMiles) {
+  const requestedMiles = Math.max(Number(radiusMiles) || 25, 1);
+  // A quarter-mile allowance avoids rejecting places that sit directly on the
+  // selected boundary because of coordinate rounding.
+  return placeDistanceMiles(place, lat, lng) <= requestedMiles + 0.25;
+}
+
+async function searchPlaces(
+  apiKey,
+  queries,
+  lat,
+  lng,
+  radius,
+  hardRadiusMiles = Number(radius) / 1609,
+) {
   const results = await Promise.all(queries.map(async (query) => {
     const params = new URLSearchParams({
       query,
@@ -259,7 +283,11 @@ async function searchPlaces(apiKey, queries, lat, lng, radius) {
       matchedQuery: query,
     }));
   }));
-  return uniqueRanked(results.flat());
+  // Legacy Places Text Search treats location/radius as a ranking preference,
+  // not a geographic guarantee. Enforce the user's distance choice ourselves
+  // so nationally popular matches can never leak into nearby recommendations.
+  return uniqueRanked(results.flat())
+    .filter((place) => isWithinRadius(place, lat, lng, hardRadiusMiles));
 }
 
 function activityCategory(place) {
@@ -286,6 +314,31 @@ function serialize(place, category, description) {
       `${PHOTO_PROXY_URL}?ref=${encodeURIComponent(photoReference)}` :
       null,
   };
+}
+
+function activityDiversityKey(place) {
+  const types = new Set(place.types || []);
+  const groups = [
+    ["museum", "museum"],
+    ["art_gallery", "art-gallery"],
+    ["park", "park"],
+    ["natural_feature", "nature"],
+    ["aquarium", "aquarium"],
+    ["zoo", "zoo"],
+    ["amusement_park", "amusement"],
+    ["bowling_alley", "bowling"],
+    ["movie_theater", "movies"],
+    ["night_club", "nightlife"],
+    ["spa", "wellness"],
+    ["gym", "fitness"],
+    ["shopping_mall", "shopping"],
+    ["book_store", "books"],
+    ["tourist_attraction", "attraction"],
+  ];
+  for (const [type, key] of groups) {
+    if (types.has(type)) return key;
+  }
+  return activityCategory(place);
 }
 
 function distanceMiles(first, second) {
@@ -1099,8 +1152,15 @@ export const getIdeas = onRequest(
 
       const [foodResults, experienceResults, recentIds, dateEvent] =
         await Promise.all([
-        searchPlaces(googleKey, foodTerms, lat, lng, radius),
-        searchPlaces(googleKey, experienceTerms, lat, lng, radius),
+        searchPlaces(googleKey, foodTerms, lat, lng, radius, radiusMiles),
+        searchPlaces(
+          googleKey,
+          experienceTerms,
+          lat,
+          lng,
+          radius,
+          radiusMiles,
+        ),
         recentRecommendationIds(user.uid),
         isDateNight ?
           findDateNightEvent({
@@ -1124,7 +1184,11 @@ export const getIdeas = onRequest(
       let experiences = unseenExperiences.length ?
         unseenExperiences :
         experienceResults;
-      const eligibleDateEvent = dateEvent && !recentIds.has(dateEvent.id) ?
+      const eligibleDateEvent = dateEvent && !recentIds.has(dateEvent.id) &&
+          distanceMiles(
+            {lat, lng},
+            {lat: Number(dateEvent.lat), lng: Number(dateEvent.lng)},
+          ) <= radiusMiles + 0.25 ?
         dateEvent :
         null;
       if (isDateNight) {
@@ -1140,9 +1204,9 @@ export const getIdeas = onRequest(
         if (selectedExperiences.length === 3) break;
         const duplicateCategory = selectedExperiences.some(
           (selected) =>
-            activityCategory(selected) === activityCategory(place),
+            activityDiversityKey(selected) === activityDiversityKey(place),
         );
-        if (!duplicateCategory || selectedExperiences.length >= 2) {
+        if (!duplicateCategory) {
           selectedExperiences.push(place);
         }
       }
