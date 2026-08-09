@@ -113,6 +113,23 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  Future<void> _checkTesterAccess() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await SubscriptionService.refresh();
+    if (!mounted) return;
+    if (SubscriptionService.isSubscribed) {
+      Navigator.pop(context, PaywallResult.subscribed);
+      return;
+    }
+    setState(() {
+      _loading = false;
+      _error = 'Tester access is not enabled for the ID shown below.';
+    });
+  }
+
   String _packageLabel(Package package) {
     return switch (package.packageType) {
       PackageType.monthly => 'Monthly',
@@ -201,7 +218,23 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
-                if (_showTesterTools)
+                if (_showTesterTools) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'PREMIUM TESTER ID',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    FirebaseAuth.instance.currentUser?.uid ?? 'Signing inâ€¦',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   TextButton.icon(
                     onPressed: _copyTesterId,
                     icon: const Icon(
@@ -214,6 +247,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       style: TextStyle(color: Colors.white70),
                     ),
                   ),
+                  OutlinedButton(
+                    onPressed: _loading ? null : _checkTesterAccess,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white70),
+                    ),
+                    child: const Text('CHECK TESTER ACCESS'),
+                  ),
+                ],
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(

@@ -1436,7 +1436,7 @@ export const getPremiumAccess = onRequest(
         user.uid,
         REVENUECAT_SECRET_API_KEY.value(),
       );
-      return res.json({allowed});
+      return res.json({allowed, testerId: user.uid});
     } catch (error) {
       console.error(error);
       return res.status(500).json({error: "Access check failed."});
