@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 const API_URL = "https://app.ticketmaster.com/discovery/v2/events.json";
 const IMAGE_PROXY_URL =
   "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getEventImage";
