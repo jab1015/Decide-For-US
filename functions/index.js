@@ -1425,7 +1425,11 @@ export const getEventImage = onRequest(
   {region: "us-central1"},
   async (req, res) => {
     try {
-      const source = new URL(String(req.query.url || ""));
+      const requestedUrl = String(req.query.url || "").trim();
+      if (!requestedUrl) {
+        return res.status(400).send("A valid event image URL is required.");
+      }
+      const source = new URL(requestedUrl);
       const host = source.hostname.toLowerCase();
       const allowed = host === "ticketm.net" ||
         host.endsWith(".ticketm.net") ||
@@ -1445,13 +1449,16 @@ export const getEventImage = onRequest(
         return res.status(415).send("Event image unavailable.");
       }
 
-      const image = await response.buffer();
+      const image = Buffer.from(await response.arrayBuffer());
       res.set("Access-Control-Allow-Origin", "*");
       res.set("Content-Type", contentType);
       res.set("Cache-Control", "public, max-age=86400");
       return res.status(200).send(image);
     } catch (error) {
       console.error(error);
+      if (error instanceof TypeError) {
+        return res.status(400).send("A valid event image URL is required.");
+      }
       return res.status(502).send("Event image unavailable.");
     }
   },
