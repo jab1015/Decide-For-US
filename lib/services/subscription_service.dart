@@ -21,6 +21,13 @@ class SubscriptionService {
     _isInitialized = true;
 
     if (kIsWeb) {
+      // Local Flutter Web runs are a QA environment. This flag is compiled out
+      // of profile and release builds, so published apps still require a real
+      // subscription or an approved Firebase tester ID.
+      if (kDebugMode) {
+        _isSubscribed = true;
+        return;
+      }
       _isSubscribed = await _serverPremiumAccess();
       return;
     }
