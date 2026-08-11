@@ -21,6 +21,10 @@ class ForcedUpdateResult {
 class ForcedUpdateService {
   static const _collection = 'app_config';
   static const _document = 'version_requirements';
+  static const _iosStoreUrl =
+      'https://apps.apple.com/us/app/decide-for-us/id6760516571';
+  static const _androidStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.decideforus.app';
 
   static Future<ForcedUpdateResult> check() async {
     final packageInfo = await PackageInfo.fromPlatform();
@@ -52,10 +56,14 @@ class ForcedUpdateService {
               ?.toString()
               .trim() ??
           '';
-      final storeUrl = (isIos ? data['ios_store_url'] : data['android_store_url'])
-              ?.toString()
-              .trim() ??
-          '';
+      final configuredStoreUrl =
+          (isIos ? data['ios_store_url'] : data['android_store_url'])
+                  ?.toString()
+                  .trim() ??
+              '';
+      final storeUrl = configuredStoreUrl.isNotEmpty
+          ? configuredStoreUrl
+          : (isIos ? _iosStoreUrl : _androidStoreUrl);
       final message = data['message']?.toString().trim().isNotEmpty == true
           ? data['message'].toString().trim()
           : 'A new version of Decide For Us is required to continue.';
