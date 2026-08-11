@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class ForcedUpdateResult {
@@ -34,7 +33,19 @@ class ForcedUpdateService {
           .get();
       final data = snapshot.data() ?? <String, dynamic>{};
 
-      final isIos = Platform.isIOS;
+      final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+      final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+      if (!isIos && !isAndroid) {
+        return ForcedUpdateResult(
+          isRequired: false,
+          currentVersion: currentVersion,
+          minimumVersion: '',
+          storeUrl: '',
+          message: 'A new version of Decide For Us is required to continue.',
+        );
+      }
+
       final minimumVersion = (isIos
                   ? data['ios_min_version']
                   : data['android_min_version'])
