@@ -9,7 +9,7 @@
 
 ## Current release baseline
 
-- App release: `1.0.28+44`.
+- App release: `1.0.28+45`.
 - App Store product name: `Decide For Us: What To Do`.
 - Bundle/application ID: `com.decideforus.app`.
 - iOS builds are produced by Codemagic after changes reach `main`.
