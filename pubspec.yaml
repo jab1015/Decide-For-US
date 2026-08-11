@@ -16,6 +16,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   http: ^1.6.0
   shared_preferences: ^2.2.2
+  package_info_plus: ^8.0.0
 
   # FIREBASE
   firebase_core: ^4.0.0
@@ -52,4 +53,3 @@ flutter:
   assets:
     - assets/sounds/spin.mp3
     - assets/sounds/win.mp3
-
