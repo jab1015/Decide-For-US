@@ -20,7 +20,7 @@ dependencies:
 
   # FIREBASE
   firebase_core: ^4.0.0
-  firebase_auth: ^6.0.0
+  firebase_auth: ^6.5.7
   cloud_firestore: ^6.2.0
 
   # PURCHASES
