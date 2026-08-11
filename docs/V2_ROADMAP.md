@@ -112,6 +112,10 @@ Core inputs:
 
 ## Launch gates
 
+Current release checkpoint: iOS 1.0.28+45 is in App Review; Android 1.0.28+45
+is active in Internal Testing; refreshed Google Play phone screenshots are in
+listing review. The next binary must use build number 46 or higher.
+
 - Audit and disable Firestore tester documents before production.
 - Upgrade the Functions runtime from Node.js 20.
 - Complete privacy policy, terms, subscription disclosure, and account/data

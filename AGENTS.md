@@ -3,7 +3,8 @@
 ## Authoritative branch
 
 - Start all new work from the latest `origin/main`.
-- Do not continue from `codex/ios-1.0.28-forced-update` after PR #49 is merged.
+- `main` already contains the 1.0.28 release work; do not continue from an old
+  release branch.
 - Create a short-lived feature branch from `main` for each change.
 - Never commit store credentials, signing files, API secrets, or Firebase secret values.
 
@@ -14,6 +15,17 @@
 - Bundle/application ID: `com.decideforus.app`.
 - iOS builds are produced by Codemagic after changes reach `main`.
 - Every upload must use a unique, increasing build number.
+- Build number 45 has been consumed by both App Store Connect and Google Play.
+  The next binary must use build number 46 or higher.
+
+## Store status on August 11, 2026
+
+- Apple: version 1.0.28, build 45 is in App Review. Release is manual after
+  approval.
+- Google Play: version 1.0.28, code 45 is active in Internal Testing.
+- Google Play phone screenshots have been replaced and sent for store review.
+- Store-ready Google Play phone screenshots are tracked in
+  `store_assets/google_play/`.
 
 ## Required checks
 

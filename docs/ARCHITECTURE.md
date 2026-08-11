@@ -4,6 +4,10 @@ Last updated: August 11, 2026
 
 ## System overview
 
+Release snapshot: source `1.0.28+45` on `main`; build 45 is in Apple review and
+active in Google Play Internal Testing. Build 46 is the next available build
+number.
+
 ```text
 Flutter app
   |-- Firebase Authentication (anonymous user)
@@ -160,6 +164,6 @@ Codemagic build output.
 - Descriptions are structured from Places metadata rather than editorial or AI
   prose.
 - Favorites are device-local and store individual stops, not full itineraries.
-- Event/place pairing, weather, routing, and travel-time logic are not yet
-  implemented.
+- Event/place companion pairing is implemented. Weather-aware scoring and full
+  route/travel-time feasibility remain future work.
 - Free usage is weekly, but there is no user-facing countdown/reset date yet.
