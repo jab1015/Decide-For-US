@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'theme/app_theme.dart';
+
 import 'screens/decide_screen.dart';
+import 'screens/forced_update_screen.dart';
 import 'services/age_signals_service.dart';
+import 'services/forced_update_service.dart';
+import 'theme/app_theme.dart';
 
 class DecideApp extends StatefulWidget {
   const DecideApp({super.key});
@@ -13,14 +16,17 @@ class DecideApp extends StatefulWidget {
 
 class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
   final _navigatorKey = GlobalKey<NavigatorState>();
+
   bool _isCheckingAgeSignals = false;
   bool _verificationDialogIsOpen = false;
+  bool _isCheckingForcedUpdate = true;
+  ForcedUpdateResult? _forcedUpdateResult;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAgeSignals());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runStartupChecks());
   }
 
   @override
@@ -31,18 +37,46 @@ class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkAgeSignals();
+    if (state == AppLifecycleState.resumed) {
+      _checkForcedUpdate().then((_) {
+        if (_forcedUpdateResult?.isRequired != true) {
+          _checkAgeSignals();
+        }
+      });
+    }
+  }
+
+  Future<void> _runStartupChecks() async {
+    await _checkForcedUpdate();
+    if (_forcedUpdateResult?.isRequired != true) {
+      await _checkAgeSignals();
+    }
+  }
+
+  Future<void> _checkForcedUpdate() async {
+    if (mounted) {
+      setState(() => _isCheckingForcedUpdate = true);
+    }
+
+    final result = await ForcedUpdateService.check();
+
+    if (!mounted) return;
+    setState(() {
+      _forcedUpdateResult = result;
+      _isCheckingForcedUpdate = false;
+    });
   }
 
   Future<void> _checkAgeSignals() async {
-    if (_isCheckingAgeSignals) return;
+    if (_isCheckingAgeSignals || _forcedUpdateResult?.isRequired == true) return;
     _isCheckingAgeSignals = true;
     final result = await AgeSignalsService.check();
     _isCheckingAgeSignals = false;
 
     if (!mounted ||
         result.status != AgeSignalsStatus.verificationRequired ||
-        _verificationDialogIsOpen) {
+        _verificationDialogIsOpen ||
+        _forcedUpdateResult?.isRequired == true) {
       return;
     }
 
@@ -86,6 +120,26 @@ class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
     _verificationDialogIsOpen = false;
   }
 
+  Widget _home() {
+    if (_isCheckingForcedUpdate && _forcedUpdateResult == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final forcedUpdate = _forcedUpdateResult;
+    if (forcedUpdate?.isRequired == true) {
+      return ForcedUpdateScreen(
+        message: forcedUpdate!.message,
+        storeUrl: forcedUpdate.storeUrl,
+        currentVersion: forcedUpdate.currentVersion,
+        minimumVersion: forcedUpdate.minimumVersion,
+      );
+    }
+
+    return const DecideScreen();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -93,7 +147,7 @@ class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       title: 'Decide For Us',
       theme: AppTheme.light(),
-      home: const DecideScreen(),
+      home: _home(),
     );
   }
 }
