@@ -55,6 +55,8 @@
 	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We use your location to find nearby activities and experiences.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We use your location to find nearby activities and experiences.</string>
 
 	<!-- The app uses only standard HTTPS encryption. -->
 	<key>ITSAppUsesNonExemptEncryption</key>

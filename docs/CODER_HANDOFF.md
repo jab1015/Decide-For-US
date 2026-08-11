@@ -17,13 +17,17 @@ The release branch `codex/ios-1.0.28-forced-update` is temporary and must not be
 
 ## Current release state
 
-- Source release version: `1.0.28+43`.
+- Source release version: `1.0.28+44`.
 - App Store Connect version record: `1.0.28`.
 - Public App Store name for the next version: `Decide For Us: What To Do`.
 - Publisher remains Jerry Brown.
 - Codemagic builds and uploads iOS archives from `main`.
 - App Store Connect App ID: `6760516571`.
 - Bundle/application ID: `com.decideforus.app`.
+
+Build 43 uploaded successfully but Apple reported ITMS-90683 because
+`NSLocationAlwaysAndWhenInUseUsageDescription` was missing. Build 44 adds that
+purpose string and is the binary that should be selected for version 1.0.28.
 
 ## What happens after merge
 
