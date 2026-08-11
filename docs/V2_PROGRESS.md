@@ -9,9 +9,9 @@ Last updated: August 11, 2026
 | Phase 0: subscription and recommendation foundation | Merged | PR #29 |
 | Phase 1: V2 design system and home experience | Merged | PR #30 |
 | Phase 2: paired results experience | Merged | PR #31 |
-| Phase 3: Local Events+ | In review | Draft PR #32; working in Chrome |
-| Date Night+ specialization | Planned | Premium-only |
-| Trip Planner+ | Planned | Premium-only |
+| Phase 3: Local Events+ | Implemented; store validation pending | Premium-only |
+| Date Night+ specialization | Implemented; store validation pending | Premium-only |
+| Trip Planner+ | Implemented; store validation pending | Premium-only |
 
 ## Completed
 
@@ -84,20 +84,24 @@ Last updated: August 11, 2026
 - `REVENUECAT_SECRET_API_KEY` created in Firebase Secret Manager.
 - `getIdeas` successfully deployed as a second-generation Cloud Function.
 - Firestore IAM failure identified and corrected.
-- Google Play Internal Testing already contains version code 30.
+- Google Play Internal Testing contains version 1.0.28, code 45.
 - Android release signing remains local and gitignored.
 - `TICKETMASTER_API_KEY` created in Firebase Secret Manager.
 - `getLocalEvents`, `getEventImage`, and `getPremiumAccess` deployed.
 - Google Play license-testing list configured for subscription testing.
-- App version advanced to `1.0.28+43` for the next iOS submission.
+- App version advanced to `1.0.28+45`; build 45 is in Apple review and active
+  in Google Play Internal Testing.
 - Firestore-controlled forced-update handling added for iOS and Android.
 - App Store product name selected as `Decide For Us: What To Do`.
+- Native iOS and Android icons were regenerated from `assets/icon.png`.
+- Three refreshed Google Play phone screenshots were submitted for listing
+  review and saved in `store_assets/google_play/`.
 
 Current store-release handoff and branch instructions live in
-`docs/CODER_HANDOFF.md`; new work starts from the latest `main` after PR #49 is
-merged.
+`docs/CODER_HANDOFF.md`; new work starts from the latest `main`. Build number 45
+is consumed, so the next binary must use build number 46 or higher.
 
-## Must verify before merging PR #32
+## Store validation still required
 
 - `flutter analyze`
 - `flutter test`

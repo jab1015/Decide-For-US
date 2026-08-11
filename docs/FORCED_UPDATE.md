@@ -28,13 +28,21 @@ Built-in store URL fallbacks:
 
 ```text
 ios_min_version: 1.0.28
-android_min_version: 1.0.25
+android_min_version: 1.0.28
 message: A new version of Decide For Us is required. Update now to continue.
 ```
 
 Only raise a minimum version after that version is publicly available in the corresponding store. Setting `ios_min_version` higher than the version Apple currently offers can lock users on an update screen while no qualifying download exists.
 
-For the 1.0.28 release, leave the existing iOS minimum unchanged while Apple reviews and publishes the build. After 1.0.28 is publicly downloadable, set `ios_min_version` to `1.0.28` to block older builds that already contain the gate.
+For the 1.0.28 release, leave the existing iOS minimum unchanged while Apple
+reviews and publishes build 45. Android 1.0.28+45 is currently available only
+through Internal Testing, so Internal Testing alone is not a reason to raise the
+production Android minimum.
+
+Version 1.0.28 is the first release containing the gate on both platforms. It
+cannot force users running older, pre-gate binaries. Treat it as the baseline:
+release a later version, verify that later version is downloadable by the
+intended audience, and only then raise that platform's minimum above 1.0.28.
 
 ## Behavior
 

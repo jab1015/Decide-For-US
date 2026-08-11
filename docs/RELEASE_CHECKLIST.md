@@ -43,6 +43,9 @@ After deployment:
 
 ## iOS / TestFlight
 
+Current 1.0.28 status: build 45 has been submitted and is in App Review. The
+release is manual after approval.
+
 - [ ] Use a new App Store Connect build number.
 - [ ] Confirm bundle ID `com.decideforus.app`.
 - [ ] Build the intended branch in Codemagic.
@@ -57,11 +60,19 @@ After deployment:
 
 ## Android / Google Play
 
+Current 1.0.28 status: code 45 is active in Internal Testing. The three updated
+phone screenshots have been sent for Google review. Production access and
+closed-testing requirements are not yet complete.
+
 - [ ] Keep `android/key.properties` and the keystore local and gitignored.
-- [ ] Run `flutter build appbundle --release`.
-- [ ] Confirm the `.aab` version code is greater than the current Play release.
-- [ ] Upload to Internal Testing.
-- [ ] Add release notes and roll out to internal testers.
+- [x] Run `flutter build appbundle --release` for 1.0.28+45.
+- [x] Confirm the `.aab` version code is greater than the prior Play release.
+- [x] Upload 1.0.28+45 to Internal Testing.
+- [x] Add release notes and roll out to internal testers.
+- [x] Replace the Google Play phone screenshots and send the listing change for
+      review.
+- [ ] Complete the required closed-testing period and apply for production
+      access.
 - [ ] Confirm RevenueCat Android monthly and annual products.
 - [ ] Confirm the internal tester list is also selected for license testing.
 - [ ] Use a Google Play test payment method and verify Premium activation.

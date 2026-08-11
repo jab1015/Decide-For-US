@@ -5,6 +5,15 @@ Places, and RevenueCat. The free experience helps a user make a quick decision.
 Premium is evolving into a planning product for Date Night+, local events,
 weekends, and trips.
 
+## Release status
+
+- Source version: `1.0.28+45` on authoritative branch `main`.
+- Apple: build 45 is in App Review with manual release after approval.
+- Google Play: code 45 is active in Internal Testing; refreshed phone
+  screenshots are in listing review.
+- Build number 45 is consumed on both stores. Start future work from the latest
+  `origin/main` and use build number 46 or higher for the next binary.
+
 ## Current product behavior
 
 - A decision returns two outing options.
