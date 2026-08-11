@@ -3,7 +3,7 @@ description: A decision-making app
 
 publish_to: 'none'
 
-version: 1.0.28+44
+version: 1.0.28+45
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -42,7 +42,7 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icon.png"

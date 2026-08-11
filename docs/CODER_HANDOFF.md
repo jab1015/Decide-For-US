@@ -17,7 +17,7 @@ The release branch `codex/ios-1.0.28-forced-update` is temporary and must not be
 
 ## Current release state
 
-- Source release version: `1.0.28+44`.
+- Source release version: `1.0.28+45`.
 - App Store Connect version record: `1.0.28`.
 - Public App Store name for the next version: `Decide For Us: What To Do`.
 - Publisher remains Jerry Brown.
@@ -27,7 +27,9 @@ The release branch `codex/ios-1.0.28-forced-update` is temporary and must not be
 
 Build 43 uploaded successfully but Apple reported ITMS-90683 because
 `NSLocationAlwaysAndWhenInUseUsageDescription` was missing. Build 44 adds that
-purpose string and is the binary that should be selected for version 1.0.28.
+purpose string, but still contained the previously generated launcher icon.
+Build 45 regenerates and commits the native iOS and Android launcher assets
+from `assets/icon.png` and is the binary that should be selected for 1.0.28.
 
 ## What happens after merge
 
