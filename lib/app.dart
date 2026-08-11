@@ -8,7 +8,12 @@ import 'services/forced_update_service.dart';
 import 'theme/app_theme.dart';
 
 class DecideApp extends StatefulWidget {
-  const DecideApp({super.key});
+  const DecideApp({
+    super.key,
+    this.forcedUpdateCheck = ForcedUpdateService.check,
+  });
+
+  final Future<ForcedUpdateResult> Function() forcedUpdateCheck;
 
   @override
   State<DecideApp> createState() => _DecideAppState();
@@ -58,7 +63,7 @@ class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
       setState(() => _isCheckingForcedUpdate = true);
     }
 
-    final result = await ForcedUpdateService.check();
+    final result = await widget.forcedUpdateCheck();
 
     if (!mounted) return;
     setState(() {
@@ -68,7 +73,9 @@ class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
   }
 
   Future<void> _checkAgeSignals() async {
-    if (_isCheckingAgeSignals || _forcedUpdateResult?.isRequired == true) return;
+    if (_isCheckingAgeSignals || _forcedUpdateResult?.isRequired == true) {
+      return;
+    }
     _isCheckingAgeSignals = true;
     final result = await AgeSignalsService.check();
     _isCheckingAgeSignals = false;
@@ -81,7 +88,7 @@ class _DecideAppState extends State<DecideApp> with WidgetsBindingObserver {
     }
 
     final dialogContext = _navigatorKey.currentContext;
-    if (dialogContext == null) return;
+    if (dialogContext == null || !dialogContext.mounted) return;
     _verificationDialogIsOpen = true;
     await showDialog<void>(
       context: dialogContext,
