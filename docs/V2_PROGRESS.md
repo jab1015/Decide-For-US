@@ -1,6 +1,6 @@
 # Decide For Us V2 Progress
 
-Last updated: July 30, 2026
+Last updated: August 11, 2026
 
 ## Status summary
 
@@ -89,6 +89,13 @@ Last updated: July 30, 2026
 - `TICKETMASTER_API_KEY` created in Firebase Secret Manager.
 - `getLocalEvents`, `getEventImage`, and `getPremiumAccess` deployed.
 - Google Play license-testing list configured for subscription testing.
+- App version advanced to `1.0.28+43` for the next iOS submission.
+- Firestore-controlled forced-update handling added for iOS and Android.
+- App Store product name selected as `Decide For Us: What To Do`.
+
+Current store-release handoff and branch instructions live in
+`docs/CODER_HANDOFF.md`; new work starts from the latest `main` after PR #49 is
+merged.
 
 ## Must verify before merging PR #32
 

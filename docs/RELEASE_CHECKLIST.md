@@ -1,6 +1,12 @@
 # Release Checklist
 
-Last updated: July 30, 2026
+Last updated: August 11, 2026
+
+## Branch and handoff
+
+- [ ] Start from the latest `origin/main`.
+- [ ] Use a short-lived branch; do not base new work on an old merged release branch.
+- [ ] Update `docs/CODER_HANDOFF.md` with the new version and remaining steps.
 
 ## Every test build
 
@@ -45,6 +51,9 @@ After deployment:
 - [ ] Test location permission, purchases, restore, and external map links.
 - [ ] Confirm TestFlight subscription transactions run in Apple sandbox.
 - [ ] Test Local Events+ at 10, 25, and 50 miles.
+- [ ] Confirm the forced-update gate allows the release version to open.
+- [ ] Do not raise `ios_min_version` until the release is publicly available.
+- [ ] After release, test updating from an older gate-enabled build.
 
 ## Android / Google Play
 
@@ -56,6 +65,8 @@ After deployment:
 - [ ] Confirm RevenueCat Android monthly and annual products.
 - [ ] Confirm the internal tester list is also selected for license testing.
 - [ ] Use a Google Play test payment method and verify Premium activation.
+- [ ] Keep `android_min_version` unchanged until the matching Play version is
+      available to the intended audience.
 
 ## Production-only gates
 

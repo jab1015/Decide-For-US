@@ -1,6 +1,6 @@
 # Decide For Us Architecture
 
-Last updated: July 30, 2026
+Last updated: August 11, 2026
 
 ## System overview
 
@@ -8,6 +8,7 @@ Last updated: July 30, 2026
 Flutter app
   |-- Firebase Authentication (anonymous user)
   |-- RevenueCat SDK (Firebase UID as app user ID)
+  |-- Firestore startup/resume minimum-version check
   |
   `-- HTTPS + Firebase ID token
         |
@@ -32,6 +33,11 @@ Flutter renders two option cards with two stops each
 
 `lib/main.dart` initializes Firebase, signs in anonymously when necessary,
 initializes RevenueCat, and then starts `DecideApp`.
+
+Before normal navigation, `DecideApp` checks `app_config/version_requirements`
+through `ForcedUpdateService`. An installed version below the platform minimum
+sees a blocking store-update screen. The check repeats when the app resumes and
+fails open if Firestore is unavailable.
 
 ### Recommendation request
 
@@ -120,6 +126,12 @@ anonymous Firebase users during Chrome development.
 
 The Functions runtime service account requires `roles/datastore.user`.
 Firestore mobile-client rules do not replace server IAM for Admin SDK calls.
+
+### `app_config/version_requirements`
+
+Stores platform minimum versions, optional store URL overrides, and the
+forced-update message. See `FORCED_UPDATE.md`. Minimums must only be raised
+after the target store version is public.
 
 ## RevenueCat
 

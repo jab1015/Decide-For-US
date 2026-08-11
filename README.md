@@ -22,8 +22,9 @@ weekends, and trips.
 - Explicit Firestore tester UIDs can receive Premium access during Chrome
   development without changing production entitlement rules.
 
-See [V2 progress](docs/V2_PROGRESS.md), [roadmap](docs/V2_ROADMAP.md),
-[architecture](docs/ARCHITECTURE.md), and the
+See the [coder handoff](docs/CODER_HANDOFF.md), [V2 progress](docs/V2_PROGRESS.md),
+[roadmap](docs/V2_ROADMAP.md), [architecture](docs/ARCHITECTURE.md),
+[forced-update configuration](docs/FORCED_UPDATE.md), and the
 [release checklist](docs/RELEASE_CHECKLIST.md).
 
 ## Development setup
@@ -119,6 +120,8 @@ Android reads `versionName` and `versionCode` from `pubspec.yaml`.
 
 iOS archives are built on macOS through Codemagic and published to TestFlight.
 Every App Store Connect upload requires a previously unused build number.
+The authoritative integration branch is `main`; create new branches from the
+latest `origin/main` and merge them before expecting Codemagic to build.
 
 ## Validation
 

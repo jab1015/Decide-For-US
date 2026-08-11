@@ -1,6 +1,6 @@
 # Decide For Us V2 Roadmap
 
-Last updated: July 30, 2026
+Last updated: August 11, 2026
 
 ## Product promise
 
@@ -119,4 +119,8 @@ Core inputs:
 - Confirm provider terms, attribution, caching, and image requirements.
 - Add monitoring, alerting, budgets, rate limiting, and abuse protection.
 - Validate subscriptions in sandbox and production for iOS and Android.
+- Release the first build containing the forced-update gate before raising any
+  Firestore platform minimum version.
+- Keep `docs/CODER_HANDOFF.md` and the release checklist current at every store
+  submission.
 
