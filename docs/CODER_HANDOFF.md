@@ -1,6 +1,6 @@
 # Coder Handoff
 
-Last updated: August 11, 2026
+Last updated: August 14, 2026
 
 ## Where to start
 
@@ -14,12 +14,12 @@ git switch -c codex/<short-description>
 ```
 
 Do not base new work on `codex/ios-1.0.28-forced-update` or another historical
-release branch. Build number 45 is already used on both stores; the next binary
-must be `1.0.29+46` or another version with build number 46 or higher.
+release branch. Build number 45 is already used on both stores. The current
+tester-access release is `1.0.29+46`.
 
 ## Current release state
 
-- Source release version: `1.0.28+45`.
+- Source release version: `1.0.29+46`.
 - App Store Connect version record: `1.0.28`.
 - Public App Store name for the next version: `Decide For Us: What To Do`.
 - Publisher remains Jerry Brown.
@@ -32,6 +32,11 @@ Build 43 uploaded successfully but Apple reported ITMS-90683 because
 purpose string, but still contained the previously generated launcher icon.
 Build 45 regenerates and commits the native iOS and Android launcher assets
 from `assets/icon.png` and is the selected 1.0.28 binary on both stores.
+
+Build 46 restores automatic Premium access for tester builds. The three
+Premium-gated Firebase Functions were deployed on August 14 with
+`TESTER_PREMIUM_ACCESS=true`. Android tester bundles and Codemagic iOS archives
+must include `--dart-define=TESTER_PREMIUM_ACCESS=true`.
 
 ### Apple
 
@@ -53,12 +58,16 @@ from `assets/icon.png` and is the selected 1.0.28 binary on both stores.
 
 ## Next store actions
 
-1. Monitor Apple review for version 1.0.28, build 45.
-2. After approval, manually release it and verify its public App Store page.
-3. Monitor Google Play Publishing overview until the phone-screenshot change is
+1. Upload version 1.0.29, build 46 to TestFlight and verify Date Night+ and
+   Local Events+ without a purchase.
+2. Upload version 1.0.29, code 46 to Google Play Internal Testing and run the
+   same Premium validation.
+3. Monitor Apple review for version 1.0.28, build 45 and release it manually if
+   that production submission remains active.
+4. Monitor Google Play Publishing overview until the phone-screenshot change is
    approved.
-4. Recruit and retain the testers needed for Google Play production access.
-5. Keep both Firestore minimum versions unchanged until a newer qualifying
+5. Recruit and retain the testers needed for Google Play production access.
+6. Keep both Firestore minimum versions unchanged until a newer qualifying
    store release is available to the audience being forced to update.
 
 Do not raise `ios_min_version` before Apple releases 1.0.28. A premature value can send users to an App Store version that is not available yet.
