@@ -17,6 +17,8 @@ Last updated: August 11, 2026
 - [ ] Run `node --check functions/index.js` after backend changes.
 - [ ] Deploy every changed Firebase Function.
 - [ ] Confirm Function secrets and IAM bindings.
+- [ ] For tester builds, set the Functions `TESTER_PREMIUM_ACCESS` parameter to
+      `true` and build Flutter with `--dart-define=TESTER_PREMIUM_ACCESS=true`.
 - [ ] Test on a real iPhone and Android device.
 - [ ] Verify two option cards and four distinct stops.
 - [ ] Verify photos, directions, favorites, and scrolling.
@@ -83,6 +85,8 @@ closed-testing requirements are not yet complete.
 
 - [x] Remove the Reset tester usage button.
 - [x] Delete `resetTesterUsage` from Firebase Functions.
+- [ ] Set the Functions `TESTER_PREMIUM_ACCESS` parameter to `false` and omit
+      the matching Dart define from production binaries.
 - [ ] Upgrade the Functions runtime from Node.js 20.
 - [ ] Review and upgrade vulnerable/outdated dependencies without forcing
       breaking changes.
