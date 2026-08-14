@@ -10,13 +10,15 @@
 
 ## Current release baseline
 
-- App release: `1.0.28+45`.
+- App release: `1.0.29+46`.
 - App Store product name: `Decide For Us: What To Do`.
 - Bundle/application ID: `com.decideforus.app`.
 - iOS builds are produced by Codemagic after changes reach `main`.
+- TestFlight and Google Play testing binaries must be built with
+  `--dart-define=TESTER_PREMIUM_ACCESS=true`.
 - Every upload must use a unique, increasing build number.
 - Build number 45 has been consumed by both App Store Connect and Google Play.
-  The next binary must use build number 46 or higher.
+  Build 46 is reserved for the Premium tester-access release.
 
 ## Store status on August 11, 2026
 

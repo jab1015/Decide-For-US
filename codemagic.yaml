@@ -32,8 +32,9 @@ workflows:
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
           flutter build ipa --release \
-            --build-name=1.0.28 \
+            --build-name=1.0.29 \
             --build-number="$BUILD_NUMBER" \
+            --dart-define=TESTER_PREMIUM_ACCESS=true \
             --export-options-plist=/Users/builder/export_options.plist
           ls build/ios/ipa/*.ipa >/dev/null
 
