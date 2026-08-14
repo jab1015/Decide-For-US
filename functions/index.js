@@ -1,7 +1,7 @@
 import {initializeApp} from "firebase-admin/app";
 import {getAuth} from "firebase-admin/auth";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
-import {defineSecret} from "firebase-functions/params";
+import {defineBoolean, defineSecret} from "firebase-functions/params";
 import {onRequest} from "firebase-functions/v2/https";
 import fetch from "node-fetch";
 import {searchTicketmasterEvents} from "./providers/ticketmaster.js";
@@ -11,6 +11,10 @@ initializeApp();
 const GOOGLE_API_KEY = defineSecret("GOOGLE_API_KEY");
 const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
 const TICKETMASTER_API_KEY = defineSecret("TICKETMASTER_API_KEY");
+const TESTER_PREMIUM_ACCESS = defineBoolean("TESTER_PREMIUM_ACCESS", {
+  default: false,
+  description: "Allow Premium requests from tester-flagged app builds.",
+});
 const FREE_WEEKLY_LIMIT = 3;
 const PHOTO_PROXY_URL =
   "https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPlacePhoto";
@@ -342,6 +346,11 @@ async function authenticatedUser(req) {
   return getAuth().verifyIdToken(authorization.slice(7));
 }
 
+function hasTesterBuildAccess(req) {
+  return TESTER_PREMIUM_ACCESS.value() === true &&
+    req.get("X-Decide-Tester-Build") === "1";
+}
+
 async function hasPremium(uid, apiKey) {
   if (!apiKey) return false;
   const response = await fetch(
@@ -403,7 +412,10 @@ export const getIdeas = onRequest(
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.set(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, X-Decide-Tester-Build",
+    );
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).json({error: "POST required."});
 
@@ -411,10 +423,11 @@ export const getIdeas = onRequest(
       const user = await authenticatedUser(req);
       if (!user) return res.status(401).json({error: "Authentication required."});
 
-      const premium = await hasPremiumAccess(
-        user.uid,
-        REVENUECAT_SECRET_API_KEY.value(),
-      );
+      const premium = hasTesterBuildAccess(req) ||
+        await hasPremiumAccess(
+          user.uid,
+          REVENUECAT_SECRET_API_KEY.value(),
+        );
       const isDateNight = req.body?.isDateNight === true;
       if (isDateNight && !premium) {
         return res.status(403).json({error: "Date Night+ requires Premium."});
@@ -556,7 +569,10 @@ export const getLocalEvents = onRequest(
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.set(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, X-Decide-Tester-Build",
+    );
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") {
       return res.status(405).json({error: "POST required."});
@@ -568,10 +584,11 @@ export const getLocalEvents = onRequest(
         return res.status(401).json({error: "Authentication required."});
       }
 
-      const premium = await hasPremiumAccess(
-        user.uid,
-        REVENUECAT_SECRET_API_KEY.value(),
-      );
+      const premium = hasTesterBuildAccess(req) ||
+        await hasPremiumAccess(
+          user.uid,
+          REVENUECAT_SECRET_API_KEY.value(),
+        );
       if (!premium) {
         return res.status(403).json({
           error: "Local Events+ requires Premium.",
@@ -658,7 +675,10 @@ export const getPremiumAccess = onRequest(
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    res.set(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, X-Decide-Tester-Build",
+    );
     if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") {
       return res.status(405).json({error: "POST required."});
@@ -669,10 +689,11 @@ export const getPremiumAccess = onRequest(
       if (!user) {
         return res.status(401).json({error: "Authentication required."});
       }
-      const allowed = await hasPremiumAccess(
-        user.uid,
-        REVENUECAT_SECRET_API_KEY.value(),
-      );
+      const allowed = hasTesterBuildAccess(req) ||
+        await hasPremiumAccess(
+          user.uid,
+          REVENUECAT_SECRET_API_KEY.value(),
+        );
       return res.json({allowed});
     } catch (error) {
       console.error(error);

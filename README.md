@@ -7,7 +7,7 @@ weekends, and trips.
 
 ## Release status
 
-- Source version: `1.0.28+45` on authoritative branch `main`.
+- Source version: `1.0.29+46` on the tester-access release branch.
 - Apple: build 45 is in App Review with manual release after approval.
 - Google Play: code 45 is active in Internal Testing; refreshed phone
   screenshots are in listing review.
@@ -82,7 +82,28 @@ See the [coder handoff](docs/CODER_HANDOFF.md), [V2 progress](docs/V2_PROGRESS.m
 - `getEventImage`: securely proxies allowlisted Ticketmaster images.
 - `getPremiumAccess`: resolves RevenueCat or Firestore tester access.
 
-## Premium testers
+## Premium tester builds
+
+TestFlight and Google Play testing builds can grant Premium to every tester,
+without collecting Firebase UIDs or requiring sandbox purchases. Enable the
+same flag in both the app binary and deployed Functions:
+
+```sh
+firebase deploy --only functions
+flutter build appbundle --release --dart-define=TESTER_PREMIUM_ACCESS=true
+flutter build ipa --release --dart-define=TESTER_PREMIUM_ACCESS=true
+```
+
+Before deploying, set `TESTER_PREMIUM_ACCESS=true` in
+`functions/.env.decide-for-us-792bc`. The Firebase environment file is
+intentionally gitignored; set it in the deployment environment rather than
+committing it.
+
+Production binaries must omit the Dart define, and the Functions parameter must
+be returned to `false` after tester validation. The server requires both the
+enabled parameter and the tester-build request header.
+
+The UID allowlist remains available for controlled development access:
 
 Chrome cannot use RevenueCat mobile purchasing. Add an authenticated anonymous
 Firebase UID to Firestore for controlled development access:
@@ -99,8 +120,8 @@ stable:
 flutter run -d chrome --web-port 7357
 ```
 
-TestFlight uses Apple sandbox purchases. Android internal testers must also be
-included in Google Play license testing to receive test payment methods.
+Sandbox purchases and Google Play license testing are only required when testing
+the actual purchase flow, not when validating Premium features in a tester build.
 
 ## Release builds
 
@@ -111,7 +132,13 @@ Release signing uses the local, gitignored files:
 - `android/key.properties`
 - the keystore referenced by `storeFile`
 
-Build:
+Tester build:
+
+```sh
+flutter build appbundle --release --dart-define=TESTER_PREMIUM_ACCESS=true
+```
+
+Production build:
 
 ```sh
 flutter build appbundle --release

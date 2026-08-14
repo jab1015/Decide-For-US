@@ -7,6 +7,10 @@ import 'package:http/http.dart' as http;
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionService {
+  static const bool testerPremiumAccess = bool.fromEnvironment(
+    'TESTER_PREMIUM_ACCESS',
+    defaultValue: false,
+  );
   static const String entitlementId = 'premium';
   static const String premiumAccessUrl =
       'https://us-central1-decide-for-us-792bc.cloudfunctions.net/getPremiumAccess';
@@ -14,11 +18,16 @@ class SubscriptionService {
   static bool _isConfigured = false;
   static bool _isSubscribed = false;
 
-  static bool get isSubscribed => _isSubscribed;
+  static bool get isSubscribed => testerPremiumAccess || _isSubscribed;
 
   static Future<void> init() async {
     if (_isInitialized) return;
     _isInitialized = true;
+
+    if (testerPremiumAccess) {
+      _isSubscribed = true;
+      return;
+    }
 
     if (kIsWeb) {
       _isSubscribed = await _serverPremiumAccess();
@@ -42,6 +51,10 @@ class SubscriptionService {
   }
 
   static Future<void> refresh() async {
+    if (testerPremiumAccess) {
+      _isSubscribed = true;
+      return;
+    }
     if (_isConfigured) {
       updateStatus(await Purchases.getCustomerInfo());
     }
@@ -81,6 +94,7 @@ class SubscriptionService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          if (testerPremiumAccess) 'X-Decide-Tester-Build': '1',
         },
       );
       if (response.statusCode != 200) return false;

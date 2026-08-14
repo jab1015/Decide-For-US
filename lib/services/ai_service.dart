@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/activity.dart';
 import '../models/planning_request.dart';
+import 'subscription_service.dart';
 
 class AIService {
   static const String baseUrl =
@@ -20,6 +21,8 @@ class AIService {
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
+          if (SubscriptionService.testerPremiumAccess)
+            'X-Decide-Tester-Build': '1',
         },
         body: jsonEncode(request.toJson()),
       );
@@ -67,6 +70,8 @@ class AIService {
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
+          if (SubscriptionService.testerPremiumAccess)
+            'X-Decide-Tester-Build': '1',
         },
         body: jsonEncode({
           'lat': lat,
@@ -121,4 +126,3 @@ class AIServiceException implements Exception {
   @override
   String toString() => message ?? 'Recommendation request failed.';
 }
-
