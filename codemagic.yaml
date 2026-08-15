@@ -50,6 +50,15 @@ workflows:
     name: Android Google Play Internal
     max_build_duration: 60
 
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'release/android-*'
+          include: true
+          source: true
+      cancel_previous_builds: true
+
     environment:
       flutter: stable
       java: 17
