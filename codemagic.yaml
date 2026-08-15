@@ -45,3 +45,47 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+
+  android-play-internal:
+    name: Android Google Play Internal
+    max_build_duration: 60
+
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - google_play_credentials
+      android_signing:
+        - Decide_Google
+
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter pub get
+
+      - name: Configure Android signing
+        script: |
+          cat > "$CM_BUILD_DIR/android/key.properties" <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_KEYSTORE_PATH
+          EOF
+
+      - name: Analyze Flutter app
+        script: flutter analyze
+
+      - name: Build signed Android App Bundle
+        script: |
+          flutter build appbundle --release \
+            --build-name=1.0.29 \
+            --build-number=47 \
+            --dart-define=TESTER_PREMIUM_ACCESS=true
+          ls build/app/outputs/bundle/release/*.aab >/dev/null
+
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
