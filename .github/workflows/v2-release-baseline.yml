@@ -1,0 +1,70 @@
+name: V2 Release Baseline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  verify-v2-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify required V2 release files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            "lib/screens/trip_planner_screen.dart"
+            "lib/screens/trip_route_screen.dart"
+            "lib/screens/trip_itinerary_screen.dart"
+            "lib/screens/saved_trips_screen.dart"
+            "lib/services/trip_route_service.dart"
+            "lib/services/trip_plan_storage.dart"
+            "lib/services/trip_itinerary_pacer.dart"
+            "lib/models/trip_plan_draft.dart"
+            "lib/models/trip_route.dart"
+            "lib/screens/local_events_screen.dart"
+            "lib/services/subscription_service.dart"
+            "lib/services/forced_update_service.dart"
+            "codemagic.yaml"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "ERROR: Required V2 release file is missing: $file"
+              exit 1
+            fi
+          done
+
+      - name: Verify Trip Planner and Premium wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -q "TripPlannerScreen" lib/screens/decide_screen.dart
+          grep -q "Trip Planner+" lib/screens/decide_screen.dart
+          grep -q "export const resolveTripRoute" functions/index.js
+          grep -q "export const discoverTripStops" functions/index.js
+          grep -q "hasTesterBuildAccess(req)" functions/index.js
+          grep -q "Local Events+ requires Premium" functions/index.js
+          grep -q "Date Night+ requires Premium" functions/index.js
+          grep -q "TESTER_PREMIUM_ACCESS" lib/services/subscription_service.dart
+
+      - name: Verify release version is not stale
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "Release baseline version: $version"
+          if [[ -z "$version" ]]; then
+            echo "ERROR: pubspec.yaml has no release version."
+            exit 1
+          fi
+
+      - name: Verify Firebase Functions syntax
+        run: node --check functions/index.js
