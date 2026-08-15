@@ -3,6 +3,15 @@ workflows:
     name: iOS App Store Release
     max_build_duration: 60
 
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'release/ios-*'
+          include: true
+          source: true
+      cancel_previous_builds: true
+
     integrations:
       app_store_connect: decide-for-us-apple
 
