@@ -1,0 +1,33 @@
+name: Apply recommendation radius fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-radius-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply radius enforcement patch
+        run: python3 .github/scripts/radius_patch.py
+      - name: Validate Firebase Functions syntax
+        run: node --check functions/index.js
+      - name: Verify radius enforcement wiring
+        run: |
+          grep -q 'maxDistanceMiles' functions/index.js
+          grep -q 'radius, radiusMiles' functions/index.js
+          grep -q 'distanceMiles(origin' functions/index.js
+          grep -q 'export const resolveTripRoute' functions/index.js
+          grep -q 'export const discoverTripStops' functions/index.js
+      - name: Commit backend fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add functions/index.js
+          git commit -m "Enforce actual recommendation radius"
+          git push
