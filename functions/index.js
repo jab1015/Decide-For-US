@@ -177,7 +177,7 @@ function uniqueRanked(places) {
     .sort((a, b) => rank(b) - rank(a));
 }
 
-async function searchPlaces(apiKey, queries, lat, lng, radius) {
+async function searchPlaces(apiKey, queries, lat, lng, radius, maxDistanceMiles) {
   const results = await Promise.all(queries.map(async (query) => {
     const params = new URLSearchParams({
       query,
@@ -197,7 +197,18 @@ async function searchPlaces(apiKey, queries, lat, lng, radius) {
       matchedQuery: query,
     }));
   }));
-  return uniqueRanked(results.flat());
+  const ranked = uniqueRanked(results.flat());
+  if (!Number.isFinite(Number(maxDistanceMiles))) return ranked;
+  const origin = {lat: Number(lat), lng: Number(lng)};
+  return ranked.filter((place) => {
+    const location = place.geometry?.location;
+    if (!location || !Number.isFinite(Number(location.lat)) ||
+        !Number.isFinite(Number(location.lng))) return false;
+    return distanceMiles(origin, {
+      lat: Number(location.lat),
+      lng: Number(location.lng),
+    }) <= Number(maxDistanceMiles);
+  });
 }
 
 function activityCategory(place) {
@@ -1040,8 +1051,8 @@ export const getIdeas = onRequest(
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
       const [foodResults, experienceResults, recentIds, dateEvent] = await Promise.all([
-        searchPlaces(googleKey, foodTerms, lat, lng, radius),
-        searchPlaces(googleKey, experienceTerms, lat, lng, radius),
+        searchPlaces(googleKey, foodTerms, lat, lng, radius, radiusMiles),
+        searchPlaces(googleKey, experienceTerms, lat, lng, radius, radiusMiles),
         recentRecommendationIds(user.uid),
         isDateNight ? findDateNightEvent({
           apiKey: TICKETMASTER_API_KEY.value(),
