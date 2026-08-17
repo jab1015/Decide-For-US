@@ -1,0 +1,1 @@
+Date Night restore must preserve each source file's existing newline convention.
