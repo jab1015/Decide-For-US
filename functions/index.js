@@ -32,121 +32,11 @@ const activityQueries = {
   High: ["basketball court", "fitness activity", "rock climbing", "adventure park"],
 };
 
-const dateEnergyQueries = {
+const dateNightActivityQueries = {
   Low: ["romantic art gallery", "jazz lounge", "scenic overlook", "wine tasting"],
   Medium: ["botanical garden", "live music", "comedy club", "cooking class"],
   High: ["dance class", "kayaking", "rock climbing", "hiking trail"],
 };
-
-const dateStyleQueries = {
-  Cozy: ["jazz lounge", "bookstore cafe", "wine tasting", "intimate live music"],
-  Playful: ["mini golf", "comedy club", "arcade", "dance class"],
-  Romantic: ["botanical garden", "scenic overlook", "art gallery", "live music"],
-  Adventurous: ["kayaking", "rock climbing", "hiking trail", "adventure tour"],
-};
-
-function dateNightTerms(occasion, style, energy) {
-  const occasionTerms = {
-    "First date": "conversation friendly activity",
-    Anniversary: "romantic anniversary experience",
-    Surprise: "unique local experience",
-    "Regular date": "couples activity",
-  };
-  return [...new Set([
-    occasionTerms[occasion],
-    ...(dateStyleQueries[style] || dateStyleQueries.Romantic).slice(0, 2),
-    ...(dateEnergyQueries[energy] || dateEnergyQueries.Medium).slice(0, 2),
-  ].filter(Boolean))].slice(0, 4);
-}
-
-function dateNightFoodTerms(occasion, budget) {
-  if (budget === "Free") return ["romantic picnic spot", "scenic picnic area"];
-  if (occasion === "First date") return ["conversation friendly restaurant", "cozy cafe"];
-  if (occasion === "Anniversary") return ["romantic fine dining restaurant", "special occasion restaurant"];
-  if (occasion === "Surprise") return ["unique restaurant", "rooftop restaurant"];
-  return ["romantic restaurant", "intimate local restaurant"];
-}
-
-function dateNightScore(place, occasion, style) {
-  const text = [place.name, place.matchedQuery, ...(place.types || [])].join(" ").toLowerCase();
-  const occasionSignals = {
-    "First date": ["conversation", "gallery", "museum", "mini golf", "coffee", "book"],
-    Anniversary: ["romantic", "scenic", "garden", "wine", "fine dining", "special occasion"],
-    Surprise: ["unique", "adventure", "comedy", "dance", "tour", "live music"],
-    "Regular date": ["couples", "music", "cooking", "mini golf", "comedy"],
-  };
-  const styleSignals = {
-    Cozy: ["cozy", "jazz", "book", "wine", "intimate"],
-    Playful: ["mini golf", "comedy", "arcade", "dance"],
-    Romantic: ["romantic", "garden", "scenic", "gallery", "music"],
-    Adventurous: ["kayak", "climbing", "hiking", "adventure"],
-  };
-  let score = rank(place);
-  for (const signal of occasionSignals[occasion] || []) if (text.includes(signal)) score += 4;
-  for (const signal of styleSignals[style] || []) if (text.includes(signal)) score += 3;
-  return score;
-}
-
-function dateEventWindow(timing) {
-  const now = new Date();
-  if (timing === "Tonight") {
-    const end = new Date(now);
-    end.setUTCHours(24, 0, 0, 0);
-    return {start: now, end};
-  }
-  if (timing === "This weekend") {
-    const day = now.getUTCDay();
-    const daysUntilSaturday = (6 - day + 7) % 7;
-    const start = day === 0 || day === 6 ? now : new Date(Date.UTC(
-      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilSaturday,
-    ));
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + (start.getUTCDay() === 0 ? 1 : 2));
-    end.setUTCHours(0, 0, 0, 0);
-    return {start, end};
-  }
-  return {start: now, end: new Date(now.getTime() + 14 * 86400000)};
-}
-
-function dateEventScore(event, occasion, style) {
-  const text = `${event.title} ${event.eventType} ${event.eventGenre}`.toLowerCase();
-  const signals = {
-    "First date": ["comedy", "arts", "theatre", "music"],
-    Anniversary: ["music", "arts", "theatre", "classical"],
-    Surprise: ["comedy", "festival", "music", "sports"],
-    "Regular date": ["comedy", "music", "sports", "arts"],
-    Cozy: ["jazz", "classical", "theatre", "acoustic"],
-    Playful: ["comedy", "sports", "festival"],
-    Romantic: ["jazz", "classical", "theatre", "music"],
-    Adventurous: ["sports", "festival", "outdoor"],
-  };
-  let score = 0;
-  for (const signal of [...(signals[occasion] || []), ...(signals[style] || [])]) {
-    if (text.includes(signal)) score += 2;
-  }
-  return score;
-}
-
-async function findDateNightEvent({apiKey, lat, lng, radiusMiles, timing, occasion, style}) {
-  try {
-    const window = dateEventWindow(timing);
-    const events = await searchTicketmasterEvents({
-      apiKey,
-      lat,
-      lng,
-      radiusMiles: Math.min(Number(radiusMiles) || 25, 50),
-      startDateTime: window.start,
-      endDateTime: window.end,
-    });
-    return events
-      .map((event) => ({event, score: dateEventScore(event, occasion, style)}))
-      .filter((candidate) => candidate.score >= 2)
-      .sort((a, b) => b.score - a.score)[0]?.event || null;
-  } catch (error) {
-    console.warn("Date Night event search skipped:", error.message);
-    return null;
-  }
-}
 
 function milesToMeters(miles) {
   return Math.min(Math.max(Number(miles) || 25, 1) * 1609, 50000);
@@ -410,30 +300,20 @@ function readableType(place, isFood) {
   return type ? labels[type] : (isFood ? "restaurant" : "local experience");
 }
 
-function placeDescription(
-  place,
-  isFood,
-  isDateNight,
-  index,
-  dateOccasion = "Regular date",
-  dateStyle = "Romantic",
-) {
+function placeDescription(place, isFood, isDateNight, index) {
   const type = readableType(place, isFood);
   const rating = Number(place.rating);
   const reviews = Number(place.user_ratings_total);
   const proof = Number.isFinite(rating) ?
     `${rating.toFixed(1)} stars${reviews > 0 ? ` from ${reviews.toLocaleString("en-US")} reviews` : ""}` :
     "a strong local reputation";
+
   if (isFood) {
     return isDateNight ?
-      `${place.name} brings a ${dateStyle.toLowerCase()} ${type} stop to your ` +
-        `${dateOccasion.toLowerCase()}, backed by ${proof}.` :
+      `${place.name} brings a ${type} stop to the date, backed by ${proof}.` :
       `Make ${place.name} the food stop—a ${type} backed by ${proof}.`;
   }
-  if (isDateNight) {
-    return `${place.name} was chosen for a ${dateStyle.toLowerCase()} ` +
-      `${dateOccasion.toLowerCase()}—a ${type} backed by ${proof}.`;
-  }
+
   const templates = [
     `Start with ${place.name}, a ${type} chosen for its ${proof}.`,
     `${place.name} adds a ${type} to the plan and carries ${proof}.`,
@@ -990,7 +870,7 @@ export const discoverTripStops = onRequest(
 export const getIdeas = onRequest(
   {
     region: "us-central1",
-    secrets: [GOOGLE_API_KEY, REVENUECAT_SECRET_API_KEY, TICKETMASTER_API_KEY],
+    secrets: [GOOGLE_API_KEY, REVENUECAT_SECRET_API_KEY],
   },
   async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -1024,34 +904,21 @@ export const getIdeas = onRequest(
       const budget = req.body?.budget || "$30–$75";
       const energy = req.body?.energy || "Medium";
       const group = req.body?.group || "Couple";
-      const dateOccasion = String(req.body?.dateOccasion || "Regular date");
-      const dateStyle = String(req.body?.dateStyle || "Romantic");
-      const dateTiming = String(req.body?.dateTiming || "Tonight");
-      const radiusMiles = Number(req.body?.radius) || 25;
-      const radius = milesToMeters(radiusMiles);
+      const radius = milesToMeters(req.body?.radius);
       const googleKey = GOOGLE_API_KEY.value();
 
-      const foodTerms = isDateNight ?
-        dateNightFoodTerms(dateOccasion, budget) :
-        (foodQueries[budget] || foodQueries["$"]);
+      const foodTerms = isDateNight
+        ? ["romantic restaurant", "fine dining restaurant"]
+        : (foodQueries[budget] || foodQueries["$"]);
       const experienceTerms = isDateNight ?
-        dateNightTerms(dateOccasion, dateStyle, energy) :
+        (dateNightActivityQueries[energy] || dateNightActivityQueries.Medium) :
         (activityQueries[energy] || activityQueries.Medium)
           .map((term) => group === "Family" ? `family friendly ${term}` : term);
 
-      const [foodResults, experienceResults, recentIds, dateEvent] = await Promise.all([
+      const [foodResults, experienceResults, recentIds] = await Promise.all([
         searchPlaces(googleKey, foodTerms, lat, lng, radius),
         searchPlaces(googleKey, experienceTerms, lat, lng, radius),
         recentRecommendationIds(user.uid),
-        isDateNight ? findDateNightEvent({
-          apiKey: TICKETMASTER_API_KEY.value(),
-          lat,
-          lng,
-          radiusMiles,
-          timing: dateTiming,
-          occasion: dateOccasion,
-          style: dateStyle,
-        }) : Promise.resolve(null),
       ]);
 
       const unseenFood = foodResults
@@ -1060,19 +927,16 @@ export const getIdeas = onRequest(
       const unseenExperiences = experienceResults
         .filter((place) => !recentIds.has(place.place_id));
       const food = unseenFood.length ? unseenFood : foodResults;
-      let experiences = unseenExperiences.length ? unseenExperiences : experienceResults;
-      if (isDateNight) {
-        experiences = [...experiences].sort(
-          (a, b) => dateNightScore(b, dateOccasion, dateStyle) -
-            dateNightScore(a, dateOccasion, dateStyle),
-        );
-      }
+      const experiences = unseenExperiences.length ?
+        unseenExperiences :
+        experienceResults;
 
       const selectedExperiences = [];
       for (const place of experiences) {
         if (selectedExperiences.length === 3) break;
         const duplicateCategory = selectedExperiences.some(
-          (selected) => activityCategory(selected) === activityCategory(place),
+          (selected) =>
+            activityCategory(selected) === activityCategory(place),
         );
         if (!duplicateCategory || selectedExperiences.length >= 2) {
           selectedExperiences.push(place);
@@ -1084,14 +948,9 @@ export const getIdeas = onRequest(
       }
 
       const foodChoice = budget === "Free" ? null : food[0];
-      const eligibleDateEvent = dateEvent && !recentIds.has(dateEvent.id) ? dateEvent : null;
-      const selected = isDateNight && eligibleDateEvent ?
-        (foodChoice ?
-          [eligibleDateEvent, foodChoice, ...selectedExperiences.slice(0, 2)] :
-          [eligibleDateEvent, ...selectedExperiences.slice(0, 3)]) :
-        (foodChoice ?
-          [foodChoice, ...selectedExperiences.slice(0, 3)] :
-          experiences.slice(0, 4));
+      const selected = foodChoice ?
+        [foodChoice, ...selectedExperiences.slice(0, 3)] :
+        experiences.slice(0, 4);
 
       if (selected.length < 4) {
         return res.status(404).json({
@@ -1102,23 +961,15 @@ export const getIdeas = onRequest(
       if (!premium) await consumeFreeRequest(user.uid);
       await rememberRecommendations(
         user.uid,
-        selected.map((place) => place.place_id || place.id),
+        selected.map((place) => place.place_id),
       );
 
       return res.json(selected.map((place, index) => {
-        if (place.category === "event") return place;
         const isFood = place === foodChoice;
         return serialize(
           place,
           isFood ? "food" : activityCategory(place),
-          placeDescription(
-            place,
-            isFood,
-            isDateNight,
-            index,
-            dateOccasion,
-            dateStyle,
-          ),
+          placeDescription(place, isFood, isDateNight, index),
         );
       }));
     } catch (error) {
