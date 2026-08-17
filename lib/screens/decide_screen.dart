@@ -41,6 +41,9 @@ class _DecideScreenState extends State<DecideScreen>
   String? selectedGroup;
   String? selectedBudget;
   String? selectedEnergy;
+  String? selectedDateOccasion;
+  String? selectedDateStyle;
+  String? selectedDateTiming;
   String? _groupBeforeDateNight;
 
   int selectedRadius = 25;
@@ -95,6 +98,9 @@ class _DecideScreenState extends State<DecideScreen>
     selectedRadiusLabel = "25 mi";
     isDateNight = false;
     _groupBeforeDateNight = null;
+    selectedDateOccasion = null;
+    selectedDateStyle = null;
+    selectedDateTiming = null;
   }
 
   void startSpinAnimation() {
@@ -163,6 +169,9 @@ class _DecideScreenState extends State<DecideScreen>
           lat: userCoords!['lat']!,
           lng: userCoords!['lng']!,
           radiusMiles: selectedRadius,
+          dateOccasion: selectedDateOccasion,
+          dateStyle: selectedDateStyle,
+          dateTiming: selectedDateTiming,
         ),
       );
     } on AIServiceException catch (e) {
@@ -231,6 +240,9 @@ class _DecideScreenState extends State<DecideScreen>
         isDateNight = false;
         selectedGroup = _groupBeforeDateNight;
         _groupBeforeDateNight = null;
+        selectedDateOccasion = null;
+        selectedDateStyle = null;
+        selectedDateTiming = null;
       });
       return;
     }
@@ -246,6 +258,9 @@ class _DecideScreenState extends State<DecideScreen>
       setState(() {
         _groupBeforeDateNight = selectedGroup;
         selectedGroup = 'Couple';
+        selectedDateOccasion = 'Regular date';
+        selectedDateStyle = 'Romantic';
+        selectedDateTiming = 'Tonight';
         isDateNight = true;
       });
     }
@@ -678,7 +693,7 @@ class _DecideScreenState extends State<DecideScreen>
               (v) => selectedGroup = v,
               enabled: !isDateNight,
             ),
-            if (isDateNight)
+            if (isDateNight) ...[
               const Text(
                 'Date Night+ is planned for two.',
                 textAlign: TextAlign.center,
@@ -688,6 +703,28 @@ class _DecideScreenState extends State<DecideScreen>
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 16),
+              sectionLabel("What’s the occasion?"),
+              row(
+                ["First date", "Regular date", "Anniversary", "Surprise"],
+                selectedDateOccasion,
+                (v) => selectedDateOccasion = v,
+              ),
+              const SizedBox(height: 16),
+              sectionLabel("What kind of date?"),
+              row(
+                ["Cozy", "Playful", "Romantic", "Adventurous"],
+                selectedDateStyle,
+                (v) => selectedDateStyle = v,
+              ),
+              const SizedBox(height: 16),
+              sectionLabel("When?"),
+              row(
+                ["Tonight", "This weekend", "Plan ahead"],
+                selectedDateTiming,
+                (v) => selectedDateTiming = v,
+              ),
+            ],
             const SizedBox(height: 20),
             sectionLabel("Total outing budget"),
             row(
