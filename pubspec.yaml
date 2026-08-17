@@ -21,7 +21,7 @@ dependencies:
   # FIREBASE
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.0
-  cloud_firestore: ^6.2.0
+  cloud_firestore: ^6.8.0
 
   # PURCHASES
   purchases_flutter: ^9.16.0
