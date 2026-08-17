@@ -1,0 +1,38 @@
+name: Date Night V2 Restore Fast
+
+on:
+  push:
+    branches: [restore/date-night-v2]
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply scoped restore
+        run: python3 .github/scripts/restore_date_night.py
+      - name: Validate functions syntax
+        run: node --check functions/index.js
+      - name: Verify protected features remain
+        run: |
+          grep -q "TripPlannerScreen" lib/screens/decide_screen.dart
+          grep -q "export const resolveTripRoute" functions/index.js
+          grep -q "export const discoverTripStops" functions/index.js
+          grep -q "TESTER_PREMIUM_ACCESS" functions/index.js
+          grep -q "hasTesterBuildAccess" functions/index.js
+          grep -q '"Anniversary"' lib/screens/decide_screen.dart
+          grep -q '"Playful"' lib/screens/decide_screen.dart
+          grep -q '"This weekend"' lib/screens/decide_screen.dart
+      - name: Commit restoration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/screens/decide_screen.dart functions/index.js
+          git diff --cached --check
+          git commit -m "Restore Date Night V2 controls and matching [date-night-restore]"
+          git pull --rebase origin restore/date-night-v2
+          git push
