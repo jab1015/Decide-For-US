@@ -24,7 +24,7 @@ dependencies:
   cloud_firestore: ^6.2.0
 
   # PURCHASES
-  purchases_flutter: ^9.16.0
+  purchases_flutter: ^10.8.0
 
   # LOCATION
   geolocator: ^11.0.0
