@@ -1,6 +1,6 @@
 # Decide For Us V2 Roadmap
 
-Last updated: August 11, 2026
+Last updated: August 26, 2026
 
 ## Product promise
 
@@ -110,11 +110,49 @@ Core inputs:
 - Seasonal suggestions and weather-triggered replanning.
 - Privacy controls and memory reset.
 
+## Google Play 2026 quality readiness — in progress
+
+Google Play notified Modern Methods on August 26, 2026 of upcoming quality
+requirements covering app memory/code optimization and secure, seamless device
+migration. This is now a release-readiness workstream rather than a deferred
+maintenance item.
+
+### Implement now
+
+- Keep `compileSdk` and `targetSdk` at Android API 36 or newer.
+- Enable R8 code shrinking and Android resource shrinking for release builds.
+- Preserve user-created local state during supported Android cloud backup and
+  device-to-device transfer using explicit backup rules.
+- Limit Android backup scope to Flutter SharedPreferences so favorites, saved
+  Trip Planner plans, and non-sensitive app preferences can migrate without
+  intentionally copying Firebase authentication stores, secrets, signing data,
+  or other native credential material.
+- Require encrypted cloud-backup capability for the scoped backup payload.
+
+### Validate before production
+
+- Build a signed Android release through Codemagic with shrinking enabled and
+  verify there are no reflection/serialization regressions.
+- Test Android 12+ cloud restore and device-to-device migration.
+- Verify Favorites and saved Trip Planner plans survive migration.
+- Verify a migrated install can refresh Firebase authentication safely and that
+  RevenueCat purchase restoration/subscription access works as intended.
+- Review Google Play Console memory/quality diagnostics and Android vitals for
+  real release builds rather than assuming R8 alone satisfies runtime-memory
+  requirements.
+- Measure decoded network-image memory and add bounded image decoding/cache
+  dimensions where Play Console or device profiling shows unnecessary bitmap
+  pressure.
+- Review Google's final migration/onboarding enforcement guidance when the
+  detailed deadline and test criteria are visible in Play Console; do not add
+  credential-transfer behavior without validating it against the app's
+  anonymous Firebase identity model.
+
 ## Launch gates
 
-Current release checkpoint: iOS 1.0.28+45 is in App Review; Android 1.0.28+45
-is active in Internal Testing; refreshed Google Play phone screenshots are in
-listing review. The next binary must use build number 46 or higher.
+Current release checkpoint: restored V2 features are on the current `main` and
+Codemagic provides manual iOS and Android release workflows. Keep store release
+build numbers monotonic and validate both platforms before production rollout.
 
 - Audit and disable Firestore tester documents before production.
 - Upgrade the Functions runtime from Node.js 20.
@@ -127,4 +165,5 @@ listing review. The next binary must use build number 46 or higher.
   Firestore platform minimum version.
 - Keep `docs/CODER_HANDOFF.md` and the release checklist current at every store
   submission.
-
+- Complete the Google Play 2026 memory/code-optimization and device-migration
+  validation gates before the next production Android rollout.
