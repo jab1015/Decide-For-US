@@ -2,15 +2,16 @@
     package="com.decideforus.app">
 
     <uses-permission android:name="android.permission.INTERNET"/>
-
-    <!-- 🔥 ADD THESE PERMISSIONS -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:label="Decide For Us"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules_legacy"
+        android:dataExtractionRules="@xml/backup_rules">
 
         <activity
             android:name=".MainActivity"
