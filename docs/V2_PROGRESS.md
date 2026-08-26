@@ -82,6 +82,28 @@ Last updated: August 26, 2026
   companion searches.
 - Verified Ticketmaster price ranges appear when the provider supplies them.
 
+### Protected release feature baseline
+
+After the previous regression where major premium features were accidentally
+lost during an update, the repository now treats those features as protected
+release requirements rather than assumptions.
+
+- `docs/RELEASE_FEATURE_BASELINE.md` records the minimum required release
+  feature set and the primary implementation files for Date Night+, Local
+  Events+, Trip Planner+, and core Decide behavior.
+- `.github/workflows/v2-release-baseline.yml` now fails a pull request if the
+  Date Night occasion/style/timing wiring disappears, including Regular date,
+  First date, Anniversary, Surprise, Romantic, Playful, and Tonight.
+- The same workflow verifies the Local Events screen, navigation, Ticketmaster
+  wiring, `getLocalEvents`, and Premium backend gate.
+- The same workflow verifies Trip Planner entry/navigation, planner/route/
+  itinerary/saved screens, saved-trip storage, `resolveTripRoute`, and
+  `discoverTripStops`.
+- Premium/tester wiring remains explicitly checked.
+- A future intentional removal or redesign of one of these protected features
+  must change the baseline deliberately in the same reviewed PR; merely
+  compiling successfully is not enough.
+
 ### Google Play 2026 quality readiness — Phase 1
 
 Google Play's August 26, 2026 developer notice has been converted into active
