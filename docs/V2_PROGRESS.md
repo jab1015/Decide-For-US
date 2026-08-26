@@ -1,6 +1,6 @@
 # Decide For Us V2 Progress
 
-Last updated: August 11, 2026
+Last updated: August 26, 2026
 
 ## Status summary
 
@@ -12,6 +12,7 @@ Last updated: August 11, 2026
 | Phase 3: Local Events+ | Implemented; store validation pending | Premium-only |
 | Date Night+ specialization | Implemented; store validation pending | Premium-only |
 | Trip Planner+ | Implemented; store validation pending | Premium-only |
+| Google Play 2026 quality readiness | In progress; Phase 1 implemented | Memory/code optimization + device migration |
 
 ## Completed
 
@@ -53,6 +54,8 @@ Last updated: August 11, 2026
 - Monthly and yearly RevenueCat packages displayed when both are present in the
   current offering.
 - Android release version now follows `pubspec.yaml`.
+- Recommendation search results are post-filtered by actual geographic distance
+  so Explore stays regional instead of accepting distant Google Places matches.
 
 ### Local Events+ in PR #32
 
@@ -79,40 +82,69 @@ Last updated: August 11, 2026
   companion searches.
 - Verified Ticketmaster price ranges appear when the provider supplies them.
 
+### Google Play 2026 quality readiness — Phase 1
+
+Google Play's August 26, 2026 developer notice has been converted into active
+engineering work instead of being left as a future compliance reminder.
+
+Implemented on `feature/google-play-quality-2026`:
+
+- Android remains on `compileSdk = 36` and `targetSdk = 36`.
+- Release builds now enable R8 code minification and Android resource shrinking.
+- `proguard-android-optimize.txt` plus an app-specific `proguard-rules.pro` are
+  wired into the release build.
+- Android 12+ `dataExtractionRules` explicitly scope cloud backup and
+  device-to-device transfer to Flutter's `FlutterSharedPreferences.xml`.
+- Legacy `fullBackupContent` rules provide the equivalent scoped behavior on
+  older Android versions.
+- Cloud backup is disabled when the device/account cannot provide encryption
+  capability for the scoped backup payload.
+- Firebase authentication stores, native credential stores, signing material,
+  API secrets, and other app-private files are not intentionally included in
+  the migration rules.
+- This scoped state covers local Flutter SharedPreferences data such as
+  Favorites and saved Trip Planner plans.
+
 ## Operational work completed
 
 - `REVENUECAT_SECRET_API_KEY` created in Firebase Secret Manager.
 - `getIdeas` successfully deployed as a second-generation Cloud Function.
 - Firestore IAM failure identified and corrected.
-- Google Play Internal Testing contains version 1.0.28, code 45.
-- Android release signing remains local and gitignored.
+- Android release signing is configured for Codemagic through the protected
+  `Decide_Google` keystore.
 - `TICKETMASTER_API_KEY` created in Firebase Secret Manager.
 - `getLocalEvents`, `getEventImage`, and `getPremiumAccess` deployed.
 - Google Play license-testing list configured for subscription testing.
-- App version advanced to `1.0.28+45`; build 45 is in Apple review and active
-  in Google Play Internal Testing.
 - Firestore-controlled forced-update handling added for iOS and Android.
 - App Store product name selected as `Decide For Us: What To Do`.
 - Native iOS and Android icons were regenerated from `assets/icon.png`.
-- Three refreshed Google Play phone screenshots were submitted for listing
-  review and saved in `store_assets/google_play/`.
+- Google Play and Apple release workflows are manual-only in Codemagic to avoid
+  accidental store uploads.
+- Trip Planner+ and the full Date Night+ occasion/style/timing experience were
+  restored to the current V2 baseline.
 
 Current store-release handoff and branch instructions live in
-`docs/CODER_HANDOFF.md`; new work starts from the latest `main`. Build number 45
-is consumed, so the next binary must use build number 46 or higher.
+`docs/CODER_HANDOFF.md`; new work starts from the latest `main`.
 
 ## Store validation still required
 
 - `flutter analyze`
 - `flutter test`
-- Android signed `.aab` build
-- TestFlight build with both subscription choices
+- Android signed `.aab` build with R8/resource shrinking enabled.
+- TestFlight build with both subscription choices.
 - Local Events+ on TestFlight and Google Play Internal Testing.
 - Event images, dates, maps, and external links on real devices.
 - Monthly and annual sandbox subscription activation through RevenueCat.
 - Non-Premium users still reach the paywall.
 - Firestore tester access remains limited to explicitly enabled UIDs.
-- Current Firebase Function revisions match PR #32.
+- Current Firebase Function revisions match the intended `main` revision.
+- Android 12+ device-to-device migration test.
+- Android cloud-backup/restore test with encrypted backup capability.
+- Confirm Favorites and saved Trip Planner plans return after migration.
+- Confirm migrated installs safely re-establish Firebase identity/session state
+  and RevenueCat subscription access or restore purchases as designed.
+- Review Play Console's new memory/quality diagnostics and Android vitals using
+  a release build before declaring the new Google quality work complete.
 
 ## Known temporary or deferred items
 
@@ -122,5 +154,8 @@ is consumed, so the next binary must use build number 46 or higher.
   event providers remain planned.
 - Ticketmaster does not provide pricing for every event; unknown prices remain
   unlabeled rather than estimated.
-- The app still needs a formal trip-planning data model and timeline UI.
-
+- Google Play's final enforcement details for the newly announced migration
+  standard must be reviewed in Play Console as they become available; do not
+  add credential-transfer behavior that conflicts with anonymous Firebase Auth.
+- Runtime memory and bitmap work remains measurement-driven: review Play Console
+  diagnostics and profile real devices before making broad caching/image changes.
