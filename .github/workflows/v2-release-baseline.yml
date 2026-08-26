@@ -41,19 +41,66 @@ jobs:
             fi
           done
 
-      - name: Verify Trip Planner and Premium wiring
+      - name: Verify Date Night+ UI and request wiring
         shell: bash
         run: |
           set -euo pipefail
 
+          grep -q "bool isDateNight = false" lib/screens/decide_screen.dart
+          grep -q "selectedDateOccasion" lib/screens/decide_screen.dart
+          grep -q "selectedDateStyle" lib/screens/decide_screen.dart
+          grep -q "selectedDateTiming" lib/screens/decide_screen.dart
+          grep -q "Regular date" lib/screens/decide_screen.dart
+          grep -q "First date" lib/screens/decide_screen.dart
+          grep -q "Anniversary" lib/screens/decide_screen.dart
+          grep -q "Surprise" lib/screens/decide_screen.dart
+          grep -q "Romantic" lib/screens/decide_screen.dart
+          grep -q "Playful" lib/screens/decide_screen.dart
+          grep -q "Tonight" lib/screens/decide_screen.dart
+          grep -q "isDateNight: isDateNight" lib/screens/decide_screen.dart
+          grep -q "dateOccasion: selectedDateOccasion" lib/screens/decide_screen.dart
+          grep -q "dateStyle: selectedDateStyle" lib/screens/decide_screen.dart
+          grep -q "dateTiming: selectedDateTiming" lib/screens/decide_screen.dart
+          grep -q "Date Night+ requires Premium" functions/index.js
+
+      - name: Verify Local Events+ UI and backend wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -q "local_events_screen.dart" lib/screens/decide_screen.dart
+          grep -q "LocalEventsScreen" lib/screens/decide_screen.dart
+          grep -q "_openLocalEvents" lib/screens/decide_screen.dart
+          grep -q "class LocalEventsScreen" lib/screens/local_events_screen.dart
+          grep -q "getLocalEvents" lib/screens/local_events_screen.dart
+          grep -q "export const getLocalEvents" functions/index.js
+          grep -q "Local Events+ requires Premium" functions/index.js
+          grep -q "TICKETMASTER_API_KEY" functions/index.js
+
+      - name: Verify Trip Planner+ UI, storage, and backend wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -q "trip_planner_screen.dart" lib/screens/decide_screen.dart
           grep -q "TripPlannerScreen" lib/screens/decide_screen.dart
           grep -q "Trip Planner+" lib/screens/decide_screen.dart
+          grep -q "class TripPlannerScreen" lib/screens/trip_planner_screen.dart
+          grep -q "class TripRouteScreen" lib/screens/trip_route_screen.dart
+          grep -q "class TripItineraryScreen" lib/screens/trip_itinerary_screen.dart
+          grep -q "class SavedTripsScreen" lib/screens/saved_trips_screen.dart
+          grep -q "saved_trip_plans" lib/services/trip_plan_storage.dart
           grep -q "export const resolveTripRoute" functions/index.js
           grep -q "export const discoverTripStops" functions/index.js
+
+      - name: Verify Premium and tester protections
+        shell: bash
+        run: |
+          set -euo pipefail
+
           grep -q "hasTesterBuildAccess(req)" functions/index.js
-          grep -q "Local Events+ requires Premium" functions/index.js
-          grep -q "Date Night+ requires Premium" functions/index.js
           grep -q "TESTER_PREMIUM_ACCESS" lib/services/subscription_service.dart
+          grep -q "SubscriptionService.isSubscribed" lib/screens/decide_screen.dart
 
       - name: Verify release version is not stale
         shell: bash
