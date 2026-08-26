@@ -1,6 +1,6 @@
 # Release Checklist
 
-Last updated: August 11, 2026
+Last updated: August 26, 2026
 
 ## Branch and handoff
 
@@ -45,9 +45,6 @@ After deployment:
 
 ## iOS / TestFlight
 
-Current 1.0.28 status: build 45 has been submitted and is in App Review. The
-release is manual after approval.
-
 - [ ] Use a new App Store Connect build number.
 - [ ] Confirm bundle ID `com.decideforus.app`.
 - [ ] Build the intended branch in Codemagic.
@@ -62,24 +59,52 @@ release is manual after approval.
 
 ## Android / Google Play
 
-Current 1.0.28 status: code 45 is active in Internal Testing. The three updated
-phone screenshots have been sent for Google review. Production access and
-closed-testing requirements are not yet complete.
+Codemagic is the signed Android release path. Google Play publishing remains
+manual-only so repository pushes cannot accidentally publish a store build.
 
-- [ ] Keep `android/key.properties` and the keystore local and gitignored.
-- [x] Run `flutter build appbundle --release` for 1.0.28+45.
-- [x] Confirm the `.aab` version code is greater than the prior Play release.
-- [x] Upload 1.0.28+45 to Internal Testing.
-- [x] Add release notes and roll out to internal testers.
-- [x] Replace the Google Play phone screenshots and send the listing change for
-      review.
-- [ ] Complete the required closed-testing period and apply for production
-      access.
+- [x] Target Android API 36.
+- [x] Configure protected Android signing in Codemagic.
+- [ ] Confirm the `.aab` version code is greater than the prior Play release.
+- [ ] Build the intended `main` revision through the YAML workflow
+      `android-play-internal`.
+- [ ] Confirm upload to Internal Testing succeeds before any production rollout.
 - [ ] Confirm RevenueCat Android monthly and annual products.
 - [ ] Confirm the internal tester list is also selected for license testing.
 - [ ] Use a Google Play test payment method and verify Premium activation.
 - [ ] Keep `android_min_version` unchanged until the matching Play version is
       available to the intended audience.
+
+### Google Play 2026 quality gates
+
+These checks implement the August 26, 2026 Google Play quality notice covering
+memory/code optimization and secure/seamless device migration.
+
+- [x] `compileSdk` and `targetSdk` are API 36.
+- [x] Enable R8 code shrinking for release builds.
+- [x] Enable Android resource shrinking for release builds.
+- [x] Add an app-specific `proguard-rules.pro` without broad keep rules.
+- [x] Add Android 12+ `dataExtractionRules` for cloud backup and device transfer.
+- [x] Add legacy `fullBackupContent` rules.
+- [x] Scope migration to Flutter SharedPreferences instead of backing up all app
+      private data.
+- [x] Require encrypted-capable cloud backup for the scoped payload.
+- [ ] Build a signed release with R8/resource shrinking and verify startup,
+      Firebase, RevenueCat, maps, Local Events+, Date Night+, and Trip Planner+.
+- [ ] Test Android 12+ device-to-device transfer on real/emulated devices.
+- [ ] Test encrypted cloud backup and restore.
+- [ ] Verify Favorites are restored after migration.
+- [ ] Verify saved Trip Planner plans are restored after migration.
+- [ ] Verify Firebase identity/session behavior after migration; do not rely on
+      copied native auth-token stores.
+- [ ] Verify Premium access after migration and test Restore Purchases where
+      needed.
+- [ ] Review Play Console memory/quality diagnostics and Android vitals for the
+      release build.
+- [ ] Profile image-heavy screens if Play Console/device metrics show bitmap
+      pressure; optimize decoded image dimensions based on measured results.
+- [ ] Review Google's final migration/onboarding enforcement guidance in Play
+      Console and add any additional required mechanism only after compatibility
+      with anonymous Firebase Auth is confirmed.
 
 ## Production-only gates
 
